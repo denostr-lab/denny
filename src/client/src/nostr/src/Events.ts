@@ -1,10 +1,12 @@
-import { debounce } from "lodash-es";
+import { Event, verifySignature } from "nostr-tools";
+import { MsgType } from "matrix-js-sdk/lib/@types/event";
+import { IContent } from "matrix-js-sdk/lib/models/event";
+
 import { ISyncResponse } from "../../sync-accumulator";
 import { MatrixClient } from "../../client";
 
 // import IndexedDB from './IndexedDB';
 import Key from "./Key";
-import Relays from "./Relays";
 import {
     ROOM_META_TYPES,
     addRoomMeta,
@@ -14,17 +16,7 @@ import {
     handMediaContent,
 } from "./Helpers";
 
-import {
-    CachedReceiptStructure,
-    MAIN_ROOM_TIMELINE,
-    Receipt,
-    ReceiptContent,
-    ReceiptType,
-} from "../../@types/read_receipts";
-import { Event, Kind } from "nostr-tools";
 import { EventType, RelationType } from "../../@types/event";
-import { MsgType } from "matrix-js-sdk/lib/@types/event";
-import { IContent } from "matrix-js-sdk/lib/models/event";
 import { MetaInfo, RoomMetaInfo, Kinds } from "./@types";
 
 type UserProfile = {
@@ -36,10 +28,15 @@ type UserProfile = {
 
 class Events {
     bufferEvent: ISyncResponse | null;
+
     operatedEvent: Record<string, boolean> = {};
+
     userProfileMap: { [key: string]: UserProfile } = {};
+
     roomJoinMap: Record<string, Set<string>> = {};
+
     NprevAccountData = {};
+
     rooms: Map<string, any> = new Map();
 
     initUsersAndRooms = (client: MatrixClient) => {
@@ -103,6 +100,12 @@ class Events {
         if (event.created_at > Date.now() / 1000) {
             return;
         }
+
+        // 确认签名, 消息无篡改
+        if (!verifySignature(event)) {
+            return;
+        }
+
         try {
             this.bufferEvent = this.convertEventToSyncResponse(client, event, this.bufferEvent);
         } catch (e) {

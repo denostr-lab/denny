@@ -4,5 +4,9 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "[javascriptreact]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "prettier.tabWidth": 4
 }

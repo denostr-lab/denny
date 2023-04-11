@@ -78,7 +78,12 @@ const PubSub = {
         Relays.subscribe(filters, "followed", true, 0, true);
         //IndexedDB.subscribe(filters);
         if (PubSub.subscribedProfiles.size) {
-            const filters = [{ authors: Array.from(PubSub.subscribedProfiles.values()), kinds: [0] }];
+            const filters = [
+                {
+                    authors: Array.from(PubSub.subscribedProfiles.values()),
+                    kinds: [0],
+                },
+            ];
             // 一次性获取
             Relays.subscribe(filters, "subscribedProfiles", true);
             //IndexedDB.subscribe(filters);
@@ -93,7 +98,11 @@ const PubSub = {
         () => {
             if (PubSub.subscribedPosts.size === 0) return;
             console.log("subscribe to", PubSub.subscribedPosts.size, "posts");
-            const filters = [{ ids: Array.from(PubSub.subscribedPosts).slice(0, 1000) }];
+            const filters = [
+                {
+                    ids: Array.from(PubSub.subscribedPosts).slice(0, 1000),
+                },
+            ];
             Relays.subscribe(filters, "posts");
             //IndexedDB.subscribe(filters);
         },
