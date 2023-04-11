@@ -1,0 +1,56 @@
+@use 'state';
+
+.ic-btn {
+  padding: var(--sp-extra-tight);
+  border: none;
+  border-radius: var(--bo-radius);
+  background-color: transparent;
+  font-size: 0;
+  line-height: 0;
+  cursor: pointer;
+  @include state.disabled;
+}
+
+@mixin color($color) {
+  .ic-raw {
+    background-color: $color;
+  }
+}
+@mixin focus($color) {
+  &:focus {
+    outline: none;
+    background-color: $color;
+  }
+}
+
+.ic-btn-surface {
+  @include color(var(--ic-surface-normal));
+  @include state.hover(var(--bg-surface-hover));
+  @include focus(var(--bg-surface-hover));
+  @include state.active(var(--bg-surface-active));
+}
+.ic-btn-primary {
+  @include color(var(--ic-primary-normal));
+  @include state.hover(var(--bg-primary-hover));
+  @include focus(var(--bg-primary-hover));
+  @include state.active(var(--bg-primary-active));
+  background-color: var(--bg-primary);
+}
+.ic-btn-positive {
+  @include color(var(--ic-positive-normal));
+  @include state.hover(var(--bg-positive-hover));
+  @include focus(var(--bg-positive-hover));
+  @include state.active(var(--bg-positive-active));
+}
+.ic-btn-caution {
+  @include color(var(--ic-caution-normal));
+  @include state.hover(var(--bg-caution-hover));
+  @include focus(var(--bg-caution-hover));
+  @include state.active(var(--bg-caution-active));
+}
+.ic-btn-danger {
+  @include color(var(--ic-danger-normal));
+  @include state.hover(var(--bg-danger-hover));
+  @include focus(var(--bg-danger-hover));
+  @include state.active(var(--bg-danger-active));
+}

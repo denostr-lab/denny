@@ -1,0 +1,108 @@
+@use '../../partials/flex';
+@use '../../partials/dir';
+@use '../../partials/screen';
+
+.settings-window {
+  & .pw {
+    background-color: var(--bg-surface-low);
+  }
+  
+  .header .btn-danger {
+    margin: 0 var(--sp-tight);
+    box-shadow: none;
+  }
+
+  & .profile-editor {
+    padding: var(--sp-loose) var(--sp-extra-loose);
+  } 
+
+  & .tabs__content {
+    padding: 0 var(--sp-normal);
+  }
+
+  &__cards-wrapper {
+    padding: 0 var(--sp-normal);
+    @include dir.side(padding, var(--sp-normal), var(--sp-extra-tight));
+  }
+}
+.settings-window__card {
+  margin: var(--sp-normal) 0;
+  background-color: var(--bg-surface);
+  border-radius: var(--bo-radius);
+  box-shadow: var(--bs-surface-border);
+  overflow: hidden;
+
+  & > .context-menu__header:first-child {
+    margin-top: 2px;
+  }
+}
+.settings-appearance__card,
+.settings-notifications,
+.global-notification,
+.keyword-notification,
+.ignore-user-list,
+.settings-security__card,
+.settings-security .device-manage,
+.settings-about__card,
+.settings-emoji__card {
+  @extend .settings-window__card;
+}
+
+.settings-window__cards-wrapper{
+  & .setting-tile {
+    margin: 0 var(--sp-normal);
+    margin-top: var(--sp-normal);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--bg-surface-border);
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+}
+
+.settings-notifications {
+  &__not-supported {
+    padding: 0 var(--sp-ultra-tight);
+  }
+}
+
+.settings-about {
+  &__branding {
+    padding: var(--sp-normal);
+    display: flex;
+    
+    & > div {
+      margin: 0 var(--sp-loose);
+    }
+    
+  }
+  &__btns {
+    & button {
+      margin-top: var(--sp-tight);
+      @include dir.side(margin, 0, var(--sp-tight));
+    }
+  }
+  
+  &__credits {
+    padding: 0 var(--sp-normal);
+    & ul {
+      color: var(--tc-surface-low);
+      padding: var(--sp-normal);
+      margin: var(--sp-extra-tight) 0;
+    }
+  }
+}
+
+.relay-manage {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.relay-buttons {
+  display: flex;
+  justify-content: left;
+  align-items: center;
+}
+.toggle-margin {
+  margin-right: 5px;
+}
