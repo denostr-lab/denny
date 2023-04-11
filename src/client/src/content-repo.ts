@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import * as utils from './utils';
+import * as utils from "./utils";
 
 /**
  * Get the HTTP URL for an MXC URI.
@@ -31,52 +31,52 @@ import * as utils from './utils';
  * @returns The complete URL to the content.
  */
 export function getHttpUriForMxc(
-  baseUrl: string,
-  mxc?: string,
-  width?: number,
-  height?: number,
-  resizeMethod?: string,
-  allowDirectLinks = false
+    baseUrl: string,
+    mxc?: string,
+    width?: number,
+    height?: number,
+    resizeMethod?: string,
+    allowDirectLinks = false,
 ): string {
-  if (typeof mxc !== 'string' || !mxc) {
-    return '';
-  }
-  if (mxc.startsWith('https')) {
-    return mxc;
-  }
-  if (mxc.indexOf('mxc://') !== 0) {
-    if (allowDirectLinks) {
-      return mxc;
-    } else {
-      return '';
+    if (typeof mxc !== "string" || !mxc) {
+        return "";
     }
-  }
-  let serverAndMediaId = mxc.slice(6); // strips mxc://
-  let prefix = '/_matrix/media/r0/download/';
-  const params: Record<string, string> = {};
+    if (mxc.startsWith("https")) {
+        return mxc;
+    }
+    if (mxc.indexOf("mxc://") !== 0) {
+        if (allowDirectLinks) {
+            return mxc;
+        } else {
+            return "";
+        }
+    }
+    let serverAndMediaId = mxc.slice(6); // strips mxc://
+    let prefix = "/_matrix/media/r0/download/";
+    const params: Record<string, string> = {};
 
-  if (width) {
-    params['width'] = Math.round(width).toString();
-  }
-  if (height) {
-    params['height'] = Math.round(height).toString();
-  }
-  if (resizeMethod) {
-    params['method'] = resizeMethod;
-  }
-  if (Object.keys(params).length > 0) {
-    // these are thumbnailing params so they probably want the
-    // thumbnailing API...
-    prefix = '/_matrix/media/r0/thumbnail/';
-  }
+    if (width) {
+        params["width"] = Math.round(width).toString();
+    }
+    if (height) {
+        params["height"] = Math.round(height).toString();
+    }
+    if (resizeMethod) {
+        params["method"] = resizeMethod;
+    }
+    if (Object.keys(params).length > 0) {
+        // these are thumbnailing params so they probably want the
+        // thumbnailing API...
+        prefix = "/_matrix/media/r0/thumbnail/";
+    }
 
-  const fragmentOffset = serverAndMediaId.indexOf('#');
-  let fragment = '';
-  if (fragmentOffset >= 0) {
-    fragment = serverAndMediaId.slice(fragmentOffset);
-    serverAndMediaId = serverAndMediaId.slice(0, fragmentOffset);
-  }
+    const fragmentOffset = serverAndMediaId.indexOf("#");
+    let fragment = "";
+    if (fragmentOffset >= 0) {
+        fragment = serverAndMediaId.slice(fragmentOffset);
+        serverAndMediaId = serverAndMediaId.slice(0, fragmentOffset);
+    }
 
-  const urlParams = Object.keys(params).length === 0 ? '' : '?' + utils.encodeParams(params);
-  return baseUrl + prefix + serverAndMediaId + urlParams + fragment;
+    const urlParams = Object.keys(params).length === 0 ? "" : "?" + utils.encodeParams(params);
+    return baseUrl + prefix + serverAndMediaId + urlParams + fragment;
 }

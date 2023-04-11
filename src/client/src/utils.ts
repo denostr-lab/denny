@@ -752,8 +752,6 @@ export function noUnsafeEventProps(event: Partial<IEvent>): boolean {
 }
 
 export class MapWithDefault<K, V> extends Map<K, V> {
-
-    
     public constructor(private createDefault: () => V) {
         super();
     }
@@ -771,23 +769,23 @@ export class MapWithDefault<K, V> extends Map<K, V> {
     }
 }
 
-export const now = () => Math.round(new Date().valueOf() / 1000)
+export const now = () => Math.round(new Date().valueOf() / 1000);
 
 export const timedelta = (n: number, unit = "seconds") => {
-  switch (unit) {
-    case "seconds":
-    case "second":
-      return n
-    case "minutes":
-    case "minute":
-      return n * 60
-    case "hours":
-    case "hour":
-      return n * 60 * 60
-    case "days":
-    case "day":
-      return n * 60 * 60 * 24
-    default:
-      throw new Error(`Invalid unit ${unit}`)
-  }
-}
+    switch (unit) {
+        case "seconds":
+        case "second":
+            return n;
+        case "minutes":
+        case "minute":
+            return n * 60;
+        case "hours":
+        case "hour":
+            return n * 60 * 60;
+        case "days":
+        case "day":
+            return n * 60 * 60 * 24;
+        default:
+            throw new Error(`Invalid unit ${unit}`);
+    }
+};

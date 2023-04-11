@@ -17,22 +17,22 @@ limitations under the License.
 /**
  * Defines m.olm encryption/decryption
  */
-import Key from '../../nostr/src/Key';
-import * as olmlib from '../olmlib';
+import Key from "../../nostr/src/Key";
+import * as olmlib from "../olmlib";
 
-import { nip04 } from 'nostr-tools';
+import { nip04 } from "nostr-tools";
 
-import type { IEventDecryptionResult } from '../../@types/crypto';
-import { DecryptionAlgorithm, EncryptionAlgorithm, registerAlgorithm } from './base';
-import { Room } from '../../models/room';
-import { IContent, MatrixEvent } from '../../models/event';
-import { SECP256K1EncryptedContent } from '../index';
-import { MsgType } from 'matrix-js-sdk/lib/@types/event';
-import { EventType } from '../../matrix';
-import { handMediaContent } from '../../nostr/src/Helpers';
+import type { IEventDecryptionResult } from "../../@types/crypto";
+import { DecryptionAlgorithm, EncryptionAlgorithm, registerAlgorithm } from "./base";
+import { Room } from "../../models/room";
+import { IContent, MatrixEvent } from "../../models/event";
+import { SECP256K1EncryptedContent } from "../index";
+import { MsgType } from "matrix-js-sdk/lib/@types/event";
+import { EventType } from "../../matrix";
+import { handMediaContent } from "../../nostr/src/Helpers";
 export interface IMessage {
-  type: number;
-  body: string;
+    type: number;
+    body: string;
 }
 
 /**
@@ -41,31 +41,27 @@ export interface IMessage {
  * @param params - parameters, as per {@link EncryptionAlgorithm}
  */
 class Secp256k1Encryption extends EncryptionAlgorithm {
-  /**
-   * @param content - plaintext event content
-   *
-   * @returns Promise which resolves to the new event body
-   */
-  public async encryptMessage(
-    room: Room,
-    eventType: string,
-    content: IContent
-  ): Promise<SECP256K1EncryptedContent> {
-    const pubKey = Key.getPubKey();
-    const priKey = Key.getPrivKey();
-    const needEncryptText = content.url || content.body;
-    const ciphertext = await nip04.encrypt(priKey, room.roomId, needEncryptText);
-    return {
-      ciphertext: {
-        [pubKey]: {
-          type: 1,
-          body: ciphertext,
-        },
-      },
-      sender_key: pubKey,
-      algorithm: olmlib.SECP256K1,
-    };
-  }
+    /**
+     * @param content - plaintext event content
+     *
+     * @returns Promise which resolves to the new event body
+     */
+    public async encryptMessage(room: Room, eventType: string, content: IContent): Promise<SECP256K1EncryptedContent> {
+        const pubKey = Key.getPubKey();
+        const priKey = Key.getPrivKey();
+        const needEncryptText = content.url || content.body;
+        const ciphertext = await nip04.encrypt(priKey, room.roomId, needEncryptText);
+        return {
+            ciphertext: {
+                [pubKey]: {
+                    type: 1,
+                    body: ciphertext,
+                },
+            },
+            sender_key: pubKey,
+            algorithm: olmlib.SECP256K1,
+        };
+    }
 }
 
 /**
@@ -74,28 +70,28 @@ class Secp256k1Encryption extends EncryptionAlgorithm {
  * @param params - parameters, as per {@link DecryptionAlgorithm}
  */
 class Secp256k1Decryption extends DecryptionAlgorithm {
-  /**
-   * returns a promise which resolves to a
-   * {@link EventDecryptionResult} once we have finished
-   * decrypting. Rejects with an `algorithms.DecryptionError` if there is a
-   * problem decrypting the event.
-   */
-  public async decryptEvent(event: MatrixEvent): Promise<IEventDecryptionResult> {
-    // const pubKey = Key.getPubKey();
-    const priKey = Key.getPrivKey();
-    const content = event.getWireContent();
-    const plaintext = await nip04.decrypt(priKey, event.getRoomId(), content.ciphertext);
-    const resContent = handMediaContent({
-      msgtype: MsgType.Text,
-      body: plaintext,
-    });
-    return {
-      clearEvent: {
-        type: EventType.RoomMessage,
-        content: resContent,
-      },
-    };
-  }
+    /**
+     * returns a promise which resolves to a
+     * {@link EventDecryptionResult} once we have finished
+     * decrypting. Rejects with an `algorithms.DecryptionError` if there is a
+     * problem decrypting the event.
+     */
+    public async decryptEvent(event: MatrixEvent): Promise<IEventDecryptionResult> {
+        // const pubKey = Key.getPubKey();
+        const priKey = Key.getPrivKey();
+        const content = event.getWireContent();
+        const plaintext = await nip04.decrypt(priKey, event.getRoomId(), content.ciphertext);
+        const resContent = handMediaContent({
+            msgtype: MsgType.Text,
+            body: plaintext,
+        });
+        return {
+            clearEvent: {
+                type: EventType.RoomMessage,
+                content: resContent,
+            },
+        };
+    }
 }
 
 registerAlgorithm(olmlib.SECP256K1, Secp256k1Encryption, Secp256k1Decryption);
