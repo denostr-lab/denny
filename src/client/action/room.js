@@ -196,13 +196,13 @@ async function createRoom(opts) {
   // joinRule: 'public' | 'invite' | 'restricted'
   const { name, topic, joinRule } = opts;
   const alias = opts.alias ?? undefined;
-  const parentId = opts.parentId ?? undefined;
-  const isSpace = opts.isSpace ?? false;
+  // const parentId = opts.parentId ?? undefined;
+  // const isSpace = opts.isSpace ?? false;
   const isEncrypted = opts.isEncrypted ?? false;
-  const powerLevel = opts.powerLevel ?? undefined;
-  const blockFederation = opts.blockFederation ?? false;
+  // const powerLevel = opts.powerLevel ?? undefined;
+  // const blockFederation = opts.blockFederation ?? false;
 
-  const mx = initMatrix.matrixClient;
+  // const mx = initMatrix.matrixClient;
   const visibility = joinRule === 'public' ? 'public' : 'private';
   const options = {
     creation_content: undefined,
@@ -267,13 +267,13 @@ async function createRoom(opts) {
 
   const result = await create(options);
 
-  if (parentId) {
-    await mx.sendStateEvent(parentId, 'm.space.child', {
-      auto_join: false,
-      suggested: false,
-      via: [getIdServer(mx.getUserId())],
-    }, result.room_id);
-  }
+  // if (parentId) {
+  //   await mx.sendStateEvent(parentId, 'm.space.child', {
+  //     auto_join: false,
+  //     suggested: false,
+  //     via: [getIdServer(mx.getUserId())],
+  //   }, result.room_id);
+  // }
 
   return result;
 }

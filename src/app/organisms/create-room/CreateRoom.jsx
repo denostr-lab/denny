@@ -34,7 +34,7 @@ import ChevronBottomIC from '../../../../public/res/ic/outlined/chevron-bottom.s
 import CrossIC from '../../../../public/res/ic/outlined/cross.svg';
 
 function CreateRoomContent({ isSpace, parentId, onRequestClose }) {
-  const [joinRule, setJoinRule] = useState(parentId ? 'restricted' : 'invite');
+  const [joinRule, setJoinRule] = useState(parentId ? 'invite' : 'public');
   const [isEncrypted, setIsEncrypted] = useState(true);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [creatingError, setCreatingError] = useState(null);
@@ -123,7 +123,7 @@ function CreateRoomContent({ isSpace, parentId, onRequestClose }) {
     let roomAlias;
     if (joinRule === 'public') {
       roomAlias = addressRef?.current?.value;
-      if (roomAlias.trim() === '') roomAlias = undefined;
+      if (roomAlias?.trim() === '') roomAlias = undefined;
     }
 
     const powerLevel = roleIndex === 1 ? 101 : undefined;
@@ -174,36 +174,39 @@ function CreateRoomContent({ isSpace, parentId, onRequestClose }) {
   // const joinRules = ['invite', 'restricted', 'public'];
   // const joinRuleShortText = ['Private', 'Restricted', 'Public'];
   // const joinRuleText = ['Private (invite only)', 'Restricted (space member can join)', 'Public (anyone can join)'];
-  // const jrRoomIC = [HashLockIC, HashIC, HashGlobeIC];
-  // const jrSpaceIC = [SpaceLockIC, SpaceIC, SpaceGlobeIC];
-  // const handleJoinRule = (evt) => {
-  //   openReusableContextMenu(
-  //     'bottom',
-  //     getEventCords(evt, '.btn-surface'),
-  //     (closeMenu) => (
-  //       <>
-  //         <MenuHeader>Visibility (who can join)</MenuHeader>
-  //         {
-  //           joinRules.map((rule) => (
-  //             <MenuItem
-  //               key={rule}
-  //               variant={rule === joinRule ? 'positive' : 'surface'}
-  //               iconSrc={
-  //                 isSpace
-  //                   ? jrSpaceIC[joinRules.indexOf(rule)]
-  //                   : jrRoomIC[joinRules.indexOf(rule)]
-  //               }
-  //               onClick={() => { closeMenu(); setJoinRule(rule); }}
-  //               disabled={!parentId && rule === 'restricted'}
-  //             >
-  //               { joinRuleText[joinRules.indexOf(rule)] }
-  //             </MenuItem>
-  //           ))
-  //         }
-  //       </>
-  //     ),
-  //   );
-  // };
+  const joinRules = ['public', 'invite'];
+  const joinRuleShortText = ['Public', 'Private'];
+  const joinRuleText = ['Public (anyone can join)', 'Private (invite only)'];
+  const jrRoomIC = [HashLockIC, HashIC, HashGlobeIC];
+  const jrSpaceIC = [SpaceLockIC, SpaceIC, SpaceGlobeIC];
+  const handleJoinRule = (evt) => {
+    openReusableContextMenu(
+      'bottom',
+      getEventCords(evt, '.btn-surface'),
+      (closeMenu) => (
+        <>
+          <MenuHeader>Visibility (who can join)</MenuHeader>
+          {
+            joinRules.map((rule) => (
+              <MenuItem
+                key={rule}
+                variant={rule === joinRule ? 'positive' : 'surface'}
+                iconSrc={
+                  isSpace
+                    ? jrSpaceIC[joinRules.indexOf(rule)]
+                    : jrRoomIC[joinRules.indexOf(rule)]
+                }
+                onClick={() => { closeMenu(); setJoinRule(rule); }}
+                disabled={!parentId && rule === 'restricted'}
+              >
+                {joinRuleText[joinRules.indexOf(rule)]}
+              </MenuItem>
+            ))
+          }
+        </>
+      ),
+    );
+  };
 
   return (
     <div className="create-room">
