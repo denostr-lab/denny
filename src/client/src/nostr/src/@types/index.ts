@@ -28,7 +28,7 @@ enum CryptoGroupExtention {
 }
 export interface RoomKey {
     session_id: string;
-    sender_key: string;
+    session_key: string;
     room_id: string;
 }
 

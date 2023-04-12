@@ -704,7 +704,7 @@ class Events {
         if (!roomid) {
             return;
         }
-        if (!decryptoContent?.room_id || !decryptoContent?.sender_key || !decryptoContent?.session_id) {
+        if (!decryptoContent?.room_id || !decryptoContent?.session_key || !decryptoContent?.session_id) {
             return;
         }
         _createRoom();
