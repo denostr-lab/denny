@@ -422,6 +422,9 @@ class NostrClient {
             world_readable: true,
         }));
     }
+    handleDeCryptedRoomMeta(event: MatrixEvent) {
+        Events.handleDeCryptedRoomMeta(this.client, event);
+    }
 }
 
 export default NostrClient;

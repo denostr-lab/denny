@@ -29,7 +29,6 @@ import { IContent, MatrixEvent } from "../../models/event";
 import { SECP256K1EncryptedContent } from "../index";
 import { MsgType } from "matrix-js-sdk/lib/@types/event";
 import { EventType } from "../../matrix";
-import { handMediaContent } from "../../nostr/src/Helpers";
 export interface IMessage {
     type: number;
     body: string;
@@ -77,18 +76,16 @@ class Secp256k1Decryption extends DecryptionAlgorithm {
      * problem decrypting the event.
      */
     public async decryptEvent(event: MatrixEvent): Promise<IEventDecryptionResult> {
-        // const pubKey = Key.getPubKey();
         const priKey = Key.getPrivKey();
         const content = event.getWireContent();
         const plaintext = await nip04.decrypt(priKey, event.getRoomId() as string, content.ciphertext);
-        const resContent = handMediaContent({
-            msgtype: MsgType.Text,
-            body: plaintext,
-        });
         return {
             clearEvent: {
                 type: EventType.RoomMessage,
-                content: resContent,
+                content: {
+                    msgtype: MsgType.Text,
+                    body: plaintext,
+                },
             },
         };
     }

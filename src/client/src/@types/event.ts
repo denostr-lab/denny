@@ -21,7 +21,6 @@ export enum EventType {
     RoomCanonicalAlias = "m.room.canonical_alias",
     RoomCreate = "m.room.create",
     RoomMetaEncrypted = "m.room.meta_encrypted",
-
     RoomJoinRules = "m.room.join_rules",
     RoomMember = "m.room.member",
     RoomThirdPartyInvite = "m.room.third_party_invite",

@@ -125,6 +125,9 @@ export const handMediaContent = (content: IContent): IContent => {
 
 export const getQuery = (content: string): Record<string, string> => {
     // str为？之后的参数部分字符串
+    if (!content) {
+        return {};
+    }
     const str = content.substr(content.indexOf("?") + 1);
     // arr每个元素都是完整的参数键值
     const arr = str.split("&");

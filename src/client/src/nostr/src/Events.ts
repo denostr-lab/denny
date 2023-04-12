@@ -1,5 +1,5 @@
-import { ISyncResponse } from "../../sync-accumulator";
 import { debounce } from "lodash-es";
+import { IStateEvent, IStrippedState, ISyncResponse } from "../../sync-accumulator";
 import { MatrixClient } from "../../client";
 
 // import IndexedDB from './IndexedDB';
@@ -28,6 +28,7 @@ import { EventType, RelationType } from "../../@types/event";
 import { MsgType } from "matrix-js-sdk/lib/@types/event";
 import { IContent } from "matrix-js-sdk/lib/models/event";
 import { MetaInfo, RoomMetaInfo, Kinds, RoomKey } from "./@types";
+import { MatrixEvent } from "../../matrix";
 
 type UserProfile = {
     picture: string;
@@ -37,8 +38,7 @@ type UserProfile = {
 };
 
 class Events {
-    bufferEvent: ISyncResponse | null;
-
+    bufferEvent: ISyncResponse | null = null;
     operatedEvent: Record<string, boolean> = {};
 
     userProfileMap: { [key: string]: UserProfile } = {};
@@ -70,6 +70,56 @@ class Events {
         });
     };
 
+    handleDeCryptedRoomMeta(client: MatrixClient, event: MatrixEvent) {
+        // 在这里创建房间
+
+        const roomid = event.getRoomId() as string;
+        const userId = client.getUserId();
+        let syncResponse = this.bufferEvent;
+
+        if (!syncResponse) {
+            syncResponse = getDefaultSyncResponse();
+            this.bufferEvent = syncResponse;
+        }
+
+        const created_at = event.getTs();
+        const content = event.getContent();
+        const roomAttrs = [
+            { key: "create", type: EventType.RoomCreate, content: { creator: event.sender?.userId }, state_key: "" },
+            { key: "name", type: EventType.RoomName, content: { name: content.name }, state_key: "" },
+            { key: "topic", type: EventType.RoomTopic, content: { topic: content.about }, state_key: "" },
+            { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture }, state_key: "" },
+            { key: "join-rules", type: EventType.RoomJoinRules, content: { join_rule: "private" }, state_key: "" },
+            {
+                key: "member",
+                type: EventType.RoomMember,
+                state_key: userId,
+                content: { displayname: userId, membership: "join" },
+            },
+        ];
+        if (!syncResponse.rooms.join?.[roomid]) {
+            syncResponse.rooms.join[roomid] = getDefaultRoomData();
+        }
+
+        for (const roomAttr of roomAttrs) {
+            if (roomAttr.key === "member") {
+                const isLeave = client.nostrClient.hasLeaveRoom(roomid) && Key.getPubKey() === userId;
+                roomAttr.content.membership = isLeave ? "leave" : "join";
+            }
+
+            syncResponse.rooms.join[roomid].state.events.push({
+                content: roomAttr.content as unknown as IStateEvent,
+                origin_server_ts: created_at,
+                sender: event.sender?.userId as string,
+                state_key: roomAttr.state_key as string,
+                type: roomAttr.type,
+                unsigned: {
+                    age: Date.now() - created_at,
+                },
+                event_id: `${roomAttr.key}-${event.getId()}-${Math.random().toString(16).slice(2, 8)}`,
+            });
+        }
+    }
     handleLeaveRoom(client: MatrixClient, event: Event) {
         if (![40, 41, 42, 4].includes(event?.kind)) return false;
         if (!Array.isArray(event?.tags)) return false;
@@ -130,7 +180,7 @@ class Events {
     }
 
     getEventRoot(event: Event) {
-        return event?.tags.find((t) => t[0] === "e" && t[3] === "root")?.[1];
+        return event.tags.find((t) => t[0] === "e" && t[3] === "root")?.[1];
     }
 
     getRooms() {
@@ -756,6 +806,39 @@ class Events {
         if (!syncResponse.rooms.join?.[roomid]) {
             syncResponse.rooms.join[roomid] = getDefaultRoomData();
         }
+        const userId = client.getUserId();
+        const memberStates = event.tags
+            .filter((tag) => tag[0] === "p" && tag[1] !== userId)
+            .map((i) => {
+                return {
+                    content: {
+                        avatar_url: "",
+                        displayname: i[1],
+                        membership: "join",
+                    },
+                    type: EventType.RoomMember,
+                    sender: i[1],
+                    state_key: i[1],
+                };
+            })
+            .filter((memberState) => {
+                return !this.roomJoinMap[roomid].has(memberState.sender);
+            });
+        memberStates.forEach((memberState) => {
+            this.roomJoinMap[roomid].add(memberState.sender);
+        });
+        memberStates.forEach((roomState) => {
+            const metadata: RoomMetaInfo = {
+                roomId: roomid,
+                sender: roomState.sender,
+                eventId: `${roomState.type}-${roomState.sender}`,
+                createdAt: created_at,
+                content: roomState.content,
+                type: roomState.type,
+                state_key: roomState.state_key,
+            };
+            addRoomMeta(syncResponse, metadata);
+        });
         syncResponse.rooms.join[roomid].state.events.push({
             content: content,
             origin_server_ts: created_at,
@@ -769,14 +852,13 @@ class Events {
         });
     };
     handlePrivateGroupRoomMessageEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
-        let tag = "e";
         const eventContent = event.content;
         const ciphertext = eventContent.split("?")[0];
         const query = getQuery(eventContent);
         if (!query?.session_id) {
             return;
         }
-        let roomid = event?.tags?.find?.((tags) => tags[0] === tag && tags[3] === "root")?.[1] as string;
+        let roomid = event.tags.find((tags) => tags[0] === "e" && tags[3] === "root")?.[1] as string;
         if (!roomid) {
             return;
         }
@@ -785,6 +867,7 @@ class Events {
             sender_key: event.pubkey,
             session_id: query.session_id,
             ciphertext,
+            version: query.v,
         } as IContent;
 
         if (!syncResponse.rooms.join?.[roomid]) {
