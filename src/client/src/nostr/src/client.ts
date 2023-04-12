@@ -100,7 +100,7 @@ class NostrClient {
         const exitedIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const ids = [...new Set([...userIds, ...exitedIds])];
         if (ids?.length) {
-            const roomFilters = [{ kinds: [5, 0], authors: ids }];
+            const roomFilters = [{ kinds: [0, 5, 7], authors: ids }];
             this.relay.subscribe({ filters: roomFilters, id: "global-user-deletion" });
         }
     }
