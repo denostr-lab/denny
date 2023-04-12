@@ -7943,19 +7943,13 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         // return this.http.authedRequest(Method.Post, '/createRoom', undefined, options);
 
         // change by nostr
-        let roomId: string | undefined;
-        if (options.is_direct) {
-            const event = await this.publishPublicCreateMessage({
-                ...options,
-                name: options.name,
-                about: options.topic || "",
-            });
-            roomId = event.id;
-        } else {
-            roomId = options.name;
-        }
+        const event = await this.publishPublicCreateMessage({
+            ...options,
+            name: options.name,
+            about: options.topic || "",
+        });
 
-        return { room_id: roomId };
+        return { room_id: event.id };
     }
 
     /**
