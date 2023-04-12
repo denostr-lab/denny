@@ -237,6 +237,7 @@ class NostrClient {
     }
 
     async createRoom(metadata: RomMetaUpdateData) {
+        console.log("createRoom() --------------- metadata=", metadata);
         if (metadata.isDM) {
             const event = {
                 kind: 4,
@@ -247,10 +248,54 @@ class NostrClient {
             Events.handle(this.client, event);
             return { id: metadata.name };
         }
+
+        if (metadata?.visibility === "private") {
+            const sessionId = this.client.crypto.olmDevice.createOutboundGroupSession();
+            const sessionKey = this.client.crypto.olmDevice.getOutboundGroupSessionKey(sessionId);
+
+            const createEncryptedChannelEvent: Event = {
+                kind: 140,
+                content: JSON.stringify({
+                    name: metadata.name || "Empty Room",
+                    about: metadata.about || "",
+                    ...{ picture: metadata.picture || "" },
+                }),
+                tags: [["p", Key.getPubKey()]],
+            };
+            createEncryptedChannelEvent.content =
+                this.client.crypto.olmDevice.encryptGroupMessage(sessionId, createEncryptedChannelEvent.content) +
+                `?sid=${sessionId}`;
+            await this.handPublishEvent(createEncryptedChannelEvent);
+
+            const communicateMegolmSessionEvent: Event = {
+                kind: 104,
+                content: JSON.stringify({
+                    session_id: sessionId,
+                    session_key: sessionKey,
+                    room_id: createEncryptedChannelEvent.id,
+                }),
+                // created_at: Math.floor(Date.now() / 1000) + 1,
+            };
+            communicateMegolmSessionEvent.content = await Key.encrypt(communicateMegolmSessionEvent.content);
+            await this.handPublishEvent(communicateMegolmSessionEvent);
+
+            const events = [communicateMegolmSessionEvent, createEncryptedChannelEvent];
+            console.log("events==========", events);
+            const promises = events.map(async (event: Event) => {
+                this.relay.publish(event);
+                await utils.sleep(2000);
+                return event;
+            });
+            await Promise.all(promises);
+
+            return createEncryptedChannelEvent;
+        }
+
         const event = {
             kind: 40,
             content: JSON.stringify({
-                ...metadata,
+                name: metadata.name || "Empty Room",
+                about: metadata.about || "",
                 ...{ picture: metadata.picture || "" },
             }),
         } as Event;
@@ -343,6 +388,14 @@ class NostrClient {
             content: body,
             pubkey: userId,
         } as Event;
+
+        console.log("nbnb ---- content=", event);
+        console.log("nbnb ---- roomId=", roomId);
+        console.log("nbnb ---- userId=", userId);
+        console.log("nbnb ---- body=", body);
+        console.log("nbnb ---- room.currentState=", room.currentState.events);
+        return;
+
         try {
             await this.handPublishEvent(event);
             this.relay.publish(event);
