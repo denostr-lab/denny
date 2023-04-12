@@ -235,14 +235,12 @@ class NostrClient {
 
     async createRoom(metadata: RomMetaUpdateData) {
         if (metadata.isDM) {
-            const event: Event = {
+            const event = {
                 kind: 4,
                 content: "nostr-create-room",
-                created_at: Math.floor(Date.now() / 1000),
                 tags: [["p", metadata.name, ""]],
-                pubkey: this.client.getUserId(),
-            };
-            event.id = getEventHash(event);
+            } as Event;
+            await this.handPublishEvent(event);
             Events.handle(this.client, event);
             return { id: metadata.name };
         }
