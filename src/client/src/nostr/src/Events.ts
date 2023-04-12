@@ -290,10 +290,10 @@ class Events {
                 return;
             }
             // 直接设置房间的 name abcout, picture
-            const room = client.getRoom(event.pubkey);
-            if (!room) {
-                return;
-            }
+            // const room = client.getRoom(event.pubkey);
+            // if (!room) {
+            //     return;
+            // }
             for (const roomType in ROOM_META_TYPES) {
                 // 直接加入
                 const roomValue = ROOM_META_TYPES[roomType];
