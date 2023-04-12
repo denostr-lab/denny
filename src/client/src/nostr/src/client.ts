@@ -314,7 +314,7 @@ class NostrClient {
                 tags = [["e", rawEvent.event.redacts]];
             } else if (relatePersonList?.length) {
                 relatePersonList.forEach((pubkey) => {
-                    tags.push(["p", pubkey.reply("@", "")]);
+                    tags.push(["p", pubkey.replace("@", "")]);
                 });
             }
             return tags;
