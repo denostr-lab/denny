@@ -274,6 +274,7 @@ class NostrClient {
                     session_key: sessionKey,
                     room_id: createEncryptedChannelEvent.id,
                 }),
+                tags: [["p", Key.getPubKey()]],
                 // created_at: Math.floor(Date.now() / 1000) + 1,
             };
             communicateMegolmSessionEvent.content = await Key.encrypt(communicateMegolmSessionEvent.content);
