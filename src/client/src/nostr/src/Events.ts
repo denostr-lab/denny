@@ -137,6 +137,9 @@ class Events {
         return this.rooms;
     }
 
+    getRoom(roomId: string) {
+        return this.rooms.get(roomId);
+    }
     addRoom(roomId: string, content: any) {
         const rooms = this.getRooms();
         if (rooms.has(roomId)) {
@@ -640,7 +643,6 @@ class Events {
 
     handlePrivateGroupRoomKeyEvent = async (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
         // 只监听了发给自己的104消息不会有其他人的
-        let roomid = "";
 
         const _decryptoMessage = async () => {
             try {
@@ -649,14 +651,11 @@ class Events {
                 const decryptoContent = JSON.parse(
                     await nip04.decrypt(priKey, event.pubkey, ciphertext),
                 ) as unknown as RoomKey;
-
-                roomid = decryptoContent?.room_id;
-
                 return decryptoContent;
             } catch (e) {}
         };
 
-        const _createRoom = () => {
+        const _createRoom = (roomid: string) => {
             if (!roomid) {
                 return;
             }
@@ -701,14 +700,13 @@ class Events {
             });
         };
         let decryptoContent = await _decryptoMessage();
-        if (!roomid) {
-            return;
-        }
+
         if (!decryptoContent?.room_id || !decryptoContent?.session_key || !decryptoContent?.session_id) {
             return;
         }
-        _createRoom();
+        _createRoom(decryptoContent?.room_id);
         _addTodevice(decryptoContent);
+        this.addRoom(decryptoContent?.room_id, { ...decryptoContent, pubkey: event.pubkey, created_at: 1 });
     };
 
     handlePrivateGroupRoomMetaEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
@@ -724,14 +722,19 @@ class Events {
             return;
         }
         const room = client.getRoom(roomid);
-        if (!room) {
-            return;
+        let sendKey = null;
+
+        if (room) {
+            const cryptoStateEvent = room.currentState.getStateEvents(EventType.RoomEncryption, "");
+            sendKey = cryptoStateEvent?.sender?.userId;
         }
-        const cryptoStateEvent = room.currentState.getStateEvents(EventType.RoomEncryption, "");
-        if (!cryptoStateEvent) {
-            return;
+        if (!sendKey) {
+            const room = this.getRoom(roomid);
+            sendKey = room.pubkey;
         }
-        if (cryptoStateEvent?.sender?.userId !== event.pubkey) {
+        // 在此之前肯定已经有房间了
+
+        if (sendKey !== event.pubkey) {
             // 虚假消息
             return;
         }

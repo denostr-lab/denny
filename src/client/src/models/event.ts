@@ -371,7 +371,6 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
             if (typeof event.content?.["m.relates_to"]?.[prop] !== "string") return;
             event.content["m.relates_to"][prop] = internaliseString(event.content["m.relates_to"][prop]!);
         });
-
         this.txnId = event.txn_id;
         this.localTimestamp = Date.now() - (this.getAge() ?? 0);
         this.reEmitter = new TypedReEmitter(this);
@@ -966,7 +965,7 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
      * established the megolm session
      */
     public getSenderKey(): string | null {
-        return this.senderCurve25519Key;
+        return this.sender?.userId || this.senderCurve25519Key;
     }
 
     /**
