@@ -1363,6 +1363,12 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         // We do this so that push rules are correctly executed on events in their decrypted
         // state, such as highlights when the user's name is mentioned.
         this.on(MatrixEventEvent.Decrypted, (event) => {
+            // change by nostr
+            if (event.getType() === EventType.RoomMetaEncrypted) {
+                // 在这里传递给Event
+                this.nostrClient.handleDeCryptedRoomMeta(event)
+                return
+            }
             fixNotificationCountOnDecryption(this, event);
         });
 
