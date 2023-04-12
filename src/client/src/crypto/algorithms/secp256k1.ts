@@ -80,7 +80,7 @@ class Secp256k1Decryption extends DecryptionAlgorithm {
         // const pubKey = Key.getPubKey();
         const priKey = Key.getPrivKey();
         const content = event.getWireContent();
-        const plaintext = await nip04.decrypt(priKey, event.getRoomId(), content.ciphertext);
+        const plaintext = await nip04.decrypt(priKey, event.getRoomId() as string, content.ciphertext);
         const resContent = handMediaContent({
             msgtype: MsgType.Text,
             body: plaintext,

@@ -948,7 +948,10 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
      * @returns True if this event is encrypted.
      */
     public isEncrypted(): boolean {
-        return !this.isState() && this.event.type === EventType.RoomMessageEncrypted;
+        const isEncrypted =
+            (!this.isState() && this.event.type === EventType.RoomMessageEncrypted) ||
+            this.event.type === EventType.RoomMetaEncrypted;
+        return isEncrypted;
     }
 
     /**

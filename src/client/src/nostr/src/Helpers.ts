@@ -59,6 +59,9 @@ export const getDefaultSyncResponse = (): ISyncResponse => {
         presence: {
             events: [],
         },
+        to_device: {
+            events: [],
+        },
         next_batch: `${Math.random()}`,
         rooms: {
             join: {},
@@ -118,4 +121,19 @@ export const handMediaContent = (content: IContent): IContent => {
         }
     }
     return content;
+};
+
+export const getQuery = (content: string): Record<string, string> => {
+    // str为？之后的参数部分字符串
+    const str = content.substr(content.indexOf("?") + 1);
+    // arr每个元素都是完整的参数键值
+    const arr = str.split("&");
+    // result为存储参数键值的集合
+    const result: Record<string, string> = {};
+    for (let i = 0; i < arr.length; i++) {
+        // item的两个元素分别为参数名和参数值
+        const item = arr[i].split("=");
+        result[item[0]] = item[1];
+    }
+    return result;
 };

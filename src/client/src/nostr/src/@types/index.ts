@@ -20,4 +20,16 @@ enum KindExtention {
     Typing = 20001,
     Recipent = 20002,
 }
-export type Kinds = Kind | KindExtention;
+enum CryptoGroupExtention {
+    RoomKey = 104,
+    RoomCreation = 140,
+    RoomMeta = 141,
+    RoomMessage = 142,
+}
+export interface RoomKey {
+    session_id: string;
+    sender_key: string;
+    room_id: string;
+}
+
+export type Kinds = Kind | KindExtention | CryptoGroupExtention;

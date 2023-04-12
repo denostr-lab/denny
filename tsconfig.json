@@ -1,17 +1,19 @@
 {
   "compilerOptions": {
-    "sourceMap": true,
-    "jsx": "react",
-    "target": "ES6",
-    "allowJs": true,
+    "target": "es2016",
+    "experimentalDecorators": true,
     "esModuleInterop": true,
-    "moduleResolution": "Node",
-    "outDir": "dist",
-    "skipLibCheck": true,
-    "paths": {
-      "src/*": ["src/*"]
-    }
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noUnusedLocals": true,
+    "noEmit": true,
+    "declaration": true,
+    "strict": true
   },
-  "exclude": ["node_modules", "dist"],
-  "include": ["src"]
+  "include": ["./src/**/*.ts", "./spec/**/*.ts"],
+  "typedocOptions": {
+    "entryPoints": ["src/index.ts"],
+    "excludeExternals": true,
+    "out": "_docs"
+  }
 }

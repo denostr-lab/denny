@@ -1,8 +1,5 @@
-import { Event, verifySignature } from "nostr-tools";
-import { MsgType } from "matrix-js-sdk/lib/@types/event";
-import { IContent } from "matrix-js-sdk/lib/models/event";
-
 import { ISyncResponse } from "../../sync-accumulator";
+import { debounce } from "lodash-es";
 import { MatrixClient } from "../../client";
 
 // import IndexedDB from './IndexedDB';
@@ -14,10 +11,23 @@ import {
     stateKeyFilters,
     getDefaultSyncResponse,
     handMediaContent,
+    getQuery,
 } from "./Helpers";
+import * as olmlib from "../../crypto/olmlib";
+import * as algorithms from "../../crypto/algorithms";
 
+import {
+    CachedReceiptStructure,
+    MAIN_ROOM_TIMELINE,
+    Receipt,
+    ReceiptContent,
+    ReceiptType,
+} from "../../@types/read_receipts";
+import { Event, Kind, nip04, verifySignature } from "nostr-tools";
 import { EventType, RelationType } from "../../@types/event";
-import { MetaInfo, RoomMetaInfo, Kinds } from "./@types";
+import { MsgType } from "matrix-js-sdk/lib/@types/event";
+import { IContent } from "matrix-js-sdk/lib/models/event";
+import { MetaInfo, RoomMetaInfo, Kinds, RoomKey } from "./@types";
 
 type UserProfile = {
     picture: string;
@@ -138,48 +148,6 @@ class Events {
         } else {
             this.rooms.set(roomId, { roomId, ...content });
         }
-    }
-
-    convertEventToSyncResponse(client: MatrixClient, event: Event, syncResponse?: ISyncResponse): ISyncResponse {
-        /*
-      处理 不同消息放入不同的数据结构
-      kind 20000-29999 短暂信息 例子(typing,recipet) 放入 join 的ephemeral
-      kind 42 群聊的消息 直接放入房间的里面的
-      kind 4 单聊的消息
-    */
-        if (!syncResponse) {
-            syncResponse = getDefaultSyncResponse();
-        }
-        switch (event.kind as Kinds) {
-            case 0:
-                this.handleUserMetaEvent(client, event, syncResponse);
-                break;
-            case 4:
-                this.handlePrivateEvent(client, event, syncResponse);
-                break;
-            case 5:
-                this.handleDeleteMessageEvent(client, event, syncResponse);
-                break;
-            case 7:
-                this.handleReactionMessageEvent(client, event, syncResponse);
-                break;
-            case 40:
-                this.handleCreateRoomEvent(client, event, syncResponse);
-                break;
-            case 41:
-                this.handleRoomMetaDataEvent(client, event, syncResponse);
-                break;
-            case 42:
-                this.handleChannleMessage(client, event, syncResponse);
-                break;
-            // case 20001:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
-            // case 20002:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
-        }
-        return syncResponse;
     }
 
     handleCreateRoomEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
@@ -669,6 +637,229 @@ class Events {
             addRoomMeta(syncResponse, metadata);
         });
     };
+
+    handlePrivateGroupRoomKeyEvent = async (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
+        // 只监听了发给自己的104消息不会有其他人的
+        let roomid = "";
+
+        const _decryptoMessage = async () => {
+            try {
+                const ciphertext = event.content;
+                const priKey = Key.getPrivKey();
+                const decryptoContent = JSON.parse(
+                    await nip04.decrypt(priKey, event.pubkey, ciphertext),
+                ) as unknown as RoomKey;
+
+                roomid = decryptoContent?.room_id;
+
+                return decryptoContent;
+            } catch (e) {}
+        };
+
+        const _createRoom = () => {
+            if (!roomid) {
+                return;
+            }
+            // 这里仅仅只是加入了房间的加密信息, 并没有放入房间的creation信息
+            if (!this.roomJoinMap[roomid]) {
+                this.roomJoinMap[roomid] = new Set();
+                const room = client.getRoom(roomid);
+                if (!room) {
+                    const roomState = {
+                        content: {
+                            algorithm: olmlib.MEGOLM_ALGORITHM,
+                        },
+                        type: EventType.RoomEncryption,
+                        sender: event.pubkey,
+                        state_key: "",
+                    };
+                    const metadata: RoomMetaInfo = {
+                        roomId: roomid,
+                        sender: roomState.sender ?? event.pubkey,
+                        eventId: `${roomState.type}-${event.id}`,
+                        createdAt: 1,
+                        content: roomState.content,
+                        type: roomState.type,
+                        state_key: roomState.state_key ?? "",
+                    };
+                    addRoomMeta(syncResponse, metadata);
+                }
+            }
+        };
+        const _addTodevice = (decryptoContent: RoomKey) => {
+            // 添加到to_device的数据里去解析数据
+            syncResponse.to_device!.events.push({
+                content: {
+                    algorithm: olmlib.MEGOLM_ALGORITHM,
+                    sender_key: event.pubkey,
+                    session_id: decryptoContent.session_id,
+                    session_key: decryptoContent.session_key,
+                    room_id: decryptoContent.room_id,
+                },
+                sender: event.pubkey,
+                type: EventType.RoomKey,
+            });
+        };
+        let decryptoContent = await _decryptoMessage();
+        if (!roomid) {
+            return;
+        }
+        if (!decryptoContent?.room_id || !decryptoContent?.sender_key || !decryptoContent?.session_id) {
+            return;
+        }
+        _createRoom();
+        _addTodevice(decryptoContent);
+    };
+
+    handlePrivateGroupRoomMetaEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
+        // 房间的140 和141非常相近 只是roomid的获取不同
+        // 但是141还必须验证 event.pubkey 必须等于房间里面的加密算法加入人的信息
+
+        let roomid = event.id;
+        const kind = event.kind as Kinds;
+        if (kind === 141) {
+            roomid = event.tags.find((tags) => tags[0] === "e" && tags[3] === "root")?.[1] as string;
+        }
+        if (!roomid) {
+            return;
+        }
+        const room = client.getRoom(roomid);
+        if (!room) {
+            return;
+        }
+        const cryptoStateEvent = room.currentState.getStateEvents(EventType.RoomEncryption, "");
+        if (!cryptoStateEvent) {
+            return;
+        }
+        if (cryptoStateEvent?.sender?.userId !== event.pubkey) {
+            // 虚假消息
+            return;
+        }
+        const eventContent = event.content;
+        const ciphertext = eventContent.split("?")[0];
+        const query = getQuery(eventContent);
+        if (!query?.session_id) {
+            return;
+        }
+        const content = {
+            algorithm: olmlib.MEGOLM_ALGORITHM,
+            sender_key: event.pubkey,
+            session_id: query.session_id,
+            ciphertext,
+        };
+        const created_at = event.created_at * 1000;
+
+        // 获取当前爱房间中的state的
+        if (!syncResponse.rooms.join?.[roomid]) {
+            syncResponse.rooms.join[roomid] = getDefaultRoomData();
+        }
+        syncResponse.rooms.join[roomid].state.events.push({
+            content: content,
+            origin_server_ts: created_at,
+            sender: event.pubkey,
+            state_key: "",
+            type: EventType.RoomMetaEncrypted,
+            unsigned: {
+                age: Date.now() - created_at,
+            },
+            event_id: event.id,
+        });
+    };
+    handlePrivateGroupRoomMessageEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
+        let tag = "e";
+        const eventContent = event.content;
+        const ciphertext = eventContent.split("?")[0];
+        const query = getQuery(eventContent);
+        if (!query?.session_id) {
+            return;
+        }
+        let roomid = event?.tags?.find?.((tags) => tags[0] === tag && tags[3] === "root")?.[1] as string;
+        if (!roomid) {
+            return;
+        }
+        let content = {
+            algorithm: olmlib.MEGOLM_ALGORITHM,
+            sender_key: event.pubkey,
+            session_id: query.session_id,
+            ciphertext,
+        } as IContent;
+
+        if (!syncResponse.rooms.join?.[roomid]) {
+            syncResponse.rooms.join[roomid] = getDefaultRoomData();
+        }
+        const created_at = event.created_at * 1000;
+        const replyEventId = event.tags.find((tags) => tags[0] === "e" && tags[3] === "reply")?.[1] as string;
+        if (replyEventId) {
+            content["m.relates_to"] = {
+                "m.in_reply_to": {
+                    event_id: replyEventId,
+                },
+            };
+        }
+        syncResponse.rooms.join[roomid].timeline.events.push({
+            content,
+            origin_server_ts: created_at,
+            sender: event.pubkey,
+            type: EventType.RoomMessageEncrypted,
+            unsigned: {
+                age: Date.now() - created_at,
+            },
+            event_id: event.id,
+        });
+    };
+    convertEventToSyncResponse(client: MatrixClient, event: Event, syncResponse?: ISyncResponse): ISyncResponse {
+        /*
+      处理 不同消息放入不同的数据结构
+      kind 20000-29999 短暂信息 例子(typing,recipet) 放入 join 的ephemeral
+      kind 42 群聊的消息 直接放入房间的里面的
+      kind 4 单聊的消息
+    */
+        if (!syncResponse) {
+            syncResponse = getDefaultSyncResponse();
+        }
+        switch (event.kind as Kinds) {
+            case 0:
+                this.handleUserMetaEvent(client, event, syncResponse);
+                break;
+            case 4:
+                this.handlePrivateEvent(client, event, syncResponse);
+                break;
+            case 5:
+                this.handleDeleteMessageEvent(client, event, syncResponse);
+                break;
+            case 7:
+                this.handleReactionMessageEvent(client, event, syncResponse);
+                break;
+            case 40:
+                this.handleCreateRoomEvent(client, event, syncResponse);
+                break;
+            case 41:
+                this.handleRoomMetaDataEvent(client, event, syncResponse);
+                break;
+            case 42:
+                this.handleChannleMessage(client, event, syncResponse);
+                break;
+            case 104:
+                this.handlePrivateGroupRoomKeyEvent(client, event, syncResponse);
+                break;
+            case 140:
+                this.handlePrivateGroupRoomMetaEvent(client, event, syncResponse);
+                break;
+            case 141:
+                this.handlePrivateGroupRoomMetaEvent(client, event, syncResponse);
+                break;
+            case 142:
+                this.handlePrivateGroupRoomMessageEvent(client, event, syncResponse);
+                break;
+            // case 20001:
+            //   this.handleEphemeralEvent(event, syncResponse);
+            //   break;
+            // case 20002:
+            //   this.handleEphemeralEvent(event, syncResponse);
+            //   break;
+        }
+        return syncResponse;
+    }
 }
 
 export default new Events();

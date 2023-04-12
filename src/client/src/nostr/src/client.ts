@@ -8,7 +8,8 @@ import { MetaInfo } from "./@types/index";
 import { EventType } from "../../@types/event";
 import { IJoinedRoom } from "../../sync-accumulator";
 import { MatrixEvent } from "../../models/event";
-import cons from "src/client/state/cons";
+import * as olmlib from "../../crypto/olmlib";
+
 // export { Filter as NostrFilter };
 let allRooms = [];
 let allUsers = [];
@@ -47,13 +48,10 @@ class NostrClient {
         const userIds = this.client.getUsers().map((user) => user.userId) as string[];
 
         const pubkey = this.client.getUserId() as string;
-        const onceFilters: Filter[] = [
-            { kinds: [4, 42, 7], authors: [pubkey], since },
-            { "kinds": [4, 42, 7], "#p": [pubkey], since },
-        ];
+        const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since }];
         const filters: Filter[] = [
             { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since },
-            { "kinds": [4, 7], "#p": [pubkey], since },
+            { "kinds": [4, 7, 104], "#p": [pubkey], since },
         ];
 
         this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
@@ -84,11 +82,13 @@ class NostrClient {
         const since = utils.now() - utils.timedelta(30, "days");
         const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])];
-        if (roomIds?.length) {
+        const publicGroupMessage = [41, 42, 7];
+        const privateGroupMessage = [140, 141, 142]; // 拿到房间的
+        if (roomIds.length) {
             const roomFilters = [
-                { "kinds": [41, 42, 7], "#e": roomIds, since },
+                { "kinds": [...publicGroupMessage, ...privateGroupMessage], "#e": roomIds as string[], since },
                 { kinds: [40], ids: roomIds, since },
-            ];
+            ] as Filter[];
             this.relay.subscribe({ filters: roomFilters, id: "global-room" });
         }
     }
@@ -274,14 +274,20 @@ class NostrClient {
         // 这里处理各种需要发送的消息
 
         const content = rawEvent.getWireContent();
-        const roomId: string = rawEvent.getRoomId();
+        const roomId: string = rawEvent.getRoomId() as string;
         const room = this.client.getRoom(roomId);
-        const userId = this.client.getUserId();
+        if (!room) {
+            return;
+        }
+        const userId = this.client.getUserId() as string;
         let body = content?.body || content?.ciphertext?.[userId]?.body;
         if (content.url) {
             body = content.url;
         }
-        const isDM = room.currentState.events.get("m.room.encryption");
+        const encryptionState = room.currentState.getStateEvents(EventType.RoomEncryption, "");
+        const encryptionStateContent = encryptionState?.getContent?.();
+        const isDM = encryptionStateContent?.algorithm === olmlib.SECP256K1;
+        const isPrivateGroup = encryptionStateContent?.algorithm === olmlib.MEGOLM_ALGORITHM;
         const isDeleteEvent = rawEvent.event.type === EventType.RoomRedaction;
         const emojiRelyEventId = content?.["m.relates_to"]?.["event_id"];
         const citedEventId = content?.["m.relates_to"]?.["m.in_reply_to"];
@@ -297,6 +303,9 @@ class NostrClient {
                 // 删除事件
                 kind = 5;
             }
+            if (isPrivateGroup) {
+                kind = 142;
+            }
             return kind;
         };
         const _getTags = () => {
@@ -305,15 +314,18 @@ class NostrClient {
                 tags.push(["e", citedEventId.event_id, "", "reply"]);
             } else if (emojiRelyEventId) {
                 const emojiRelyEvent = room.findEventById(emojiRelyEventId);
+
                 if (!body) {
                     body = content?.["m.relates_to"]?.key;
                 }
-                tags.push(["e", emojiRelyEventId, "", "reply"], ["p", emojiRelyEvent.sender.userId]);
+                if (emojiRelyEvent?.sender?.userId) {
+                    tags.push(["e", emojiRelyEventId, "", "reply"], ["p", emojiRelyEvent.sender.userId]);
+                }
             } else if (isDeleteEvent) {
                 body = content.reason ?? "";
                 tags = [["e", rawEvent.event.redacts]];
             } else if (relatePersonList?.length) {
-                relatePersonList.forEach((pubkey) => {
+                relatePersonList.forEach((pubkey: string) => {
                     tags.push(["p", pubkey.replace("@", "")]);
                 });
             }
