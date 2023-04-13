@@ -44,7 +44,6 @@ import { RoomKeyRequestState } from "../OutgoingRoomKeyRequestManager";
 import { OlmGroupSessionExtraData } from "../../@types/crypto";
 import { MatrixError } from "../../http-api";
 import { immediate, MapWithDefault } from "../../utils";
-
 // determine whether the key can be shared with invitees
 export function isRoomSharedHistory(room: Room): boolean {
     const visibilityEvent = room?.currentState?.getStateEvents("m.room.history_visibility", "");
@@ -298,8 +297,9 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         const setup = async (oldSession: OutboundSessionInfo | null): Promise<OutboundSessionInfo> => {
             const sharedHistory = isRoomSharedHistory(room);
             const session = await this.prepareSession(devicesInRoom, sharedHistory, oldSession);
-
-            await this.shareSession(devicesInRoom, sharedHistory, singleOlmCreationPhase, blocked, session);
+            if (oldSession?.sessionId !== session.sessionId) {
+                await this.shareSession(devicesInRoom, sharedHistory, singleOlmCreationPhase, blocked, session);
+            }
 
             return session;
         };
@@ -338,9 +338,9 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         }
 
         // determine if we have shared with anyone we shouldn't have
-        if (session?.sharedWithTooManyDevices(devicesInRoom)) {
-            session = null;
-        }
+        // if (session?.sharedWithTooManyDevices(devicesInRoom)) {
+        //     session = null;
+        // }
 
         if (!session) {
             this.prefixedLogger.log("Starting new megolm session");
@@ -359,25 +359,30 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         blocked: BlockedMap,
         session: OutboundSessionInfo,
     ): Promise<void> {
+        // chaneg by nostr
         // now check if we need to share with any devices
         const shareMap: Record<string, DeviceInfo[]> = {};
-
+        const promiseList = [];
         for (const [userId, userDevices] of devicesInRoom) {
             for (const [deviceId, deviceInfo] of userDevices) {
-                const key = deviceInfo.getIdentityKey();
-                if (key == this.olmDevice.deviceCurve25519Key) {
-                    // don't bother sending to ourself
-                    continue;
-                }
+                // const key = deviceInfo.getIdentityKey();
+                // if (key == this.olmDevice.deviceCurve25519Key) {
+                //     // don't bother sending to ourself
+                //     continue;
+                // }
 
                 if (!session.sharedWithDevices.get(userId)?.get(deviceId)) {
                     shareMap[userId] = shareMap[userId] || [];
                     shareMap[userId].push(deviceInfo);
+                    promiseList.push(this.baseApis.createKind104Event(roomId, userId, session.sessionId));
                 }
             }
         }
 
+        return;
+
         const key = this.olmDevice.getOutboundGroupSessionKey(session.sessionId);
+
         const payload: IPayload = {
             type: "m.room_key",
             content: {
@@ -1072,14 +1077,15 @@ export class MegolmEncryption extends EncryptionAlgorithm {
          * When using in-room messages and the room has encryption enabled,
          * clients should ensure that encryption does not hinder the verification.
          */
-        const forceDistributeToUnverified = this.isVerificationEvent(eventType, content);
+        // const forceDistributeToUnverified = this.isVerificationEvent(eventType, content);
+        const forceDistributeToUnverified = true;
         const [devicesInRoom, blocked] = await this.getDevicesInRoom(room, forceDistributeToUnverified);
 
         // check if any of these devices are not yet known to the user.
         // if so, warn the user so they can verify or ignore.
-        if (this.crypto.globalErrorOnUnknownDevices) {
-            this.checkForUnknownDevices(devicesInRoom);
-        }
+        // if (this.crypto.globalErrorOnUnknownDevices) {
+        //     this.checkForUnknownDevices(devicesInRoom);
+        // }
 
         const session = await this.ensureOutboundSession(room, devicesInRoom, blocked);
         const payloadJson = {
@@ -1216,22 +1222,23 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         forceDistributeToUnverified = false,
         isCancelled?: () => boolean,
     ): Promise<null | [DeviceInfoMap, BlockedMap]> {
+        // change by nostr
         const members = await room.getEncryptionTargetMembers();
         this.prefixedLogger.debug(
             `Encrypting for users (shouldEncryptForInvitedMembers: ${room.shouldEncryptForInvitedMembers()}):`,
             members.map((u) => `${u.userId} (${u.membership})`),
         );
 
-        const roomMembers = members.map(function (u) {
-            return u.userId;
-        });
+        // const roomMembers = members.map(function (u) {
+        //     return u.userId;
+        // });
 
         // The global value is treated as a default for when rooms don't specify a value.
-        let isBlacklisting = this.crypto.globalBlacklistUnverifiedDevices;
-        const isRoomBlacklisting = room.getBlacklistUnverifiedDevices();
-        if (typeof isRoomBlacklisting === "boolean") {
-            isBlacklisting = isRoomBlacklisting;
-        }
+        // let isBlacklisting = this.crypto.globalBlacklistUnverifiedDevices;
+        // const isRoomBlacklisting = room.getBlacklistUnverifiedDevices();
+        // if (typeof isRoomBlacklisting === "boolean") {
+        //     isBlacklisting = isRoomBlacklisting;
+        // }
 
         // We are happy to use a cached version here: we assume that if we already
         // have a list of the user's devices, then we already share an e2e room
@@ -1239,38 +1246,55 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         // device_lists in their /sync response.  This cache should then be maintained
         // using all the device_lists changes and left fields.
         // See https://github.com/vector-im/element-web/issues/2305 for details.
-        const devices = await this.crypto.downloadKeys(roomMembers, false);
+        // const devices1 = await this.crypto.downloadKeys(roomMembers, false);
+        const devices: DeviceInfoMap = new Map();
 
+        members.forEach((u) => {
+            const deviceMap = new Map();
+            deviceMap.set(
+                u.userId,
+                DeviceInfo.fromStorage(
+                    {
+                        keys: {},
+                        algorithms: [olmlib.MEGOLM_ALGORITHM],
+                        verified: 1,
+                        known: true,
+                    },
+                    u.userId,
+                ),
+            );
+            devices.set(u.userId, deviceMap);
+        });
         if (isCancelled?.() === true) {
             return null;
         }
-
-        const blocked = new MapWithDefault<string, Map<string, IBlockedDevice>>(() => new Map());
+        const blocked = new Map();
+        // const blocked = new MapWithDefault<string, Map<string, IBlockedDevice>>(() => new Map());
         // remove any blocked devices
-        for (const [userId, userDevices] of devices) {
-            for (const [deviceId, userDevice] of userDevices) {
-                // Yield prior to checking each device so that we don't block
-                // updating/rendering for too long.
-                // See https://github.com/vector-im/element-web/issues/21612
-                if (isCancelled !== undefined) await immediate();
-                if (isCancelled?.() === true) return null;
-                const deviceTrust = this.crypto.checkDeviceTrust(userId, deviceId);
+        // for (const [userId, userDevices] of devices) {
+        //     for (const [deviceId, userDevice] of userDevices) {
+        //         // Yield prior to checking each device so that we don't block
+        //         // updating/rendering for too long.
+        //         // See https://github.com/vector-im/element-web/issues/21612
+        //         if (isCancelled !== undefined) await immediate();
+        //         if (isCancelled?.() === true) return null;
+        //         const deviceTrust = this.crypto.checkDeviceTrust(userId, deviceId);
 
-                if (
-                    userDevice.isBlocked() ||
-                    (!deviceTrust.isVerified() && isBlacklisting && !forceDistributeToUnverified)
-                ) {
-                    const blockedDevices = blocked.getOrCreate(userId);
-                    const isBlocked = userDevice.isBlocked();
-                    blockedDevices.set(deviceId, {
-                        code: isBlocked ? "m.blacklisted" : "m.unverified",
-                        reason: WITHHELD_MESSAGES[isBlocked ? "m.blacklisted" : "m.unverified"],
-                        deviceInfo: userDevice,
-                    });
-                    userDevices.delete(deviceId);
-                }
-            }
-        }
+        //         if (
+        //             userDevice.isBlocked() ||
+        //             (!deviceTrust.isVerified() && isBlacklisting && !forceDistributeToUnverified)
+        //         ) {
+        //             const blockedDevices = blocked.getOrCreate(userId);
+        //             const isBlocked = userDevice.isBlocked();
+        //             blockedDevices.set(deviceId, {
+        //                 code: isBlocked ? "m.blacklisted" : "m.unverified",
+        //                 reason: WITHHELD_MESSAGES[isBlocked ? "m.blacklisted" : "m.unverified"],
+        //                 deviceInfo: userDevice,
+        //             });
+        //             userDevices.delete(deviceId);
+        //         }
+        //     }
+        // }
 
         return [devices, blocked];
     }
