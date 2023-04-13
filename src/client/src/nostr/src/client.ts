@@ -81,7 +81,7 @@ class NostrClient {
 
     subscribeRooms(roomsIds: string[]) {
         const since = utils.now() - utils.timedelta(30, "days");
-        const exitedRoomIds = this.client.getJoinedRooms();
+        const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
         const publicGroupMessage = [41, 42];
         const privateGroupMessage = [142, 141]; // 拿到房间的
