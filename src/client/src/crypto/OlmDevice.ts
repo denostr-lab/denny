@@ -23,6 +23,7 @@ import { CryptoStore, IProblem, ISessionInfo, IWithheld } from "./store/base";
 import { IOlmDevice, IOutboundGroupSessionKey } from "./algorithms/megolm";
 import { IMegolmSessionData, OlmGroupSessionExtraData } from "../@types/crypto";
 import { IMessage } from "./algorithms/olm";
+import Key from "../nostr/src/Key";
 
 // The maximum size of an event is 65K, and we base64 the content, so this is a
 // reasonable approximation to the biggest plaintext we can encrypt.
@@ -120,6 +121,7 @@ export class OlmDevice {
 
     /** Curve25519 key for the account, unknown until we load the account from storage in init() */
     public deviceCurve25519Key: string | null = null;
+    public deviceCurve25519KeyRaw: string | null = null;
     /** Ed25519 key for the account, unknown until we load the account from storage in init() */
     public deviceEd25519Key: string | null = null;
     private maxOneTimeKeys: number | null = null;
@@ -204,8 +206,9 @@ export class OlmDevice {
             account.free();
         }
 
-        // this.deviceCurve25519Key = e2eKeys.curve25519;
         this.deviceCurve25519Key = Key.getPubKey();
+        this.deviceCurve25519KeyRaw = e2eKeys.curve25519;
+
         this.deviceEd25519Key = e2eKeys.ed25519;
     }
 

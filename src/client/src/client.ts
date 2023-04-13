@@ -8163,9 +8163,16 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
      * @returns Promise which resolves: A list of the user's current rooms
      * @returns Rejects: with an error response.
      */
-    public getJoinedRooms(): Promise<IJoinedRoomsResponse> {
-        const path = utils.encodeUri("/joined_rooms", {});
-        return this.http.authedRequest(Method.Get, path);
+    public getJoinedRooms(): string[] {
+        // change by nostr
+        const rooms = this.getRooms();
+        return rooms
+            .filter((i) => {
+                return i.getMyMembership() !== "leave";
+            })
+            .map((i) => i.roomId);
+        // const path = utils.encodeUri("/joined_rooms", {});
+        // return this.http.authedRequest(Method.Get, path);
     }
 
     /**

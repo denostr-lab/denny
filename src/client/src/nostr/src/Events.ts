@@ -761,9 +761,12 @@ class Events {
 
     handlePrivateGroupRoomMetaEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
         // 房间的140 和141非常相近 只是roomid的获取不同
+        // 房间的140 事件目前只有创建人可以收到
         // 但是141还必须验证 event.pubkey 必须等于房间里面的加密算法加入人的信息
-
+        const userId = client.getUserId() as string;
         let roomid = event.id;
+        const created_at = event.created_at * 1000;
+
         const kind = event.kind as Kinds;
         if (kind === 141) {
             roomid = event.tags.find((tags) => tags[0] === "e" && tags[3] === "root")?.[1] as string;
@@ -772,7 +775,32 @@ class Events {
             return;
         }
         const room = client.getRoom(roomid);
-        let sendKey = null;
+        if (kind === 141) {
+            // 判断自己是否在房间, 不在房间则立即标记自己退出了
+            const mySelf = event.tags.find((tags) => tags[0] === "p" && tags[1] === userId)?.[1] as string;
+            if (!mySelf) {
+                if (!syncResponse.rooms.leave?.[roomid]) {
+                    syncResponse.rooms.leave[roomid] = getDefaultRoomData();
+                }
+                syncResponse.rooms.leave[roomid].state.events.push({
+                    content: {
+                        avatar_url: "",
+                        displayname: userId,
+                        membership: "leave",
+                    },
+                    origin_server_ts: created_at,
+                    sender: userId,
+                    state_key: "",
+                    type: EventType.RoomMember,
+                    unsigned: {
+                        age: Date.now() - created_at,
+                    },
+                    event_id: `${EventType.RoomMember}-${event.id}`,
+                });
+                return;
+            }
+        }
+        let sendKey;
 
         if (room) {
             const cryptoStateEvent = room.currentState.getStateEvents(EventType.RoomEncryption, "");
@@ -800,30 +828,46 @@ class Events {
             session_id: query.session_id,
             ciphertext,
         };
-        const created_at = event.created_at * 1000;
 
         // 获取当前爱房间中的state的
         if (!syncResponse.rooms.join?.[roomid]) {
             syncResponse.rooms.join[roomid] = getDefaultRoomData();
         }
-        const userId = client.getUserId();
-        const memberStates = event.tags
-            .filter((tag) => tag[0] === "p" && tag[1] !== userId)
+        const pList = event.tags.filter((tag) => tag[0] === "p" && tag[1] !== userId).map((i) => i[1]);
+        const PListMap = new Set(pList);
+        const memberStates = pList
             .map((i) => {
                 return {
                     content: {
                         avatar_url: "",
-                        displayname: i[1],
+                        displayname: i,
                         membership: "join",
                     },
                     type: EventType.RoomMember,
-                    sender: i[1],
-                    state_key: i[1],
+                    sender: i,
+                    state_key: i,
                 };
             })
             .filter((memberState) => {
                 return !this.roomJoinMap[roomid].has(memberState.sender);
             });
+        if (room) {
+            const memberStateEvents = room.getMembers();
+            memberStateEvents.forEach((i) => {
+                if (PListMap.has(i.userId)) {
+                    memberStates.push({
+                        content: {
+                            avatar_url: "",
+                            displayname: i.userId,
+                            membership: "leave",
+                        },
+                        type: EventType.RoomMember,
+                        sender: i.userId,
+                        state_key: i.userId,
+                    });
+                }
+            });
+        }
         memberStates.forEach((memberState) => {
             this.roomJoinMap[roomid].add(memberState.sender);
         });
@@ -850,6 +894,9 @@ class Events {
             },
             event_id: event.id,
         });
+        if (kind === 141 && room) {
+            client.forceDiscardSession(room.roomId);
+        }
     };
     handlePrivateGroupRoomMessageEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
         const eventContent = event.content;
