@@ -187,12 +187,16 @@ class Relays {
         return Array.from(relays.entries());
     }
 
-    publish(event: Event) {
+    publish(event: Event, cb?: any) {
         const relays = Array.from(this.relays.values()).filter(
             (relay: NostrRelay) => relay.enabled !== false,
         ) as NostrRelay[];
         for (const relay of relays) {
-            relay.publish(event);
+            const pub = relay.publish(event);
+            if (cb) {
+                pub.on("ok", () => cb("ok"));
+                pub.on("failed", (reason) => cb(reason));
+            }
         }
         let recipientRelays: string[] = [];
         const mentionedUsers = event.tags.filter((tag) => tag[0] === "p").map((tag) => tag[1]);
@@ -219,6 +223,18 @@ class Relays {
                 }, 5000);
             }
         }
+    }
+
+    publishAsPromise(event: Event) {
+        return new Promise((resolve, reject) => {
+            this.publish(event, (res: "ok" | string) => {
+                if (res === "ok") {
+                    resolve(res);
+                } else {
+                    reject(res);
+                }
+            });
+        });
     }
 
     connect(relay: NostrRelay) {

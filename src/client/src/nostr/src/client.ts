@@ -1,14 +1,15 @@
-import { Filter, Event, getEventHash } from "nostr-tools";
+import { Filter, Event } from "nostr-tools";
 import { MatrixClient } from "../../client";
 import Relays from "./Relays";
 import Events from "./Events";
-import Key from "./Key";
+import { createKind104Event, createKind140Event, createKind141Event, handlePublishEvent } from "./Helpers";
 import * as utils from "../../utils";
 import { MetaInfo } from "./@types/index";
 import { EventType } from "../../@types/event";
 import { IJoinedRoom } from "../../sync-accumulator";
 import { MatrixEvent } from "../../models/event";
 import * as olmlib from "../../crypto/olmlib";
+import Key from "./Key";
 
 // export { Filter as NostrFilter };
 let allRooms = [];
@@ -181,20 +182,7 @@ class NostrClient {
     }
 
     async handPublishEvent(event: Event) {
-        if (!event.sig) {
-            if (!event.tags) {
-                event.tags = [];
-            }
-            event.content = event.content || "";
-            event.created_at = event.created_at || Math.floor(Date.now() / 1000);
-            event.pubkey = Key.getPubKey();
-            event.id = getEventHash(event);
-            event.sig = await Key.sign(event);
-        }
-
-        if (!(event.id && event.sig)) {
-            throw new Error("Invalid event");
-        }
+        await handlePublishEvent(event);
     }
 
     async fetchRoomMetadatas(roomIds: string[]) {
@@ -237,7 +225,6 @@ class NostrClient {
     }
 
     async createRoom(metadata: RomMetaUpdateData) {
-        console.log("createRoom() --------------- metadata=", metadata);
         if (metadata.isDM) {
             const event = {
                 kind: 4,
@@ -249,49 +236,24 @@ class NostrClient {
             return { id: metadata.name };
         }
 
+        // encrypt channel
         if (metadata?.visibility === "private") {
-            const sessionId = this.client.crypto.olmDevice.createOutboundGroupSession();
-            const sessionKey = this.client.crypto.olmDevice.getOutboundGroupSessionKey(sessionId);
-
-            const createEncryptedChannelEvent: Event = {
-                kind: 140,
-                content: JSON.stringify({
+            const olmDevice = this.client.crypto.olmDevice!;
+            const sessionId = olmDevice.createOutboundGroupSession();
+            const event140 = await createKind140Event(
+                this.client,
+                sessionId,
+                JSON.stringify({
                     name: metadata.name || "Empty Room",
                     about: metadata.about || "",
                     ...{ picture: metadata.picture || "" },
                 }),
-                tags: [["p", Key.getPubKey()]],
-            };
-            createEncryptedChannelEvent.content =
-                this.client.crypto.olmDevice.encryptGroupMessage(sessionId, createEncryptedChannelEvent.content) +
-                `?sid=${sessionId}`;
-            await this.handPublishEvent(createEncryptedChannelEvent);
-
-            const communicateMegolmSessionEvent: Event = {
-                kind: 104,
-                content: JSON.stringify({
-                    session_id: sessionId,
-                    session_key: sessionKey,
-                    room_id: createEncryptedChannelEvent.id,
-                }),
-                tags: [["p", Key.getPubKey()]],
-                // created_at: Math.floor(Date.now() / 1000) + 1,
-            };
-            communicateMegolmSessionEvent.content = await Key.encrypt(communicateMegolmSessionEvent.content);
-            await this.handPublishEvent(communicateMegolmSessionEvent);
-
-            const events = [communicateMegolmSessionEvent, createEncryptedChannelEvent];
-            console.log("events==========", events);
-            const promises = events.map(async (event: Event) => {
-                this.relay.publish(event);
-                await utils.sleep(2000);
-                return event;
-            });
-            await Promise.all(promises);
-
-            return createEncryptedChannelEvent;
+            );
+            await createKind104Event(this.client, event140.id, Key.getPubKey(), sessionId);
+            return event140;
         }
 
+        // public channel
         const event = {
             kind: 40,
             content: JSON.stringify({
@@ -301,7 +263,7 @@ class NostrClient {
             }),
         } as Event;
         await this.handPublishEvent(event);
-        this.relay.publish(event);
+        await this.relay.publishAsPromise(event);
         return event;
     }
 
@@ -315,7 +277,7 @@ class NostrClient {
             tags: [["e", roomId]],
         } as Event;
         await this.handPublishEvent(event);
-        this.relay.publish(event);
+        await this.relay.publishAsPromise(event);
         return event;
     }
 
@@ -390,16 +352,9 @@ class NostrClient {
             pubkey: userId,
         } as Event;
 
-        console.log("nbnb ---- content=", event);
-        console.log("nbnb ---- roomId=", roomId);
-        console.log("nbnb ---- userId=", userId);
-        console.log("nbnb ---- body=", body);
-        console.log("nbnb ---- room.currentState=", room.currentState.events);
-        return;
-
         try {
             await this.handPublishEvent(event);
-            this.relay.publish(event);
+            await this.relay.publishAsPromise(event);
             if (event.kind === 7) {
                 Events.handle(this.client, event);
             }
@@ -449,7 +404,7 @@ class NostrClient {
             pubkey: userId,
         } as Event;
         await this.handPublishEvent(event);
-        this.relay.publish(event);
+        await this.relay.publishAsPromise(event);
     }
 
     get totalRoomCount() {
@@ -479,8 +434,17 @@ class NostrClient {
             world_readable: true,
         }));
     }
+
     handleDeCryptedRoomMeta(event: MatrixEvent) {
         Events.handleDeCryptedRoomMeta(this.client, event);
+    }
+
+    createKind104Event(roomId: string, pubkey: string, sessionId?: string) {
+        return createKind104Event(this.client, roomId, pubkey, sessionId);
+    }
+
+    createKind141Event(roomId: string, payload: string, toPubkeys: string[], sessionId?: string) {
+        return createKind141Event(this.client, roomId, payload, toPubkeys, sessionId);
     }
 }
 

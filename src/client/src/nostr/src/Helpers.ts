@@ -1,9 +1,14 @@
+import { getEventHash, Event } from "nostr-tools";
+import { MsgType } from "matrix-js-sdk/lib/@types/event";
+import { IContent } from "matrix-js-sdk/lib/models/event";
+
 import { IJoinedRoom, ISyncResponse } from "../../sync-accumulator";
 
 import { EventType } from "../../@types/event";
-import { MsgType } from "matrix-js-sdk/lib/@types/event";
-import { IContent } from "matrix-js-sdk/lib/models/event";
 import { RoomMetaInfo } from "./@types";
+import { MatrixClient } from "../../matrix";
+import Key from "./Key";
+
 export const stateKeyFilters = [
     EventType.RoomName,
     EventType.RoomTopic,
@@ -140,3 +145,93 @@ export const getQuery = (content: string): Record<string, string> => {
     }
     return result;
 };
+
+export async function handlePublishEvent(event: Event) {
+    if (!event.sig) {
+        if (!event.tags) {
+            event.tags = [];
+        }
+        event.content = event.content || "";
+        event.created_at = event.created_at || Math.floor(Date.now() / 1000);
+        event.pubkey = Key.getPubKey();
+        event.id = event.id || getEventHash(event);
+        event.sig = await Key.sign(event);
+    }
+
+    if (!(event.id && event.sig)) {
+        throw new Error("Invalid event");
+    }
+}
+
+export async function createKind140Event(client: MatrixClient, payload: string, sessionId?: string) {
+    const olmDevice = client.crypto.olmDevice!;
+    if (!sessionId) {
+        // eslint-disable-next-line no-param-reassign
+        sessionId = olmDevice.createOutboundGroupSession();
+    }
+    const event: Event = {
+        kind: 140,
+        tags: [["p", Key.getPubKey()]],
+    };
+    const ciphertext = olmDevice.encryptGroupMessage(sessionId, payload);
+    event.content = `${ciphertext}?sid=${sessionId}`;
+    await handlePublishEvent(event);
+    await client.nostrClient.relay.publishAsPromise(event);
+    return event;
+}
+export const createEncryptedChannelEvent = createKind140Event;
+
+export async function createKind104Event(client: MatrixClient, roomId: string, pubkey: string, sessionId?: string) {
+    const olmDevice = client.crypto.olmDevice!;
+    if (!sessionId) {
+        // eslint-disable-next-line no-param-reassign
+        sessionId = olmDevice.createOutboundGroupSession();
+    }
+    const sessionKey = olmDevice.getOutboundGroupSessionKey(sessionId);
+    const event: Event = {
+        kind: 104,
+        content: JSON.stringify({
+            session_id: sessionId,
+            session_key: sessionKey,
+            room_id: roomId,
+        }),
+        tags: [["p", pubkey]],
+    };
+    event.content = await Key.encrypt(event.content);
+    await handlePublishEvent(event);
+    await client.nostrClient.relay.publishAsPromise(event);
+    return event;
+}
+export const communicateMegolmSessionEvent = createKind104Event;
+
+export async function createKind141Event(
+    client: MatrixClient,
+    room: { id: string; relayUrl?: string },
+    payload: string,
+    toPubkeys: string[],
+    sessionId?: string,
+) {
+    const olmDevice = client.crypto.olmDevice!;
+    if (!sessionId) {
+        // eslint-disable-next-line no-param-reassign
+        sessionId = olmDevice.createOutboundGroupSession();
+    }
+    if (toPubkeys.length === 0) {
+        toPubkeys.push(Key.getPubKey());
+    }
+
+    const relatedEvent = ["e", room.id];
+    if (room.relayUrl) {
+        relatedEvent.push(room.relayUrl);
+    }
+    const event: Event = {
+        kind: 141,
+        tags: [relatedEvent, ...toPubkeys.map((pubkey) => ["p", pubkey])],
+    };
+    const ciphertext = olmDevice.encryptGroupMessage(sessionId, payload);
+    event.content = `${ciphertext}?sid=${sessionId}`;
+    await handlePublishEvent(event);
+    await client.nostrClient.relay.publishAsPromise(event);
+    return event;
+}
+export const updateEncryptedChannelMetadataEvent = createKind141Event;

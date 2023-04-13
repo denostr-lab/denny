@@ -1366,8 +1366,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
             // change by nostr
             if (event.getType() === EventType.RoomMetaEncrypted) {
                 // 在这里传递给Event
-                this.nostrClient.handleDeCryptedRoomMeta(event)
-                return
+                this.nostrClient.handleDeCryptedRoomMeta(event);
+                return;
             }
             fixNotificationCountOnDecryption(this, event);
         });
@@ -9897,6 +9897,14 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
             return;
         }
         return this.nostrClient.hasLeaveRoom(roomId);
+    }
+
+    public createKind104Event(roomId: string, pubkey: string, sessionId?: string) {
+        return this.nostrClient.createKind104Event(roomId, pubkey, sessionId);
+    }
+
+    public createKind141Event(roomId: string, payload: string, toPubkeys: string[], sessionId?: string) {
+        return this.nostrClient.createKind141Event(roomId, payload, toPubkeys, sessionId);
     }
 }
 
