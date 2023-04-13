@@ -204,7 +204,8 @@ export class OlmDevice {
             account.free();
         }
 
-        this.deviceCurve25519Key = e2eKeys.curve25519;
+        // this.deviceCurve25519Key = e2eKeys.curve25519;
+        this.deviceCurve25519Key = Key.getPubKey();
         this.deviceEd25519Key = e2eKeys.ed25519;
     }
 
