@@ -901,6 +901,7 @@ class Events {
         syncResponse.rooms.join[roomid].state.events.push({
             content: {
                 state_default: 50,
+                invite: 100,
                 users: {
                     [event.pubkey]: 100,
                 },
