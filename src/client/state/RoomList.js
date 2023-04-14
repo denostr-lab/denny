@@ -241,7 +241,6 @@ class RoomList extends EventEmitter {
         else this.inviteRooms.add(roomId);
         return;
       }
-
       if (room.getMyMembership() !== 'join') return;
       if (this.mDirects.has(roomId)) this.directs.add(roomId);
       else if (room.isSpaceRoom()) this.addToSpaces(roomId);

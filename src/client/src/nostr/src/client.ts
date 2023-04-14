@@ -495,7 +495,15 @@ class NostrClient {
         }
 
         let toPubkeys = [
-            ...new Set([Key.getPubKey(), ...currentRoom.getMembers().map((member) => member.userId)].filter(Boolean)),
+            ...new Set(
+                [
+                    Key.getPubKey(),
+                    ...currentRoom
+                        .getMembers()
+                        .filter((i) => i.membership !== "leave")
+                        .map((member) => member.userId),
+                ].filter(Boolean),
+            ),
         ];
         let newToPubkeys: string[] = [];
 

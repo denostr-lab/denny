@@ -874,6 +874,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
     public updateMyMembership(membership: string): void {
         const prevMembership = this.selfMembership;
         this.selfMembership = membership;
+
         if (prevMembership !== membership) {
             if (membership === "leave") {
                 this.cleanupAfterLeaving();
