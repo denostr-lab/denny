@@ -84,6 +84,9 @@ class Events {
 
         const created_at = event.getTs();
         const content = event.getContent();
+        if (content?.msgtype === "m.bad.encrypted") {
+            return;
+        }
         const roomAttrs = [
             { key: "create", type: EventType.RoomCreate, content: { creator: event.sender?.userId }, state_key: "" },
             { key: "name", type: EventType.RoomName, content: { name: content.name }, state_key: "" },
@@ -742,7 +745,7 @@ class Events {
                     algorithm: olmlib.MEGOLM_ALGORITHM,
                     sender_key: event.pubkey,
                     session_id: decryptoContent.session_id,
-                    session_key: decryptoContent.session_key,
+                    session_key: decryptoContent.session_key.key,
                     room_id: decryptoContent.room_id,
                 },
                 sender: event.pubkey,
@@ -750,7 +753,6 @@ class Events {
             });
         };
         let decryptoContent = await _decryptoMessage();
-
         if (!decryptoContent?.room_id || !decryptoContent?.session_key || !decryptoContent?.session_id) {
             return;
         }
@@ -766,7 +768,6 @@ class Events {
         const userId = client.getUserId() as string;
         let roomid = event.id;
         const created_at = event.created_at * 1000;
-
         const kind = event.kind as Kinds;
         if (kind === 141) {
             roomid = event.tags.find((tags) => tags[0] === "e" && tags[3] === "root")?.[1] as string;
@@ -808,24 +809,26 @@ class Events {
         }
         if (!sendKey) {
             const room = this.getRoom(roomid);
-            sendKey = room.pubkey;
+            sendKey = room?.pubkey;
         }
         // 在此之前肯定已经有房间了
 
-        if (sendKey !== event.pubkey) {
+        if (sendKey !== event.pubkey && kind === 141) {
             // 虚假消息
             return;
         }
+
         const eventContent = event.content;
         const ciphertext = eventContent.split("?")[0];
         const query = getQuery(eventContent);
-        if (!query?.session_id) {
+        if (!query?.sid) {
             return;
         }
         const content = {
             algorithm: olmlib.MEGOLM_ALGORITHM,
             sender_key: event.pubkey,
-            session_id: query.session_id,
+            session_id: query.sid,
+            room_id: roomid,
             ciphertext,
         };
 
@@ -902,7 +905,7 @@ class Events {
         const eventContent = event.content;
         const ciphertext = eventContent.split("?")[0];
         const query = getQuery(eventContent);
-        if (!query?.session_id) {
+        if (!query?.sid) {
             return;
         }
         let roomid = event.tags.find((tags) => tags[0] === "e" && tags[3] === "root")?.[1] as string;
@@ -912,7 +915,7 @@ class Events {
         let content = {
             algorithm: olmlib.MEGOLM_ALGORITHM,
             sender_key: event.pubkey,
-            session_id: query.session_id,
+            session_id: query.sid,
             ciphertext,
             version: query.v,
         } as IContent;

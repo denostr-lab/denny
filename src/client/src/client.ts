@@ -1364,7 +1364,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         // state, such as highlights when the user's name is mentioned.
         this.on(MatrixEventEvent.Decrypted, (event) => {
             // change by nostr
-            if (event.getType() === EventType.RoomMetaEncrypted) {
+
+            if (event.getWireType() === EventType.RoomMetaEncrypted) {
                 // 在这里传递给Event
                 this.nostrClient.handleDeCryptedRoomMeta(event);
                 return;

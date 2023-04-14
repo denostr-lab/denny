@@ -819,7 +819,6 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
         // it is set in attemptDecryption - and hence end up with a stuck
         // `decryptionPromise`).
         await Promise.resolve();
-
         // eslint-disable-next-line no-constant-condition
         while (true) {
             this.retryDecryption = false;
@@ -936,7 +935,6 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
         } else {
             decryptionResult.clearEvent.content = handMediaContent(decryptionResult.clearEvent.content);
         }
-
         this.clearEvent = decryptionResult.clearEvent;
         this.senderCurve25519Key = decryptionResult.senderCurve25519Key ?? null;
         this.claimedEd25519Key = decryptionResult.claimedEd25519Key ?? null;
@@ -979,7 +977,7 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
      * established the megolm session
      */
     public getSenderKey(): string | null {
-        return this.sender?.userId || this.senderCurve25519Key;
+        return this.getWireContent()?.sender_key || this.sender?.userId || this.senderCurve25519Key;
     }
 
     /**
