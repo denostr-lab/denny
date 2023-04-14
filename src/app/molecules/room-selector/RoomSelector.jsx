@@ -78,7 +78,7 @@ function RoomSelector({
               </Text>
             )}
           </Text>
-          { isUnread && (
+          {isUnread && (
             <NotificationBadge
               alert={isAlert}
               content={notificationCount !== 0 ? notificationCount : null}

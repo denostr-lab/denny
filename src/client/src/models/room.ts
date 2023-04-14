@@ -1477,6 +1477,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         allowDefault = true,
     ): string | null {
         const roomAvatarEvent = this.currentState.getStateEvents(EventType.RoomAvatar, "");
+        console.info(roomAvatarEvent, this.roomId, "来爱");
         if (!roomAvatarEvent && !allowDefault) {
             return null;
         }

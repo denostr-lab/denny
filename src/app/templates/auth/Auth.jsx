@@ -658,7 +658,7 @@ function AuthCard() {
   return (
     <>
       {/* <Homeserver onChange={handleHsChange} /> */}
-      { hsConfig !== null && (
+      {hsConfig !== null && (
         // type === 'login'
         //   ? <Login loginFlow={hsConfig.login.flows} baseUrl={hsConfig.baseUrl} />
         //   : (
@@ -670,7 +670,7 @@ function AuthCard() {
         //   )
         type === 'login' ? <LoginByName /> : <LoginByPriKey />
       )}
-      { hsConfig !== null && (
+      {hsConfig !== null && (
         <Text variant="b2" className="auth-card__switch flex--center">
           {/* {`${(type === 'login' ? 'Don\'t have' : 'Already have')} an account?`} */}
           {/* <button
@@ -723,7 +723,7 @@ function Auth() {
               <Header>
                 <Avatar size="extra-small" imageSrc={CinnySvg} />
                 <TitleWrapper>
-                  <Text variant="h2" weight="medium">Cinny</Text>
+                  <Text variant="h2" weight="medium">Denny</Text>
                 </TitleWrapper>
               </Header>
               <div className="auth-card__content">

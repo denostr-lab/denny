@@ -10,6 +10,7 @@ import { IJoinedRoom } from "../../sync-accumulator";
 import { MatrixEvent } from "../../models/event";
 import * as olmlib from "../../crypto/olmlib";
 import Key from "./Key";
+import { Room } from "../../models/room";
 
 // export { Filter as NostrFilter };
 let allRooms = [];
@@ -269,13 +270,42 @@ class NostrClient {
     }
 
     async updateRoomMetaData(roomId: string, metadata: UpdateRoomMetadata) {
+        const userId = this.client.getUserId() as string;
+        const room = this.client.getRoom(roomId) as Room;
+        const encryptionState = room!.currentState.getStateEvents(EventType.RoomEncryption, "");
+        const encryptionStateContent = encryptionState?.getContent?.();
+        const isPrivateGroup = encryptionStateContent?.algorithm === olmlib.MEGOLM_ALGORITHM;
+        let content = JSON.stringify({
+            ...metadata,
+            ...{ picture: metadata.picture || "" },
+        });
+        let toPubkeys: any = [];
+        if (isPrivateGroup) {
+            toPubkeys = [Key.getPubKey(), ...room!.getMembers().map((member) => member.userId)];
+            toPubkeys = [...new Set(toPubkeys)].map((i) => ["p", i]);
+            // 直接对房间进行加密
+            const localEvent = new MatrixEvent({
+                event_id: `${Math.random()}`,
+                content: {
+                    body: {
+                        ...metadata,
+                        ...{ picture: metadata.picture || "" },
+                    },
+                },
+                user_id: userId,
+                sender: userId,
+                room_id: roomId,
+                origin_server_ts: new Date().getTime(),
+            });
+
+            await this.client.crypto.encryptEvent(localEvent, room);
+            const cipherResult = localEvent.getWireContent();
+            content = `${cipherResult.ciphertext}?sid=${cipherResult.session_id}`;
+        }
         const event = {
-            kind: 41,
-            content: JSON.stringify({
-                ...metadata,
-                ...{ picture: metadata.picture || "" },
-            }),
-            tags: [["e", roomId]],
+            kind: isPrivateGroup ? 141 : 41,
+            content,
+            tags: [["e", roomId], ...toPubkeys],
         } as Event;
         await this.handPublishEvent(event);
         await this.relay.publishAsPromise(event);
@@ -482,7 +512,7 @@ class NostrClient {
             sessionId,
             sessionKey: key.key,
         };
-        const event141 = createKind141Event(
+        const event141 = await createKind141Event(
             this.client,
             room,
             JSON.stringify(metadata),

@@ -84,6 +84,7 @@ class Events {
 
         const created_at = event.getTs();
         const clearContent = event.getContent();
+
         if (event.isDecryptionFailure()) {
             return;
         }
@@ -847,8 +848,10 @@ class Events {
         });
         if (room && kind === 141) {
             const memberStateEvents = room.getMembers();
+            let hasLeave = false;
             memberStateEvents.forEach((i) => {
                 if (!PListMap.has(i.userId)) {
+                    hasLeave = true;
                     memberStates.push({
                         content: {
                             avatar_url: "",
@@ -859,6 +862,13 @@ class Events {
                         sender: i.userId,
                         state_key: i.userId,
                     });
+                }
+                if (memberStateEvents.length !== PListMap.size || hasLeave) {
+                    try {
+                        client.forceDiscardSession(room.roomId);
+                    } catch (e) {
+                        console.info(e, "141 destroy session error");
+                    }
                 }
             });
         }
@@ -915,13 +925,6 @@ class Events {
             },
             event_id: event.id,
         });
-        if (kind === 141 && room) {
-            try {
-                client.forceDiscardSession(room.roomId);
-            } catch (e) {
-                console.info(e, "141 destroy session error");
-            }
-        }
     };
     handlePrivateGroupRoomMessageEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
         const eventContent = event.content;
