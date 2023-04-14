@@ -207,13 +207,10 @@ class NostrClient {
 
     fetchUserMetadatas(userIds: string[]) {
         /*
-        批量获取房间的MetaData信息,
-        如果出现中继提示连接过多的错误，则后续继续获取
-    */
-        console.info(userIds, "userIdsuserIds");
-
+            批量获取房间的MetaData信息,
+            如果出现中继提示连接过多的错误，则后续继续获取
+        */
         if (!userIds?.length) return;
-        console.info(userIds, "userIdsuserIds");
         const filters: Filter[] = [
             {
                 authors: userIds,
@@ -365,7 +362,6 @@ class NostrClient {
         } catch (e) {
             console.info(e, "send message error");
         }
-        console.info("out bound message,", event, rawEvent);
         return { event_id: event.id };
     }
 

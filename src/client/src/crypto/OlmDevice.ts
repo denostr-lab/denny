@@ -1282,7 +1282,7 @@ export class OlmDevice {
                         keysClaimed: sessionData.keysClaimed || {},
                         senderKey: senderKey,
                         forwardingCurve25519KeyChain: sessionData.forwardingCurve25519KeyChain || [],
-                        untrusted: !!sessionData.untrusted,
+                        untrusted: false,
                     };
                 });
             },

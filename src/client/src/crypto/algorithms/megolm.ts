@@ -1368,7 +1368,7 @@ export class MegolmDecryption extends DecryptionAlgorithm {
             let errorCode = "OLM_DECRYPT_GROUP_MESSAGE_ERROR";
 
             if ((<MatrixError>e)?.message === "OLM.UNKNOWN_MESSAGE_INDEX") {
-                this.requestKeysForEvent(event);
+                // this.requestKeysForEvent(event);
 
                 errorCode = "OLM_UNKNOWN_MESSAGE_INDEX";
             }
@@ -1381,32 +1381,32 @@ export class MegolmDecryption extends DecryptionAlgorithm {
         if (res === null) {
             // We've got a message for a session we don't have.
             // try and get the missing key from the backup first
-            this.crypto.backupManager.queryKeyBackupRateLimited(event.getRoomId(), content.session_id).catch(() => {});
+            // this.crypto.backupManager.queryKeyBackupRateLimited(event.getRoomId(), content.session_id).catch(() => {});
 
             // (XXX: We might actually have received this key since we started
             // decrypting, in which case we'll have scheduled a retry, and this
             // request will be redundant. We could probably check to see if the
             // event is still in the pending list; if not, a retry will have been
             // scheduled, so we needn't send out the request here.)
-            this.requestKeysForEvent(event);
+            // this.requestKeysForEvent(event);
 
             // See if there was a problem with the olm session at the time the
             // event was sent.  Use a fuzz factor of 2 minutes.
-            const problem = await this.olmDevice.sessionMayHaveProblems(content.sender_key, event.getTs() - 120000);
-            if (problem) {
-                this.prefixedLogger.info(
-                    `When handling UISI from ${event.getSender()} (sender key ${content.sender_key}): ` +
-                        `recent session problem with that sender:`,
-                    problem,
-                );
-                let problemDescription = PROBLEM_DESCRIPTIONS[problem.type as "no_olm"] || PROBLEM_DESCRIPTIONS.unknown;
-                if (problem.fixed) {
-                    problemDescription += " Trying to create a new secure channel and re-requesting the keys.";
-                }
-                throw new DecryptionError("MEGOLM_UNKNOWN_INBOUND_SESSION_ID", problemDescription, {
-                    session: content.sender_key + "|" + content.session_id,
-                });
-            }
+            // const problem = await this.olmDevice.sessionMayHaveProblems(content.sender_key, event.getTs() - 120000);
+            // if (problem) {
+            //     this.prefixedLogger.info(
+            //         `When handling UISI from ${event.getSender()} (sender key ${content.sender_key}): ` +
+            //             `recent session problem with that sender:`,
+            //         problem,
+            //     );
+            //     let problemDescription = PROBLEM_DESCRIPTIONS[problem.type as "no_olm"] || PROBLEM_DESCRIPTIONS.unknown;
+            //     if (problem.fixed) {
+            //         problemDescription += " Trying to create a new secure channel and re-requesting the keys.";
+            //     }
+            //     throw new DecryptionError("MEGOLM_UNKNOWN_INBOUND_SESSION_ID", problemDescription, {
+            //         session: content.sender_key + "|" + content.session_id,
+            //     });
+            // }
 
             throw new DecryptionError(
                 "MEGOLM_UNKNOWN_INBOUND_SESSION_ID",
@@ -1421,7 +1421,7 @@ export class MegolmDecryption extends DecryptionAlgorithm {
         // that hasn't already happened. However, if the event was
         // decrypted with an untrusted key, leave it on the pending
         // list so it will be retried if we find a trusted key later.
-        if (!res.untrusted) {
+        if (!res?.untrusted) {
             this.removeEventFromPendingList(event);
         }
 
@@ -1431,7 +1431,6 @@ export class MegolmDecryption extends DecryptionAlgorithm {
         } catch (e) {
             payload = res.result;
         }
-        console.info(payload, "解密了吗");
         // belt-and-braces check that the room id matches that indicated by the HS
         // (this is somewhat redundant, since the megolm session is scoped to the
         // room, so neither the sender nor a MITM can lie about the room_id).
@@ -1813,12 +1812,12 @@ export class MegolmDecryption extends DecryptionAlgorithm {
                 // session, because if we didn't, we leave the other key
                 // requests in the hopes that someone sends us a key that
                 // includes an earlier index.
-                this.crypto.cancelRoomKeyRequest({
-                    algorithm: roomKey.algorithm,
-                    room_id: roomKey.roomId,
-                    session_id: roomKey.sessionId,
-                    sender_key: roomKey.senderKey,
-                });
+                // this.crypto.cancelRoomKeyRequest({
+                //     algorithm: roomKey.algorithm,
+                //     room_id: roomKey.roomId,
+                //     session_id: roomKey.sessionId,
+                //     sender_key: roomKey.senderKey,
+                // });
             }
 
             // don't wait for the keys to be backed up for the server
@@ -2130,7 +2129,6 @@ export class MegolmDecryption extends DecryptionAlgorithm {
             "Retrying decryption on events:",
             pendingList.map((e) => `${e.getId()}`),
         );
-
         await Promise.all(
             pendingList.map(async (ev) => {
                 try {
