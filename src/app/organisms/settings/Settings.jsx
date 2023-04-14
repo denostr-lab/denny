@@ -339,10 +339,10 @@ function AboutSection() {
       <div className="settings-about__card">
         <MenuHeader>Application</MenuHeader>
         <div className="settings-about__branding">
-          <img width="60" height="60" src={CinnySVG} alt="Cinny logo" />
+          <img width="60" height="60" src={CinnySVG} alt="Denny logo" />
           <div>
             <Text variant="h2" weight="medium">
-              Cinny
+              Denny
               <span className="text text-b3" style={{ margin: '0 var(--sp-extra-tight)' }}>{`v${cons.version}`}</span>
             </Text>
             <Text>Yet another matrix client</Text>
@@ -360,15 +360,15 @@ function AboutSection() {
         <div className="settings-about__credits">
           <ul>
             <li>
-              {/* eslint-disable-next-line react/jsx-one-expression-per-line */ }
+              {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
               <Text>The <a href="https://github.com/matrix-org/matrix-js-sdk" rel="noreferrer noopener" target="_blank">matrix-js-sdk</a> is © <a href="https://matrix.org/foundation" rel="noreferrer noopener" target="_blank">The Matrix.org Foundation C.I.C</a> used under the terms of <a href="http://www.apache.org/licenses/LICENSE-2.0" rel="noreferrer noopener" target="_blank">Apache 2.0</a>.</Text>
             </li>
             <li>
-              {/* eslint-disable-next-line react/jsx-one-expression-per-line */ }
+              {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
               <Text>The <a href="https://twemoji.twitter.com" target="_blank" rel="noreferrer noopener">Twemoji</a> emoji art is © <a href="https://twemoji.twitter.com" target="_blank" rel="noreferrer noopener">Twitter, Inc and other contributors</a> used under the terms of <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC-BY 4.0</a>.</Text>
             </li>
             <li>
-              {/* eslint-disable-next-line react/jsx-one-expression-per-line */ }
+              {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
               <Text>The <a href="https://material.io/design/sound/sound-resources.html" target="_blank" rel="noreferrer noopener">Material sound resources</a> are © <a href="https://google.com" target="_blank" rel="noreferrer noopener">Google</a> used under the terms of <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC-BY 4.0</a>.</Text>
             </li>
           </ul>
@@ -467,7 +467,7 @@ function Settings() {
             onSelect={handleTabChange}
           />
           <div className="settings-window__cards-wrapper">
-            { selectedTab.render() }
+            {selectedTab.render()}
           </div>
         </div>
       )}

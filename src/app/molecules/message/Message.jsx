@@ -762,7 +762,6 @@ function Message({
     ? reactionTimeline.has(eventId) || !!mEvent.getServerAggregatedRelation('m.annotation')
     : false;
   const isReply = !!mEvent.replyEventId;
-
   if (isEdited) {
     const editedList = editedTimeline.get(eventId);
     const editedMEvent = editedList[editedList.length - 1];

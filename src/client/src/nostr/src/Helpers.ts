@@ -187,20 +187,23 @@ export async function createKind104Event(
     pubkey: string,
     session: { sessionId: string; sessionKey: string },
 ) {
-    const olmDevice = client.crypto.olmDevice!;
-    const event: Event = {
-        kind: 104,
-        content: JSON.stringify({
-            session_id: session.sessionId,
-            session_key: session.sessionKey,
-            room_id: roomId,
-        }),
-        tags: [["p", pubkey]],
-    };
-    event.content = await Key.encrypt(event.content);
-    await handlePublishEvent(event);
-    await client.nostrClient.relay.publishAsPromise(event);
-    return event;
+    try {
+        const event: Event = {
+            kind: 104,
+            content: JSON.stringify({
+                session_id: session.sessionId,
+                session_key: session.sessionKey,
+                room_id: roomId,
+            }),
+            tags: [["p", pubkey]],
+        };
+        event.content = await Key.encrypt(event.content, pubkey);
+        await handlePublishEvent(event);
+        await client.nostrClient.relay.publishAsPromise(event);
+        return event;
+    } catch (e) {
+        console.info(e, "发送104错误");
+    }
 }
 export const communicateMegolmSessionEvent = createKind104Event;
 

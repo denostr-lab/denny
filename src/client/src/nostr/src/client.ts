@@ -10,6 +10,7 @@ import { IJoinedRoom } from "../../sync-accumulator";
 import { MatrixEvent } from "../../models/event";
 import * as olmlib from "../../crypto/olmlib";
 import Key from "./Key";
+import { Room } from "../../models/room";
 
 // export { Filter as NostrFilter };
 let allRooms = [];
@@ -83,15 +84,14 @@ class NostrClient {
         const since = utils.now() - utils.timedelta(30, "days");
         const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
-        const publicGroupMessage = [41, 42];
+        const publicGroupMessage = [41, 42, 7];
         const privateGroupMessage = [142, 141]; // 拿到房间的
         // 这里要过滤掉用户
 
         if (roomIds.length) {
             const roomFilters = [
                 { "kinds": [...publicGroupMessage, ...privateGroupMessage], "#e": roomIds as string[], since },
-                { kinds: [40], ids: roomIds, since },
-                { kinds: [7], ids: roomIds, since },
+                { kinds: [40, 140], ids: roomIds, since },
             ] as Filter[];
             this.relay.subscribe({ filters: roomFilters, id: "global-room" });
         }
@@ -122,17 +122,16 @@ class NostrClient {
                         .forEach((i) => userIds.add(i.sender));
                 }
             });
+
             this.fetchUserMetadatas([...userIds] as string[]);
 
             if (roomIds?.length) {
                 const prevAllids = allRooms;
-                console.info(prevAllids, "asasas ");
                 let currentAllIds = [...allRooms, ...roomIds];
                 currentAllIds = [...new Set(currentAllIds)];
                 const notSmae = currentAllIds.some((i) => !prevAllids.find((j) => i === j));
                 if (notSmae || currentAllIds.length !== prevAllids.length) {
                     allRooms = currentAllIds;
-                    console.info(allRooms, "allRoomsallRooms");
                     this.subscribeRooms(allRooms);
                 }
             }
@@ -143,8 +142,6 @@ class NostrClient {
             const ids = (data?.presence?.events || []).map((i) => i.user_id).filter(Boolean);
             if (ids?.length) {
                 const prevAllUsers = allUsers;
-                console.info(prevAllUsers, "asasas ");
-
                 let currentAllUsers = [...allUsers, ...ids];
                 currentAllUsers = [...new Set(currentAllUsers)];
                 const notSmae = currentAllUsers.some((i) => !prevAllUsers.find((j) => i === j));
@@ -211,9 +208,9 @@ class NostrClient {
 
     fetchUserMetadatas(userIds: string[]) {
         /*
-        批量获取房间的MetaData信息,
-        如果出现中继提示连接过多的错误，则后续继续获取
-    */
+            批量获取房间的MetaData信息,
+            如果出现中继提示连接过多的错误，则后续继续获取
+        */
         if (!userIds?.length) return;
         const filters: Filter[] = [
             {
@@ -273,13 +270,42 @@ class NostrClient {
     }
 
     async updateRoomMetaData(roomId: string, metadata: UpdateRoomMetadata) {
+        const userId = this.client.getUserId() as string;
+        const room = this.client.getRoom(roomId) as Room;
+        const encryptionState = room!.currentState.getStateEvents(EventType.RoomEncryption, "");
+        const encryptionStateContent = encryptionState?.getContent?.();
+        const isPrivateGroup = encryptionStateContent?.algorithm === olmlib.MEGOLM_ALGORITHM;
+        let content = JSON.stringify({
+            ...metadata,
+            ...{ picture: metadata.picture || "" },
+        });
+        let toPubkeys: any = [];
+        if (isPrivateGroup) {
+            toPubkeys = [Key.getPubKey(), ...room!.getMembers().map((member) => member.userId)];
+            toPubkeys = [...new Set(toPubkeys)].map((i) => ["p", i]);
+            // 直接对房间进行加密
+            const localEvent = new MatrixEvent({
+                event_id: `${Math.random()}`,
+                content: {
+                    body: {
+                        ...metadata,
+                        ...{ picture: metadata.picture || "" },
+                    },
+                },
+                user_id: userId,
+                sender: userId,
+                room_id: roomId,
+                origin_server_ts: new Date().getTime(),
+            });
+
+            await this.client.crypto.encryptEvent(localEvent, room);
+            const cipherResult = localEvent.getWireContent();
+            content = `${cipherResult.ciphertext}?sid=${cipherResult.session_id}`;
+        }
         const event = {
-            kind: 41,
-            content: JSON.stringify({
-                ...metadata,
-                ...{ picture: metadata.picture || "" },
-            }),
-            tags: [["e", roomId]],
+            kind: isPrivateGroup ? 141 : 41,
+            content,
+            tags: [["e", roomId], ...toPubkeys],
         } as Event;
         await this.handPublishEvent(event);
         await this.relay.publishAsPromise(event);
@@ -318,9 +344,9 @@ class NostrClient {
             } else if (isDeleteEvent) {
                 // 删除事件
                 kind = 5;
-            }
-            if (isPrivateGroup) {
+            } else if (isPrivateGroup) {
                 kind = 142;
+                body = `${content.ciphertext}?sid=${content.session_id}`;
             }
             return kind;
         };
@@ -364,9 +390,8 @@ class NostrClient {
                 Events.handle(this.client, event);
             }
         } catch (e) {
-            console.info(e, "发送错误");
+            console.info(e, "send message error");
         }
-        console.info("你来说,", event);
         return { event_id: event.id };
     }
 
@@ -444,14 +469,17 @@ class NostrClient {
         Events.handleDeCryptedRoomMeta(this.client, event);
     }
 
-    createKind104Event(roomId: string, pubkey: string) {
-        const olmDevice = this.client.crypto.olmDevice!;
-        const sessionId = olmDevice.createOutboundGroupSession();
-        const key = olmDevice.getOutboundGroupSessionKey(sessionId);
-        const session = {
-            sessionId,
-            sessionKey: key.key,
-        };
+    createKind104Event(roomId: string, pubkey: string, session?: any) {
+        if (!session) {
+            const olmDevice = this.client.crypto.olmDevice!;
+            const sessionId = olmDevice.createOutboundGroupSession();
+            const key = olmDevice.getOutboundGroupSessionKey(sessionId);
+            session = {
+                sessionId,
+                sessionKey: key.key,
+            };
+        }
+
         return createKind104Event(this.client, roomId, pubkey, session);
     }
 
@@ -484,7 +512,7 @@ class NostrClient {
             sessionId,
             sessionKey: key.key,
         };
-        const event141 = createKind141Event(
+        const event141 = await createKind141Event(
             this.client,
             room,
             JSON.stringify(metadata),

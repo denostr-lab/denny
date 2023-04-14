@@ -9907,8 +9907,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         return this.nostrClient.hasLeaveRoom(roomId);
     }
 
-    public createKind104Event(roomId: string, pubkey: string, sessionId?: string) {
-        return this.nostrClient.createKind104Event(roomId, pubkey, sessionId);
+    public createKind104Event(roomId: string, pubkey: string, session?: any) {
+        return this.nostrClient.createKind104Event(roomId, pubkey, session);
     }
 
     public inviteUserToEncryptedChannel(room: { id: string; relayUrl?: string }, pubkey: string, sessionId?: string) {
