@@ -483,23 +483,39 @@ class NostrClient {
         return createKind104Event(this.client, roomId, pubkey, session);
     }
 
-    async inviteUserToEncryptedChannel(room: { id: string; relayUrl?: string }, invitePubkeys: string[]) {
+    async inviteUserToEncryptedChannel(
+        room: { id: string; relayUrl?: string },
+        invitePubkeys: string[],
+        kickPubkeys?: string[],
+    ) {
         // 查找创建event事件
         const currentRoom = this.client.getRoom(room.id);
         if (!currentRoom) {
             return;
         }
 
-        if (invitePubkeys.length === 0) {
-            return;
+        let toPubkeys = [
+            ...new Set([Key.getPubKey(), ...currentRoom.getMembers().map((member) => member.userId)].filter(Boolean)),
+        ];
+        let newToPubkeys: string[] = [];
+
+        // 剔除 kick 列表内的 pubkey
+        if (kickPubkeys && Array.isArray(kickPubkeys)) {
+            newToPubkeys = toPubkeys.filter((pubkey) => !kickPubkeys.includes(pubkey));
         }
 
-        const toPubkeys = [Key.getPubKey(), ...currentRoom.getMembers().map((member) => member.userId)];
         invitePubkeys.forEach((pubkey) => {
-            if (!toPubkeys.includes(pubkey)) {
-                toPubkeys.push(pubkey);
+            if (!newToPubkeys.includes(pubkey)) {
+                newToPubkeys.push(pubkey);
             }
         });
+
+        toPubkeys = [...new Set(toPubkeys)].sort();
+        newToPubkeys = [...new Set(newToPubkeys)].sort();
+
+        if (toPubkeys.join("") === newToPubkeys.join("")) {
+            return;
+        }
 
         const { currentState } = currentRoom;
         const roomTopic = currentState.getStateEvents("m.room.topic")[0]?.getContent().topic;
@@ -521,10 +537,10 @@ class NostrClient {
             this.client,
             room,
             JSON.stringify(metadata),
-            [...new Set(toPubkeys)].sort(),
+            newToPubkeys,
             session.sessionId,
         );
-        await Promise.all(toPubkeys.map((pubkey) => createKind104Event(this.client, room.id, pubkey, session)));
+        await Promise.all(newToPubkeys.map((pubkey) => createKind104Event(this.client, room.id, pubkey, session)));
 
         return event141;
     }
