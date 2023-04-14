@@ -67,48 +67,6 @@ function CreateRoomContent({ isSpace, parentId, onRequestClose }) {
     };
   }, []);
 
-  // const handleSubmit = async (evt) => {
-  //   evt.preventDefault();
-  //   const { target } = evt;
-
-  //   if (isCreatingRoom) return;
-  //   setIsCreatingRoom(true);
-  //   setCreatingError(null);
-
-  //   const name = target.name.value;
-  //   let topic = target.topic.value;
-  //   if (topic.trim() === '') topic = undefined;
-  //   let roomAlias;
-  //   if (joinRule === 'public') {
-  //     roomAlias = addressRef?.current?.value;
-  //     if (roomAlias.trim() === '') roomAlias = undefined;
-  //   }
-
-  //   const powerLevel = roleIndex === 1 ? 101 : undefined;
-
-  //   try {
-  //     await roomActions.createRoom({
-  //       name,
-  //       topic,
-  //       joinRule,
-  //       alias: roomAlias,
-  //       isEncrypted: (isSpace || joinRule === 'public') ? false : isEncrypted,
-  //       powerLevel,
-  //       isSpace,
-  //       parentId,
-  //     });
-  //   } catch (e) {
-  //     if (e.message === 'M_UNKNOWN: Invalid characters in room alias') {
-  //       setCreatingError('ERROR: Invalid characters in address');
-  //       setIsValidAddress(false);
-  //     } else if (e.message === 'M_ROOM_IN_USE: Room alias already taken') {
-  //       setCreatingError('ERROR: This address is already in use');
-  //       setIsValidAddress(false);
-  //     } else setCreatingError(e.message);
-  //     setIsCreatingRoom(false);
-  //   }
-  // };
-
   const handleSubmit = async (evt) => {
     evt.preventDefault();
     const { target } = evt;
@@ -211,7 +169,7 @@ function CreateRoomContent({ isSpace, parentId, onRequestClose }) {
   return (
     <div className="create-room">
       <form className="create-room__form" onSubmit={handleSubmit}>
-        {/* <SettingTile
+        <SettingTile
           title="Visibility"
           options={(
             <Button onClick={handleJoinRule} iconSrc={ChevronBottomIC}>
@@ -219,7 +177,7 @@ function CreateRoomContent({ isSpace, parentId, onRequestClose }) {
             </Button>
           )}
           content={<Text variant="b3">{`Select who can join this ${isSpace ? 'space' : 'room'}.`}</Text>}
-        /> */}
+        />
         {/* {joinRule === 'public' && (
           <div>
             <Text className="create-room__address__label" variant="b2">{isSpace ? 'Space address' : 'Room address'}</Text>

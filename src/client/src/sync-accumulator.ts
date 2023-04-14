@@ -42,6 +42,7 @@ export interface IMinimalEvent {
     type: EventType | string;
     unsigned?: IUnsigned;
     origin_server_ts?: number;
+    presence?: boolean;
 }
 
 export interface IEphemeral {

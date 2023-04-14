@@ -37,6 +37,7 @@ import { EventStatus } from "./event-status";
 import { DecryptionError } from "../crypto/algorithms";
 import { CryptoBackend } from "../common-crypto/CryptoBackend";
 import { WITHHELD_MESSAGES } from "../crypto/OlmDevice";
+import { handMediaContent } from "../nostr/src/Helpers";
 
 export { EventStatus } from "./event-status";
 
@@ -95,6 +96,8 @@ export interface IEvent {
      * @deprecated in favour of `origin_server_ts`
      */
     age?: number;
+    // v2
+    version?: string;
 }
 
 export interface IAggregatedRelation {
@@ -371,7 +374,6 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
             if (typeof event.content?.["m.relates_to"]?.[prop] !== "string") return;
             event.content["m.relates_to"][prop] = internaliseString(event.content["m.relates_to"][prop]!);
         });
-
         this.txnId = event.txn_id;
         this.localTimestamp = Date.now() - (this.getAge() ?? 0);
         this.reEmitter = new TypedReEmitter(this);
@@ -817,7 +819,6 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
         // it is set in attemptDecryption - and hence end up with a stuck
         // `decryptionPromise`).
         await Promise.resolve();
-
         // eslint-disable-next-line no-constant-condition
         while (true) {
             this.retryDecryption = false;
@@ -924,6 +925,16 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
      * Fires {@link MatrixEventEvent.Decrypted}
      */
     private setClearData(decryptionResult: IEventDecryptionResult): void {
+        if (this.version === "2") {
+            try {
+                decryptionResult.clearEvent.content.body = JSON.parse(decryptionResult.clearEvent.content.body).content;
+            } catch (e) {
+                console.info(e, "JSON Parse Error");
+            }
+            decryptionResult.clearEvent.content = handMediaContent(decryptionResult.clearEvent.content);
+        } else {
+            decryptionResult.clearEvent.content = handMediaContent(decryptionResult.clearEvent.content);
+        }
         this.clearEvent = decryptionResult.clearEvent;
         this.senderCurve25519Key = decryptionResult.senderCurve25519Key ?? null;
         this.claimedEd25519Key = decryptionResult.claimedEd25519Key ?? null;
@@ -948,7 +959,10 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
      * @returns True if this event is encrypted.
      */
     public isEncrypted(): boolean {
-        return !this.isState() && this.event.type === EventType.RoomMessageEncrypted;
+        const isEncrypted =
+            (!this.isState() && this.event.type === EventType.RoomMessageEncrypted) ||
+            this.event.type === EventType.RoomMetaEncrypted;
+        return isEncrypted;
     }
 
     /**
@@ -963,7 +977,7 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
      * established the megolm session
      */
     public getSenderKey(): string | null {
-        return this.senderCurve25519Key;
+        return this.getWireContent()?.sender_key || this.sender?.userId || this.senderCurve25519Key;
     }
 
     /**

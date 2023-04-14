@@ -1477,6 +1477,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         allowDefault = true,
     ): string | null {
         const roomAvatarEvent = this.currentState.getStateEvents(EventType.RoomAvatar, "");
+        console.info(roomAvatarEvent, this.roomId, "来爱");
         if (!roomAvatarEvent && !allowDefault) {
             return null;
         }
@@ -2985,6 +2986,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         const powerLevelsEvent = this.currentState.getStateEvents(EventType.RoomPowerLevels, "");
         const powerLevels = powerLevelsEvent && powerLevelsEvent.getContent();
         const me = this.getMember(userId);
+
         if (powerLevels && me && powerLevels.invite > me.powerLevel) {
             canInvite = false;
         }

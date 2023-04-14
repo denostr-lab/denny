@@ -27,7 +27,6 @@ function Selector({
 
   let imageSrc = mx.getUserAvatar(room?.roomId);
   if (imageSrc === null) imageSrc = room?.getAvatarUrl(mx.baseUrl, 24, 24, 'crop') || null;
-
   const isMuted = noti.getNotiType(roomId) === cons.notifs.MUTE;
 
   const [, forceUpdate] = useForceUpdate();

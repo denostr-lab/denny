@@ -44,7 +44,6 @@ import { RoomKeyRequestState } from "../OutgoingRoomKeyRequestManager";
 import { OlmGroupSessionExtraData } from "../../@types/crypto";
 import { MatrixError } from "../../http-api";
 import { immediate, MapWithDefault } from "../../utils";
-
 // determine whether the key can be shared with invitees
 export function isRoomSharedHistory(room: Room): boolean {
     const visibilityEvent = room?.currentState?.getStateEvents("m.room.history_visibility", "");
@@ -298,8 +297,9 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         const setup = async (oldSession: OutboundSessionInfo | null): Promise<OutboundSessionInfo> => {
             const sharedHistory = isRoomSharedHistory(room);
             const session = await this.prepareSession(devicesInRoom, sharedHistory, oldSession);
-
-            await this.shareSession(devicesInRoom, sharedHistory, singleOlmCreationPhase, blocked, session);
+            if (oldSession?.sessionId !== session.sessionId) {
+                await this.shareSession(devicesInRoom, sharedHistory, singleOlmCreationPhase, blocked, session);
+            }
 
             return session;
         };
@@ -338,9 +338,9 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         }
 
         // determine if we have shared with anyone we shouldn't have
-        if (session?.sharedWithTooManyDevices(devicesInRoom)) {
-            session = null;
-        }
+        // if (session?.sharedWithTooManyDevices(devicesInRoom)) {
+        //     session = null;
+        // }
 
         if (!session) {
             this.prefixedLogger.log("Starting new megolm session");
@@ -359,25 +359,36 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         blocked: BlockedMap,
         session: OutboundSessionInfo,
     ): Promise<void> {
+        // chaneg by nostr
         // now check if we need to share with any devices
         const shareMap: Record<string, DeviceInfo[]> = {};
-
+        const promiseList: Promise<any>[] = [];
+        const outboundKey = this.olmDevice.getOutboundGroupSessionKey(session.sessionId);
+        const sessionData = {
+            sessionId: session.sessionId,
+            sessionKey: outboundKey.key,
+        };
         for (const [userId, userDevices] of devicesInRoom) {
             for (const [deviceId, deviceInfo] of userDevices) {
-                const key = deviceInfo.getIdentityKey();
-                if (key == this.olmDevice.deviceCurve25519Key) {
-                    // don't bother sending to ourself
-                    continue;
-                }
+                // const key = deviceInfo.getIdentityKey();
+                // if (key == this.olmDevice.deviceCurve25519Key) {
+                //     // don't bother sending to ourself
+                //     continue;
+                // }
 
                 if (!session.sharedWithDevices.get(userId)?.get(deviceId)) {
                     shareMap[userId] = shareMap[userId] || [];
                     shareMap[userId].push(deviceInfo);
+
+                    promiseList.push(this.baseApis.createKind104Event(this.roomId, userId, sessionData));
                 }
             }
         }
 
+        return;
+
         const key = this.olmDevice.getOutboundGroupSessionKey(session.sessionId);
+
         const payload: IPayload = {
             type: "m.room_key",
             content: {
@@ -1072,23 +1083,24 @@ export class MegolmEncryption extends EncryptionAlgorithm {
          * When using in-room messages and the room has encryption enabled,
          * clients should ensure that encryption does not hinder the verification.
          */
-        const forceDistributeToUnverified = this.isVerificationEvent(eventType, content);
+        // const forceDistributeToUnverified = this.isVerificationEvent(eventType, content);
+        const forceDistributeToUnverified = true;
         const [devicesInRoom, blocked] = await this.getDevicesInRoom(room, forceDistributeToUnverified);
 
         // check if any of these devices are not yet known to the user.
         // if so, warn the user so they can verify or ignore.
-        if (this.crypto.globalErrorOnUnknownDevices) {
-            this.checkForUnknownDevices(devicesInRoom);
-        }
+        // if (this.crypto.globalErrorOnUnknownDevices) {
+        //     this.checkForUnknownDevices(devicesInRoom);
+        // }
 
         const session = await this.ensureOutboundSession(room, devicesInRoom, blocked);
-        const payloadJson = {
-            room_id: this.roomId,
-            type: eventType,
-            content: content,
-        };
-
-        const ciphertext = this.olmDevice.encryptGroupMessage(session.sessionId, JSON.stringify(payloadJson));
+        // const payloadJson = {
+        //     room_id: this.roomId,
+        //     type: eventType,
+        //     content: content,
+        // };
+        const needCiphertext = content.url || content.body;
+        const ciphertext = this.olmDevice.encryptGroupMessage(session.sessionId, JSON.stringify(needCiphertext));
         const encryptedContent: IEncryptedContent = {
             algorithm: olmlib.MEGOLM_ALGORITHM,
             sender_key: this.olmDevice.deviceCurve25519Key!,
@@ -1216,22 +1228,23 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         forceDistributeToUnverified = false,
         isCancelled?: () => boolean,
     ): Promise<null | [DeviceInfoMap, BlockedMap]> {
+        // change by nostr
         const members = await room.getEncryptionTargetMembers();
         this.prefixedLogger.debug(
             `Encrypting for users (shouldEncryptForInvitedMembers: ${room.shouldEncryptForInvitedMembers()}):`,
             members.map((u) => `${u.userId} (${u.membership})`),
         );
 
-        const roomMembers = members.map(function (u) {
-            return u.userId;
-        });
+        // const roomMembers = members.map(function (u) {
+        //     return u.userId;
+        // });
 
         // The global value is treated as a default for when rooms don't specify a value.
-        let isBlacklisting = this.crypto.globalBlacklistUnverifiedDevices;
-        const isRoomBlacklisting = room.getBlacklistUnverifiedDevices();
-        if (typeof isRoomBlacklisting === "boolean") {
-            isBlacklisting = isRoomBlacklisting;
-        }
+        // let isBlacklisting = this.crypto.globalBlacklistUnverifiedDevices;
+        // const isRoomBlacklisting = room.getBlacklistUnverifiedDevices();
+        // if (typeof isRoomBlacklisting === "boolean") {
+        //     isBlacklisting = isRoomBlacklisting;
+        // }
 
         // We are happy to use a cached version here: we assume that if we already
         // have a list of the user's devices, then we already share an e2e room
@@ -1239,38 +1252,55 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         // device_lists in their /sync response.  This cache should then be maintained
         // using all the device_lists changes and left fields.
         // See https://github.com/vector-im/element-web/issues/2305 for details.
-        const devices = await this.crypto.downloadKeys(roomMembers, false);
+        // const devices1 = await this.crypto.downloadKeys(roomMembers, false);
+        const devices: DeviceInfoMap = new Map();
 
+        members.forEach((u) => {
+            const deviceMap = new Map();
+            deviceMap.set(
+                u.userId,
+                DeviceInfo.fromStorage(
+                    {
+                        keys: {},
+                        algorithms: [olmlib.MEGOLM_ALGORITHM],
+                        verified: 1,
+                        known: true,
+                    },
+                    u.userId,
+                ),
+            );
+            devices.set(u.userId, deviceMap);
+        });
         if (isCancelled?.() === true) {
             return null;
         }
-
-        const blocked = new MapWithDefault<string, Map<string, IBlockedDevice>>(() => new Map());
+        const blocked = new Map();
+        // const blocked = new MapWithDefault<string, Map<string, IBlockedDevice>>(() => new Map());
         // remove any blocked devices
-        for (const [userId, userDevices] of devices) {
-            for (const [deviceId, userDevice] of userDevices) {
-                // Yield prior to checking each device so that we don't block
-                // updating/rendering for too long.
-                // See https://github.com/vector-im/element-web/issues/21612
-                if (isCancelled !== undefined) await immediate();
-                if (isCancelled?.() === true) return null;
-                const deviceTrust = this.crypto.checkDeviceTrust(userId, deviceId);
+        // for (const [userId, userDevices] of devices) {
+        //     for (const [deviceId, userDevice] of userDevices) {
+        //         // Yield prior to checking each device so that we don't block
+        //         // updating/rendering for too long.
+        //         // See https://github.com/vector-im/element-web/issues/21612
+        //         if (isCancelled !== undefined) await immediate();
+        //         if (isCancelled?.() === true) return null;
+        //         const deviceTrust = this.crypto.checkDeviceTrust(userId, deviceId);
 
-                if (
-                    userDevice.isBlocked() ||
-                    (!deviceTrust.isVerified() && isBlacklisting && !forceDistributeToUnverified)
-                ) {
-                    const blockedDevices = blocked.getOrCreate(userId);
-                    const isBlocked = userDevice.isBlocked();
-                    blockedDevices.set(deviceId, {
-                        code: isBlocked ? "m.blacklisted" : "m.unverified",
-                        reason: WITHHELD_MESSAGES[isBlocked ? "m.blacklisted" : "m.unverified"],
-                        deviceInfo: userDevice,
-                    });
-                    userDevices.delete(deviceId);
-                }
-            }
-        }
+        //         if (
+        //             userDevice.isBlocked() ||
+        //             (!deviceTrust.isVerified() && isBlacklisting && !forceDistributeToUnverified)
+        //         ) {
+        //             const blockedDevices = blocked.getOrCreate(userId);
+        //             const isBlocked = userDevice.isBlocked();
+        //             blockedDevices.set(deviceId, {
+        //                 code: isBlocked ? "m.blacklisted" : "m.unverified",
+        //                 reason: WITHHELD_MESSAGES[isBlocked ? "m.blacklisted" : "m.unverified"],
+        //                 deviceInfo: userDevice,
+        //             });
+        //             userDevices.delete(deviceId);
+        //         }
+        //     }
+        // }
 
         return [devices, blocked];
     }
@@ -1338,7 +1368,7 @@ export class MegolmDecryption extends DecryptionAlgorithm {
             let errorCode = "OLM_DECRYPT_GROUP_MESSAGE_ERROR";
 
             if ((<MatrixError>e)?.message === "OLM.UNKNOWN_MESSAGE_INDEX") {
-                this.requestKeysForEvent(event);
+                // this.requestKeysForEvent(event);
 
                 errorCode = "OLM_UNKNOWN_MESSAGE_INDEX";
             }
@@ -1351,32 +1381,32 @@ export class MegolmDecryption extends DecryptionAlgorithm {
         if (res === null) {
             // We've got a message for a session we don't have.
             // try and get the missing key from the backup first
-            this.crypto.backupManager.queryKeyBackupRateLimited(event.getRoomId(), content.session_id).catch(() => {});
+            // this.crypto.backupManager.queryKeyBackupRateLimited(event.getRoomId(), content.session_id).catch(() => {});
 
             // (XXX: We might actually have received this key since we started
             // decrypting, in which case we'll have scheduled a retry, and this
             // request will be redundant. We could probably check to see if the
             // event is still in the pending list; if not, a retry will have been
             // scheduled, so we needn't send out the request here.)
-            this.requestKeysForEvent(event);
+            // this.requestKeysForEvent(event);
 
             // See if there was a problem with the olm session at the time the
             // event was sent.  Use a fuzz factor of 2 minutes.
-            const problem = await this.olmDevice.sessionMayHaveProblems(content.sender_key, event.getTs() - 120000);
-            if (problem) {
-                this.prefixedLogger.info(
-                    `When handling UISI from ${event.getSender()} (sender key ${content.sender_key}): ` +
-                        `recent session problem with that sender:`,
-                    problem,
-                );
-                let problemDescription = PROBLEM_DESCRIPTIONS[problem.type as "no_olm"] || PROBLEM_DESCRIPTIONS.unknown;
-                if (problem.fixed) {
-                    problemDescription += " Trying to create a new secure channel and re-requesting the keys.";
-                }
-                throw new DecryptionError("MEGOLM_UNKNOWN_INBOUND_SESSION_ID", problemDescription, {
-                    session: content.sender_key + "|" + content.session_id,
-                });
-            }
+            // const problem = await this.olmDevice.sessionMayHaveProblems(content.sender_key, event.getTs() - 120000);
+            // if (problem) {
+            //     this.prefixedLogger.info(
+            //         `When handling UISI from ${event.getSender()} (sender key ${content.sender_key}): ` +
+            //             `recent session problem with that sender:`,
+            //         problem,
+            //     );
+            //     let problemDescription = PROBLEM_DESCRIPTIONS[problem.type as "no_olm"] || PROBLEM_DESCRIPTIONS.unknown;
+            //     if (problem.fixed) {
+            //         problemDescription += " Trying to create a new secure channel and re-requesting the keys.";
+            //     }
+            //     throw new DecryptionError("MEGOLM_UNKNOWN_INBOUND_SESSION_ID", problemDescription, {
+            //         session: content.sender_key + "|" + content.session_id,
+            //     });
+            // }
 
             throw new DecryptionError(
                 "MEGOLM_UNKNOWN_INBOUND_SESSION_ID",
@@ -1391,21 +1421,31 @@ export class MegolmDecryption extends DecryptionAlgorithm {
         // that hasn't already happened. However, if the event was
         // decrypted with an untrusted key, leave it on the pending
         // list so it will be retried if we find a trusted key later.
-        if (!res.untrusted) {
+        if (!res?.untrusted) {
             this.removeEventFromPendingList(event);
         }
 
-        const payload = JSON.parse(res.result);
-
+        let payload = res.result;
+        try {
+            payload = JSON.parse(res.result);
+        } catch (e) {
+            payload = res.result;
+        }
         // belt-and-braces check that the room id matches that indicated by the HS
         // (this is somewhat redundant, since the megolm session is scoped to the
         // room, so neither the sender nor a MITM can lie about the room_id).
-        if (payload.room_id !== event.getRoomId()) {
-            throw new DecryptionError("MEGOLM_BAD_ROOM", "Message intended for room " + payload.room_id);
-        }
+        // if (payload.room_id !== event.getRoomId()) {
+        //     throw new DecryptionError("MEGOLM_BAD_ROOM", "Message intended for room " + payload.room_id);
+        // }
 
         return {
-            clearEvent: payload,
+            clearEvent: {
+                type: EventType.RoomMessage,
+                content: {
+                    msgtype: MsgType.Text,
+                    body: payload,
+                },
+            },
             senderCurve25519Key: res.senderKey,
             claimedEd25519Key: res.keysClaimed.ed25519,
             forwardingCurve25519KeyChain: res.forwardingCurve25519KeyChain,
@@ -1495,7 +1535,7 @@ export class MegolmDecryption extends DecryptionAlgorithm {
             return;
         }
 
-        if (!olmlib.isOlmEncrypted(event)) {
+        if (!olmlib.isOlmMegolmEncrypted(event)) {
             this.prefixedLogger.error("key event not properly encrypted");
             return;
         }
@@ -1772,12 +1812,12 @@ export class MegolmDecryption extends DecryptionAlgorithm {
                 // session, because if we didn't, we leave the other key
                 // requests in the hopes that someone sends us a key that
                 // includes an earlier index.
-                this.crypto.cancelRoomKeyRequest({
-                    algorithm: roomKey.algorithm,
-                    room_id: roomKey.roomId,
-                    session_id: roomKey.sessionId,
-                    sender_key: roomKey.senderKey,
-                });
+                // this.crypto.cancelRoomKeyRequest({
+                //     algorithm: roomKey.algorithm,
+                //     room_id: roomKey.roomId,
+                //     session_id: roomKey.sessionId,
+                //     sender_key: roomKey.senderKey,
+                // });
             }
 
             // don't wait for the keys to be backed up for the server
@@ -1820,7 +1860,6 @@ export class MegolmDecryption extends DecryptionAlgorithm {
             await this.onForwardedRoomKey(event);
         } else {
             const roomKey = this.roomKeyFromEvent(event);
-
             if (!roomKey) {
                 return;
             }
@@ -2090,7 +2129,6 @@ export class MegolmDecryption extends DecryptionAlgorithm {
             "Retrying decryption on events:",
             pendingList.map((e) => `${e.getId()}`),
         );
-
         await Promise.all(
             pendingList.map(async (ev) => {
                 try {

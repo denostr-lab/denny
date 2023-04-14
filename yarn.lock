@@ -1402,7 +1402,7 @@ eslint-plugin-jsx-a11y@6.6.1:
 
 eslint-plugin-matrix-org@1.1.0:
   version "1.1.0"
-  resolved "https://registry.yarnpkg.com/eslint-plugin-matrix-org/-/eslint-plugin-matrix-org-1.1.0.tgz#cb3c313b58aa84ee0dd52c57f4a614a1795e8744"
+  resolved "https://registry.npmjs.org/eslint-plugin-matrix-org/-/eslint-plugin-matrix-org-1.1.0.tgz#cb3c313b58aa84ee0dd52c57f4a614a1795e8744"
   integrity sha512-UArLqthBuaCljVajS2TtlPQLXNMZZAPKRt+gA8D0ayzcAj+Ghl50amwGtvLHMzISGv3sqNDBFBMD9cElntE1zA==
 
 eslint-plugin-react-hooks@4.6.0:

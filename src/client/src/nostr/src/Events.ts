@@ -1,8 +1,5 @@
-import { Event, verifySignature } from "nostr-tools";
-import { MsgType } from "matrix-js-sdk/lib/@types/event";
-import { IContent } from "matrix-js-sdk/lib/models/event";
-
-import { ISyncResponse } from "../../sync-accumulator";
+import { debounce } from "lodash-es";
+import { IStateEvent, IStrippedState, ISyncResponse } from "../../sync-accumulator";
 import { MatrixClient } from "../../client";
 
 // import IndexedDB from './IndexedDB';
@@ -14,10 +11,24 @@ import {
     stateKeyFilters,
     getDefaultSyncResponse,
     handMediaContent,
+    getQuery,
 } from "./Helpers";
+import * as olmlib from "../../crypto/olmlib";
+import * as algorithms from "../../crypto/algorithms";
 
+import {
+    CachedReceiptStructure,
+    MAIN_ROOM_TIMELINE,
+    Receipt,
+    ReceiptContent,
+    ReceiptType,
+} from "../../@types/read_receipts";
+import { Event, Kind, nip04, verifySignature } from "nostr-tools";
 import { EventType, RelationType } from "../../@types/event";
-import { MetaInfo, RoomMetaInfo, Kinds } from "./@types";
+import { MsgType } from "matrix-js-sdk/lib/@types/event";
+import { IContent } from "matrix-js-sdk/lib/models/event";
+import { MetaInfo, RoomMetaInfo, Kinds, RoomKey } from "./@types";
+import { MatrixEvent } from "../../matrix";
 
 type UserProfile = {
     picture: string;
@@ -27,8 +38,7 @@ type UserProfile = {
 };
 
 class Events {
-    bufferEvent: ISyncResponse | null;
-
+    bufferEvent: ISyncResponse | undefined;
     operatedEvent: Record<string, boolean> = {};
 
     userProfileMap: { [key: string]: UserProfile } = {};
@@ -43,10 +53,10 @@ class Events {
         const users = client.getUsers();
         users.forEach((user) => {
             const userProfile: UserProfile = {
-                about: user.displayName,
+                about: user.displayName ?? "",
                 created_at: user.getLastModifiedTime(),
-                name: user.displayName,
-                picture: user.avatarUrl,
+                name: user.displayName ?? "",
+                picture: user.avatarUrl ?? "",
             };
             this.userProfileMap[user.userId] = userProfile;
         });
@@ -60,6 +70,60 @@ class Events {
         });
     };
 
+    handleDeCryptedRoomMeta(client: MatrixClient, event: MatrixEvent) {
+        // 在这里创建房间
+
+        const roomid = event.getRoomId() as string;
+        const userId = client.getUserId();
+        let syncResponse = this.bufferEvent;
+
+        if (!syncResponse) {
+            syncResponse = getDefaultSyncResponse();
+            this.bufferEvent = syncResponse;
+        }
+
+        const created_at = event.getTs();
+        const clearContent = event.getContent();
+
+        if (event.isDecryptionFailure()) {
+            return;
+        }
+        const content = clearContent.body;
+        const roomAttrs = [
+            { key: "name", type: EventType.RoomName, content: { name: content.name }, state_key: "" },
+            { key: "topic", type: EventType.RoomTopic, content: { topic: content.about }, state_key: "" },
+            { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture }, state_key: "" },
+            { key: "join-rules", type: EventType.RoomJoinRules, content: { join_rule: "private" }, state_key: "" },
+            {
+                key: "member",
+                type: EventType.RoomMember,
+                state_key: userId,
+                content: { displayname: userId, membership: "join" },
+            },
+        ];
+        if (!syncResponse.rooms.join?.[roomid]) {
+            syncResponse.rooms.join[roomid] = getDefaultRoomData();
+        }
+
+        for (const roomAttr of roomAttrs) {
+            if (roomAttr.key === "member") {
+                const isLeave = client.nostrClient.hasLeaveRoom(roomid) && Key.getPubKey() === userId;
+                roomAttr.content.membership = isLeave ? "leave" : "join";
+            }
+
+            syncResponse.rooms.join[roomid].state.events.push({
+                content: roomAttr.content as unknown as IStateEvent,
+                origin_server_ts: created_at,
+                sender: event.sender?.userId as string,
+                state_key: roomAttr.state_key as string,
+                type: roomAttr.type,
+                unsigned: {
+                    age: Date.now() - created_at,
+                },
+                event_id: `${roomAttr.key}-${event.getId()}-${Math.random().toString(16).slice(2, 8)}`,
+            });
+        }
+    }
     handleLeaveRoom(client: MatrixClient, event: Event) {
         if (![40, 41, 42, 4].includes(event?.kind)) return false;
         if (!Array.isArray(event?.tags)) return false;
@@ -78,7 +142,7 @@ class Events {
             roomId = event.tags?.find((tag) => tag[0] === "p")?.[1];
         }
 
-        return client.nostrClient.getLeaveRooms().has(roomId);
+        return client.nostrClient.getLeaveRooms().has(roomId as string);
     }
 
     handle(client: MatrixClient, event: Event) {
@@ -109,24 +173,27 @@ class Events {
         try {
             this.bufferEvent = this.convertEventToSyncResponse(client, event, this.bufferEvent);
         } catch (e) {
-            console.info(e, "有错误了吗");
+            console.info(e, "get buffer error");
         }
     }
 
     getBufferEvent() {
         const data = this.bufferEvent;
-        this.bufferEvent = null;
+        this.bufferEvent = undefined;
         return data;
     }
 
     getEventRoot(event: Event) {
-        return event?.tags.find((t) => t[0] === "e" && t[3] === "root")?.[1];
+        return event.tags.find((t) => t[0] === "e" && t[3] === "root")?.[1];
     }
 
     getRooms() {
         return this.rooms;
     }
 
+    getRoom(roomId: string) {
+        return this.rooms.get(roomId);
+    }
     addRoom(roomId: string, content: any) {
         const rooms = this.getRooms();
         if (rooms.has(roomId)) {
@@ -138,48 +205,6 @@ class Events {
         } else {
             this.rooms.set(roomId, { roomId, ...content });
         }
-    }
-
-    convertEventToSyncResponse(client: MatrixClient, event: Event, syncResponse?: ISyncResponse): ISyncResponse {
-        /*
-      处理 不同消息放入不同的数据结构
-      kind 20000-29999 短暂信息 例子(typing,recipet) 放入 join 的ephemeral
-      kind 42 群聊的消息 直接放入房间的里面的
-      kind 4 单聊的消息
-    */
-        if (!syncResponse) {
-            syncResponse = getDefaultSyncResponse();
-        }
-        switch (event.kind as Kinds) {
-            case 0:
-                this.handleUserMetaEvent(client, event, syncResponse);
-                break;
-            case 4:
-                this.handlePrivateEvent(client, event, syncResponse);
-                break;
-            case 5:
-                this.handleDeleteMessageEvent(client, event, syncResponse);
-                break;
-            case 7:
-                this.handleReactionMessageEvent(client, event, syncResponse);
-                break;
-            case 40:
-                this.handleCreateRoomEvent(client, event, syncResponse);
-                break;
-            case 41:
-                this.handleRoomMetaDataEvent(client, event, syncResponse);
-                break;
-            case 42:
-                this.handleChannleMessage(client, event, syncResponse);
-                break;
-            // case 20001:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
-            // case 20002:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
-        }
-        return syncResponse;
     }
 
     handleCreateRoomEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
@@ -224,12 +249,6 @@ class Events {
                 },
                 event_id: `${roomAttr.key}-${event.id}-${Math.random().toString(16).slice(2, 8)}`,
             });
-            // console.info(
-            //   syncResponse.rooms.join[roomid].state.events,
-            //   'syncResponse.rooms.join[roomid].state.events',
-            //   event,
-            //   'as水电费是的'
-            // );
         }
 
         this.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
@@ -247,7 +266,7 @@ class Events {
                 created_at,
             };
             this.userProfileMap[event.pubkey] = userProfile;
-            syncResponse.presence.events.push({
+            syncResponse.presence!.events.push({
                 content: {
                     avatar_url: content.picture,
                     displayname: content.name,
@@ -269,10 +288,10 @@ class Events {
                 return;
             }
             // 直接设置房间的 name abcout, picture
-            const room = client.getRoom(event.pubkey);
-            if (!room) {
-                return;
-            }
+            // const room = client.getRoom(event.pubkey);
+            // if (!room) {
+            //     return;
+            // }
             for (const roomType in ROOM_META_TYPES) {
                 // 直接加入
                 const roomValue = ROOM_META_TYPES[roomType];
@@ -669,6 +688,340 @@ class Events {
             addRoomMeta(syncResponse, metadata);
         });
     };
+
+    handlePrivateGroupRoomKeyEvent = async (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
+        // 只监听了发给自己的104消息不会有其他人的
+
+        const _decryptoMessage = async () => {
+            try {
+                const ciphertext = event.content;
+                const priKey = Key.getPrivKey();
+                const a = await nip04.decrypt(priKey, event.pubkey, ciphertext);
+                const decryptoContent = JSON.parse(
+                    await nip04.decrypt(priKey, event.pubkey, ciphertext),
+                ) as unknown as RoomKey;
+                return decryptoContent;
+            } catch (e) {
+                console.info(e, "解密错误");
+            }
+        };
+
+        const _createRoom = (roomid: string) => {
+            if (!roomid) {
+                return;
+            }
+            // 这里仅仅只是加入了房间的加密信息, 并没有放入房间的creation信息
+            const roomState = {
+                content: {
+                    algorithm: olmlib.MEGOLM_ALGORITHM,
+                },
+                type: EventType.RoomEncryption,
+                sender: event.pubkey,
+                state_key: "",
+            };
+            const metadata: RoomMetaInfo = {
+                roomId: roomid,
+                sender: roomState.sender ?? event.pubkey,
+                eventId: `${roomState.type}-${event.id}`,
+                createdAt: 1,
+                content: roomState.content,
+                type: roomState.type,
+                state_key: roomState.state_key ?? "",
+            };
+            addRoomMeta(syncResponse, metadata);
+        };
+        const _addTodevice = (decryptoContent: RoomKey) => {
+            // 添加到to_device的数据里去解析数据
+            syncResponse.to_device!.events.push({
+                content: {
+                    algorithm: olmlib.MEGOLM_ALGORITHM,
+                    sender_key: event.pubkey,
+                    session_id: decryptoContent.session_id,
+                    session_key: decryptoContent.session_key,
+                    room_id: decryptoContent.room_id,
+                },
+                sender: event.pubkey,
+                type: EventType.RoomKey,
+            });
+        };
+        let decryptoContent = await _decryptoMessage();
+        if (!decryptoContent?.room_id || !decryptoContent?.session_key || !decryptoContent?.session_id) {
+            return;
+        }
+        _createRoom(decryptoContent?.room_id);
+        _addTodevice(decryptoContent);
+        this.addRoom(decryptoContent?.room_id, { ...decryptoContent, pubkey: event.pubkey, created_at: 1 });
+    };
+
+    handlePrivateGroupRoomMetaEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
+        // 房间的140 和141非常相近 只是roomid的获取不同
+        // 房间的140 事件目前只有创建人可以收到
+        // 但是141还必须验证 event.pubkey 必须等于房间里面的加密算法加入人的信息
+        const userId = client.getUserId() as string;
+        let roomid = event.id;
+        const created_at = event.created_at * 1000;
+        const kind = event.kind as Kinds;
+        if (kind === 141) {
+            roomid = event.tags.find((tags) => tags[0] === "e")?.[1] as string;
+        }
+        if (!roomid) {
+            return;
+        }
+
+        const room = client.getRoom(roomid);
+        if (kind === 141) {
+            // 判断自己是否在房间, 不在房间则立即标记自己退出了
+            const mySelf = event.tags.find((tags) => tags[0] === "p" && tags[1] === userId)?.[1] as string;
+            if (!mySelf) {
+                if (!syncResponse.rooms.leave?.[roomid]) {
+                    syncResponse.rooms.leave[roomid] = getDefaultRoomData();
+                }
+                syncResponse.rooms.leave[roomid].state.events.push({
+                    content: {
+                        avatar_url: "",
+                        displayname: userId,
+                        membership: "leave",
+                    },
+                    origin_server_ts: created_at,
+                    sender: userId,
+                    state_key: "",
+                    type: EventType.RoomMember,
+                    unsigned: {
+                        age: Date.now() - created_at,
+                    },
+                    event_id: `${EventType.RoomMember}-${event.id}`,
+                });
+                return;
+            }
+        }
+        let sendKey;
+
+        if (room) {
+            const cryptoStateEvent = room.currentState.getStateEvents(EventType.RoomEncryption, "");
+            sendKey = cryptoStateEvent?.sender?.userId;
+        }
+        if (!sendKey) {
+            const room = this.getRoom(roomid);
+            sendKey = room?.pubkey;
+        }
+        // 在此之前肯定已经有房间了
+
+        // if (sendKey !== event.pubkey && kind === 141) {
+        //     // 虚假消息
+        //     return;
+        // }
+
+        const eventContent = event.content;
+        const ciphertext = eventContent.split("?")[0];
+        const query = getQuery(eventContent);
+        if (!query?.sid) {
+            return;
+        }
+        const content = {
+            algorithm: olmlib.MEGOLM_ALGORITHM,
+            sender_key: event.pubkey,
+            session_id: query.sid,
+            room_id: roomid,
+            ciphertext,
+        };
+
+        // 获取当前爱房间中的state的
+        if (!syncResponse.rooms.join?.[roomid]) {
+            syncResponse.rooms.join[roomid] = getDefaultRoomData();
+        }
+        if (!this.roomJoinMap[roomid]) {
+            this.roomJoinMap[roomid] = new Set();
+        }
+        const pList = event.tags.filter((tag) => tag[0] === "p").map((i) => i[1]);
+        const PListMap = new Set(pList);
+        const memberStates = pList.map((i) => {
+            return {
+                content: {
+                    avatar_url: "",
+                    displayname: i,
+                    membership: "join",
+                },
+                type: EventType.RoomMember,
+                sender: i,
+                state_key: i,
+            };
+        });
+        if (room && kind === 141) {
+            const memberStateEvents = room.getMembers();
+            let hasLeave = false;
+            memberStateEvents.forEach((i) => {
+                if (!PListMap.has(i.userId)) {
+                    hasLeave = true;
+                    memberStates.push({
+                        content: {
+                            avatar_url: "",
+                            displayname: i.userId,
+                            membership: "leave",
+                        },
+                        type: EventType.RoomMember,
+                        sender: i.userId,
+                        state_key: i.userId,
+                    });
+                }
+                if (memberStateEvents.length !== PListMap.size || hasLeave) {
+                    try {
+                        client.forceDiscardSession(room.roomId);
+                    } catch (e) {
+                        console.info(e, "141 destroy session error");
+                    }
+                }
+            });
+        }
+        // memberStates.forEach((memberState) => {
+        //     this.roomJoinMap[roomid].add(memberState.sender);
+        // });
+        memberStates.forEach((roomState) => {
+            const metadata: RoomMetaInfo = {
+                roomId: roomid,
+                sender: roomState.sender,
+                eventId: `${roomState.type}-${roomState.sender}`,
+                createdAt: created_at,
+                content: roomState.content,
+                type: roomState.type,
+                state_key: roomState.state_key,
+            };
+            addRoomMeta(syncResponse, metadata);
+        });
+        syncResponse.rooms.join[roomid].state.events.push({
+            content: { creator: event.pubkey },
+            origin_server_ts: created_at,
+            sender: event.pubkey,
+            state_key: "",
+            type: EventType.RoomCreate,
+            unsigned: {
+                age: Date.now() - created_at,
+            },
+            event_id: event.id,
+        });
+        syncResponse.rooms.join[roomid].state.events.push({
+            content: {
+                state_default: 50,
+                invite: 100,
+                users: {
+                    [event.pubkey]: 100,
+                },
+            },
+            origin_server_ts: created_at,
+            sender: event.pubkey,
+            state_key: "",
+            type: EventType.RoomPowerLevels,
+            unsigned: {
+                age: Date.now() - created_at,
+            },
+            event_id: event.id,
+        });
+        syncResponse.rooms.join[roomid].state.events.push({
+            content: content,
+            origin_server_ts: created_at,
+            sender: event.pubkey,
+            state_key: "",
+            type: EventType.RoomMetaEncrypted,
+            unsigned: {
+                age: Date.now() - created_at,
+            },
+            event_id: event.id,
+        });
+    };
+    handlePrivateGroupRoomMessageEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
+        const eventContent = event.content;
+        const ciphertext = eventContent.split("?")[0];
+        const query = getQuery(eventContent);
+        if (!query?.sid) {
+            return;
+        }
+        let roomid = event.tags.find((tags) => tags[0] === "e" && tags[3] === "root")?.[1] as string;
+        if (!roomid) {
+            return;
+        }
+        let content = {
+            algorithm: olmlib.MEGOLM_ALGORITHM,
+            sender_key: event.pubkey,
+            session_id: query.sid,
+            ciphertext,
+            version: query.v,
+        } as IContent;
+
+        if (!syncResponse.rooms.join?.[roomid]) {
+            syncResponse.rooms.join[roomid] = getDefaultRoomData();
+        }
+        const created_at = event.created_at * 1000;
+        const replyEventId = event.tags.find((tags) => tags[0] === "e" && tags[3] === "reply")?.[1] as string;
+        if (replyEventId) {
+            content["m.relates_to"] = {
+                "m.in_reply_to": {
+                    event_id: replyEventId,
+                },
+            };
+        }
+        syncResponse.rooms.join[roomid].timeline.events.push({
+            content,
+            origin_server_ts: created_at,
+            sender: event.pubkey,
+            type: EventType.RoomMessageEncrypted,
+            unsigned: {
+                age: Date.now() - created_at,
+            },
+            event_id: event.id,
+        });
+    };
+    convertEventToSyncResponse(client: MatrixClient, event: Event, syncResponse?: ISyncResponse): ISyncResponse {
+        /*
+      处理 不同消息放入不同的数据结构
+      kind 20000-29999 短暂信息 例子(typing,recipet) 放入 join 的ephemeral
+      kind 42 群聊的消息 直接放入房间的里面的
+      kind 4 单聊的消息
+    */
+        if (!syncResponse) {
+            syncResponse = getDefaultSyncResponse();
+        }
+        switch (event.kind as Kinds) {
+            case 0:
+                this.handleUserMetaEvent(client, event, syncResponse);
+                break;
+            case 4:
+                this.handlePrivateEvent(client, event, syncResponse);
+                break;
+            case 5:
+                this.handleDeleteMessageEvent(client, event, syncResponse);
+                break;
+            case 7:
+                this.handleReactionMessageEvent(client, event, syncResponse);
+                break;
+            case 40:
+                this.handleCreateRoomEvent(client, event, syncResponse);
+                break;
+            case 41:
+                this.handleRoomMetaDataEvent(client, event, syncResponse);
+                break;
+            case 42:
+                this.handleChannleMessage(client, event, syncResponse);
+                break;
+            case 104:
+                this.handlePrivateGroupRoomKeyEvent(client, event, syncResponse);
+                break;
+            case 140:
+                this.handlePrivateGroupRoomMetaEvent(client, event, syncResponse);
+                break;
+            case 141:
+                this.handlePrivateGroupRoomMetaEvent(client, event, syncResponse);
+                break;
+            case 142:
+                this.handlePrivateGroupRoomMessageEvent(client, event, syncResponse);
+                break;
+            // case 20001:
+            //   this.handleEphemeralEvent(event, syncResponse);
+            //   break;
+            // case 20002:
+            //   this.handleEphemeralEvent(event, syncResponse);
+            //   break;
+        }
+        return syncResponse;
+    }
 }
 
 export default new Events();

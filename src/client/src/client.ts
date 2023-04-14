@@ -1363,6 +1363,13 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         // We do this so that push rules are correctly executed on events in their decrypted
         // state, such as highlights when the user's name is mentioned.
         this.on(MatrixEventEvent.Decrypted, (event) => {
+            // change by nostr
+
+            if (event.getWireType() === EventType.RoomMetaEncrypted) {
+                // 在这里传递给Event
+                this.nostrClient.handleDeCryptedRoomMeta(event);
+                return;
+            }
             fixNotificationCountOnDecryption(this, event);
         });
 
@@ -5374,14 +5381,15 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
      * @returns Rejects: with an error response.
      */
     public kick(roomId: string, userId: string, reason?: string): Promise<{}> {
-        const path = utils.encodeUri("/rooms/$roomId/kick", {
-            $roomId: roomId,
-        });
-        const data = {
-            user_id: userId,
-            reason: reason,
-        };
-        return this.http.authedRequest(Method.Post, path, undefined, data);
+        return this.kickUserToEncryptedChannel({ id: roomId }, [userId]) as Promise<any>;
+        // const path = utils.encodeUri("/rooms/$roomId/kick", {
+        //     $roomId: roomId,
+        // });
+        // const data = {
+        //     user_id: userId,
+        //     reason: reason,
+        // };
+        // return this.http.authedRequest(Method.Post, path, undefined, data);
     }
 
     private membershipChange(
@@ -8157,9 +8165,16 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
      * @returns Promise which resolves: A list of the user's current rooms
      * @returns Rejects: with an error response.
      */
-    public getJoinedRooms(): Promise<IJoinedRoomsResponse> {
-        const path = utils.encodeUri("/joined_rooms", {});
-        return this.http.authedRequest(Method.Get, path);
+    public getJoinedRooms(): string[] {
+        // change by nostr
+        const rooms = this.getRooms();
+        return rooms
+            .filter((i) => {
+                return i.getMyMembership() !== "leave";
+            })
+            .map((i) => i.roomId);
+        // const path = utils.encodeUri("/joined_rooms", {});
+        // return this.http.authedRequest(Method.Get, path);
     }
 
     /**
@@ -9891,6 +9906,18 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
             return;
         }
         return this.nostrClient.hasLeaveRoom(roomId);
+    }
+
+    public createKind104Event(roomId: string, pubkey: string, session?: any) {
+        return this.nostrClient.createKind104Event(roomId, pubkey, session);
+    }
+
+    public inviteUserToEncryptedChannel(room: { id: string; relayUrl?: string }, invitePubkeys: string[]) {
+        return this.nostrClient.inviteUserToEncryptedChannel(room, invitePubkeys, []);
+    }
+
+    public kickUserToEncryptedChannel(room: { id: string; relayUrl?: string }, kickPubkeys: string[]) {
+        return this.nostrClient.inviteUserToEncryptedChannel(room, [], kickPubkeys);
     }
 }
 

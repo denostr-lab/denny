@@ -1,45 +1,64 @@
-@use '../../partials/dir';
+@use "../../partials/dir";
 
 .invite-user {
-  margin-top: var(--sp-extra-tight);
-  @include dir.side(margin, var(--sp-normal), var(--sp-extra-tight));
+    margin-top: var(--sp-extra-tight);
+    @include dir.side(margin, var(--sp-normal), var(--sp-extra-tight));
 
-  &__form {
-    display: flex;
-    align-items: flex-end;
+    &__form {
+        display: flex;
+        align-items: flex-end;
 
-    & .input-container {
-      flex: 1;
-      min-width: 0;
-      @include dir.side(margin, 0, var(--sp-normal));
+        & .input-container {
+            flex: 1;
+            min-width: 0;
+            @include dir.side(margin, 0, var(--sp-normal));
+        }
+
+        & .btn-primary {
+            margin-left: 5px;
+            padding: {
+                // top: 11px;
+                // bottom: 11px;
+            }
+        }
     }
 
-    & .btn-primary {
-      padding: {
-        top: 11px;
-        bottom: 11px;
-      }
+    &__search-status {
+        margin-top: var(--sp-extra-loose);
+        margin-bottom: var(--sp-tight);
+        & .donut-spinner {
+            margin: 0 var(--sp-tight);
+        }
     }
-  }
-  
-  &__search-status {
-    margin-top: var(--sp-extra-loose);
-    margin-bottom: var(--sp-tight);
-    & .donut-spinner {
-      margin: 0 var(--sp-tight);
+    &__search-error {
+        color: var(--bg-danger);
     }
-  }
-  &__search-error {
-    color: var(--bg-danger);
-  }
-  &__content {
-    border-top: 1px solid var(--bg-surface-border);
-  }
+    &__content {
+        border-top: 1px solid var(--bg-surface-border);
+    }
 
-  & .room-tile {
-    margin-top: var(--sp-normal);
-    &__options {
-      align-self: flex-end;
+    & .room-tile {
+        margin-top: var(--sp-normal);
+        &__options {
+            align-self: flex-end;
+        }
     }
-  }
+
+    &__add-invite-user {
+        // color: var(--ic-primary-normal);
+        background: var(--bg-caution);
+        // color: var(--ic-primary-normal);
+    }
+
+    &__submit-invite-user {
+        // color: var(--ic-primary-normal);
+        // background: var(--bg-caution);
+        // color: var(--ic-primary-normal);
+        & .ic-raw.ic-raw-small {
+            color: var(--ic-primary-normal);
+        }
+        & .text.text-b1.text-normal {
+            color: var(--ic-primary-normal);
+        }
+    }
 }

@@ -965,10 +965,10 @@ export class SyncApi {
             //   // tell databases that everything is now in a consistent state and can be saved.
             //   this.client.store.save();
             // }
-            const delta = Date.now() - start;
-            if (delta < 300) {
-                await utils.sleep(Math.max(0, 300 - delta));
-            }
+            // const delta = Date.now() - start;
+            // if (delta < 300) {
+            //     await utils.sleep(Math.max(0, 300 - delta));
+            // }
         }
 
         if (!this.running) {
