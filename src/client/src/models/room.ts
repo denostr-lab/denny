@@ -2986,6 +2986,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         const powerLevelsEvent = this.currentState.getStateEvents(EventType.RoomPowerLevels, "");
         const powerLevels = powerLevelsEvent && powerLevelsEvent.getContent();
         const me = this.getMember(userId);
+
         if (powerLevels && me && powerLevels.invite > me.powerLevel) {
             canInvite = false;
         }

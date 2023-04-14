@@ -301,7 +301,7 @@ function InviteUser({
             searchQuery.error && <Text className="invite-user__search-error" variant="b2">{searchQuery.error}</Text>
           }
         </div>
-        { users.length !== 0 && (
+        {users.length !== 0 && (
           <div className="invite-user__content">
             {renderUserList()}
           </div>
