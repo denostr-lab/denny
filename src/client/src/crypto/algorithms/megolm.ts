@@ -1094,13 +1094,13 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         // }
 
         const session = await this.ensureOutboundSession(room, devicesInRoom, blocked);
-        const payloadJson = {
-            room_id: this.roomId,
-            type: eventType,
-            content: content,
-        };
-
-        const ciphertext = this.olmDevice.encryptGroupMessage(session.sessionId, JSON.stringify(payloadJson));
+        // const payloadJson = {
+        //     room_id: this.roomId,
+        //     type: eventType,
+        //     content: content,
+        // };
+        const needCiphertext = content.url || content.body;
+        const ciphertext = this.olmDevice.encryptGroupMessage(session.sessionId, JSON.stringify(needCiphertext));
         const encryptedContent: IEncryptedContent = {
             algorithm: olmlib.MEGOLM_ALGORITHM,
             sender_key: this.olmDevice.deviceCurve25519Key!,
@@ -1431,6 +1431,7 @@ export class MegolmDecryption extends DecryptionAlgorithm {
         } catch (e) {
             payload = res.result;
         }
+        console.info(payload, "解密了吗");
         // belt-and-braces check that the room id matches that indicated by the HS
         // (this is somewhat redundant, since the megolm session is scoped to the
         // room, so neither the sender nor a MITM can lie about the room_id).

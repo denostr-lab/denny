@@ -329,6 +329,7 @@ class Events {
                 roomid = event.pubkey;
             }
         }
+        console.info(roomid, "你看", event);
         if (!roomid) {
             return;
         }
@@ -696,11 +697,14 @@ class Events {
             try {
                 const ciphertext = event.content;
                 const priKey = Key.getPrivKey();
+                const a = await nip04.decrypt(priKey, event.pubkey, ciphertext);
                 const decryptoContent = JSON.parse(
                     await nip04.decrypt(priKey, event.pubkey, ciphertext),
                 ) as unknown as RoomKey;
                 return decryptoContent;
-            } catch (e) {}
+            } catch (e) {
+                console.info(e, "解密错误");
+            }
         };
 
         const _createRoom = (roomid: string) => {
@@ -708,30 +712,24 @@ class Events {
                 return;
             }
             // 这里仅仅只是加入了房间的加密信息, 并没有放入房间的creation信息
-            if (!this.roomJoinMap[roomid]) {
-                this.roomJoinMap[roomid] = new Set();
-                const room = client.getRoom(roomid);
-                if (!room) {
-                    const roomState = {
-                        content: {
-                            algorithm: olmlib.MEGOLM_ALGORITHM,
-                        },
-                        type: EventType.RoomEncryption,
-                        sender: event.pubkey,
-                        state_key: "",
-                    };
-                    const metadata: RoomMetaInfo = {
-                        roomId: roomid,
-                        sender: roomState.sender ?? event.pubkey,
-                        eventId: `${roomState.type}-${event.id}`,
-                        createdAt: 1,
-                        content: roomState.content,
-                        type: roomState.type,
-                        state_key: roomState.state_key ?? "",
-                    };
-                    addRoomMeta(syncResponse, metadata);
-                }
-            }
+            const roomState = {
+                content: {
+                    algorithm: olmlib.MEGOLM_ALGORITHM,
+                },
+                type: EventType.RoomEncryption,
+                sender: event.pubkey,
+                state_key: "",
+            };
+            const metadata: RoomMetaInfo = {
+                roomId: roomid,
+                sender: roomState.sender ?? event.pubkey,
+                eventId: `${roomState.type}-${event.id}`,
+                createdAt: 1,
+                content: roomState.content,
+                type: roomState.type,
+                state_key: roomState.state_key ?? "",
+            };
+            addRoomMeta(syncResponse, metadata);
         };
         const _addTodevice = (decryptoContent: RoomKey) => {
             // 添加到to_device的数据里去解析数据
@@ -765,15 +763,17 @@ class Events {
         const created_at = event.created_at * 1000;
         const kind = event.kind as Kinds;
         if (kind === 141) {
-            roomid = event.tags.find((tags) => tags[0] === "e" && tags[3] === "root")?.[1] as string;
+            roomid = event.tags.find((tags) => tags[0] === "e")?.[1] as string;
         }
         if (!roomid) {
             return;
         }
+
         const room = client.getRoom(roomid);
         if (kind === 141) {
             // 判断自己是否在房间, 不在房间则立即标记自己退出了
             const mySelf = event.tags.find((tags) => tags[0] === "p" && tags[1] === userId)?.[1] as string;
+            console.info(mySelf, "youasaoas");
             if (!mySelf) {
                 if (!syncResponse.rooms.leave?.[roomid]) {
                     syncResponse.rooms.leave[roomid] = getDefaultRoomData();
@@ -808,12 +808,13 @@ class Events {
         }
         // 在此之前肯定已经有房间了
 
-        if (sendKey !== event.pubkey && kind === 141) {
-            // 虚假消息
-            return;
-        }
+        // if (sendKey !== event.pubkey && kind === 141) {
+        //     // 虚假消息
+        //     return;
+        // }
 
         const eventContent = event.content;
+        console.info(eventContent, "eventContenteventContent");
         const ciphertext = eventContent.split("?")[0];
         const query = getQuery(eventContent);
         if (!query?.sid) {
@@ -831,28 +832,28 @@ class Events {
         if (!syncResponse.rooms.join?.[roomid]) {
             syncResponse.rooms.join[roomid] = getDefaultRoomData();
         }
-        const pList = event.tags.filter((tag) => tag[0] === "p" && tag[1] !== userId).map((i) => i[1]);
+        if (!this.roomJoinMap[roomid]) {
+            this.roomJoinMap[roomid] = new Set();
+        }
+        const pList = event.tags.filter((tag) => tag[0] === "p").map((i) => i[1]);
         const PListMap = new Set(pList);
-        const memberStates = pList
-            .map((i) => {
-                return {
-                    content: {
-                        avatar_url: "",
-                        displayname: i,
-                        membership: "join",
-                    },
-                    type: EventType.RoomMember,
-                    sender: i,
-                    state_key: i,
-                };
-            })
-            .filter((memberState) => {
-                return !this.roomJoinMap[roomid].has(memberState.sender);
-            });
-        if (room) {
+        const memberStates = pList.map((i) => {
+            return {
+                content: {
+                    avatar_url: "",
+                    displayname: i,
+                    membership: "join",
+                },
+                type: EventType.RoomMember,
+                sender: i,
+                state_key: i,
+            };
+        });
+        if (room && kind === 141) {
             const memberStateEvents = room.getMembers();
             memberStateEvents.forEach((i) => {
-                if (PListMap.has(i.userId)) {
+                console.info(PListMap.has(i.userId), PListMap, i, "niasn", i.userId, event);
+                if (!PListMap.has(i.userId)) {
                     memberStates.push({
                         content: {
                             avatar_url: "",
@@ -866,9 +867,9 @@ class Events {
                 }
             });
         }
-        memberStates.forEach((memberState) => {
-            this.roomJoinMap[roomid].add(memberState.sender);
-        });
+        // memberStates.forEach((memberState) => {
+        //     this.roomJoinMap[roomid].add(memberState.sender);
+        // });
         memberStates.forEach((roomState) => {
             const metadata: RoomMetaInfo = {
                 roomId: roomid,
@@ -893,7 +894,11 @@ class Events {
             event_id: event.id,
         });
         if (kind === 141 && room) {
-            client.forceDiscardSession(room.roomId);
+            try {
+                client.forceDiscardSession(room.roomId);
+            } catch (e) {
+                console.info(e, "141 destroy session error");
+            }
         }
     };
     handlePrivateGroupRoomMessageEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {

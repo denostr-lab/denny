@@ -83,15 +83,14 @@ class NostrClient {
         const since = utils.now() - utils.timedelta(30, "days");
         const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
-        const publicGroupMessage = [41, 42];
+        const publicGroupMessage = [41, 42, 7];
         const privateGroupMessage = [142, 141]; // 拿到房间的
         // 这里要过滤掉用户
 
         if (roomIds.length) {
             const roomFilters = [
                 { "kinds": [...publicGroupMessage, ...privateGroupMessage], "#e": roomIds as string[], since },
-                { kinds: [40], ids: roomIds, since },
-                { kinds: [7], ids: roomIds, since },
+                { kinds: [40, 140], ids: roomIds, since },
             ] as Filter[];
             this.relay.subscribe({ filters: roomFilters, id: "global-room" });
         }
@@ -122,6 +121,7 @@ class NostrClient {
                         .forEach((i) => userIds.add(i.sender));
                 }
             });
+
             this.fetchUserMetadatas([...userIds] as string[]);
 
             if (roomIds?.length) {
@@ -210,7 +210,10 @@ class NostrClient {
         批量获取房间的MetaData信息,
         如果出现中继提示连接过多的错误，则后续继续获取
     */
+        console.info(userIds, "userIdsuserIds");
+
         if (!userIds?.length) return;
+        console.info(userIds, "userIdsuserIds");
         const filters: Filter[] = [
             {
                 authors: userIds,
@@ -314,9 +317,9 @@ class NostrClient {
             } else if (isDeleteEvent) {
                 // 删除事件
                 kind = 5;
-            }
-            if (isPrivateGroup) {
+            } else if (isPrivateGroup) {
                 kind = 142;
+                body = `${content.ciphertext}?sid=${content.session_id}`;
             }
             return kind;
         };
@@ -362,7 +365,7 @@ class NostrClient {
         } catch (e) {
             console.info(e, "send message error");
         }
-        console.info("out bound message,", event);
+        console.info("out bound message,", event, rawEvent);
         return { event_id: event.id };
     }
 
