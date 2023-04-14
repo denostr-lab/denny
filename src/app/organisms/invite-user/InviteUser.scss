@@ -42,4 +42,22 @@
       align-self: flex-end;
     }
   }
+
+  &__add-invite-user {
+    // color: var(--ic-primary-normal);
+    background: var(--bg-caution);
+    // color: var(--ic-primary-normal);
+  }
+
+  &__submit-invite-user {
+    // color: var(--ic-primary-normal);
+    // background: var(--bg-caution);
+    // color: var(--ic-primary-normal);
+    & .ic-raw.ic-raw-small {
+      color: var(--ic-primary-normal);
+    }
+    & .text.text-b1.text-normal {
+      color: var(--ic-primary-normal);
+    }
+  }
 }

@@ -744,7 +744,7 @@ function Message({
   const senderId = mEvent.getSender();
   let { body } = content;
   const username = mEvent.sender ? getUsernameOfRoomMember(mEvent.sender) : getUsername(senderId);
-  const avatarSrc = initMatrix.matrixClient.getUserAvatar(mEvent.sender.userId);
+  const avatarSrc = mEvent?.sender?.userId ? initMatrix.matrixClient.getUserAvatar(mEvent.sender.userId) : '';
   let isCustomHTML = content.format === 'org.matrix.custom.html';
   let customHTML = isCustomHTML ? content.formatted_body : null;
 
