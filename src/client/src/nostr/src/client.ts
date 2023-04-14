@@ -483,18 +483,23 @@ class NostrClient {
         return createKind104Event(this.client, roomId, pubkey, session);
     }
 
-    async inviteUserToEncryptedChannel(room: { id: string; relayUrl?: string }, pubkey: string) {
+    async inviteUserToEncryptedChannel(room: { id: string; relayUrl?: string }, invitePubkeys: string[]) {
         // 查找创建event事件
         const currentRoom = this.client.getRoom(room.id);
         if (!currentRoom) {
             return;
         }
 
-        const toPubkeys = [Key.getPubKey(), ...currentRoom.getMembers().map((member) => member.userId)];
-        if (toPubkeys.includes(pubkey)) {
+        if (invitePubkeys.length === 0) {
             return;
         }
-        toPubkeys.push(pubkey);
+
+        const toPubkeys = [Key.getPubKey(), ...currentRoom.getMembers().map((member) => member.userId)];
+        invitePubkeys.forEach((pubkey) => {
+            if (!toPubkeys.includes(pubkey)) {
+                toPubkeys.push(pubkey);
+            }
+        });
 
         const { currentState } = currentRoom;
         const roomTopic = currentState.getStateEvents("m.room.topic")[0]?.getContent().topic;
@@ -519,7 +524,7 @@ class NostrClient {
             [...new Set(toPubkeys)].sort(),
             session.sessionId,
         );
-        await createKind104Event(this.client, room.id, pubkey, session);
+        await Promise.all(toPubkeys.map((pubkey) => createKind104Event(this.client, room.id, pubkey, session)));
 
         return event141;
     }

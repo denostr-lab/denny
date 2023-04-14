@@ -28,6 +28,11 @@
   --bg-caution-active: rgba(255, 179, 0, 15%);
   --bg-caution-border: rgba(255, 179, 0, 40%);
 
+  --bg-caution-invert: rgb(255, 179, 0);
+  --bg-caution-invert-hover: rgba(255, 179, 0, 90%);
+  --bg-caution-invert-active: rgba(255, 179, 0, 70%);
+  --bg-caution-invert-border: rgba(255, 179, 0, 40%);
+
   --bg-danger: rgb(240, 71, 71);
   --bg-danger-hover: rgba(240, 71, 71, 5%);
   --bg-danger-active: rgba(240, 71, 71, 10%);
@@ -56,6 +61,10 @@
   --tc-caution-high: var(--bg-caution);
   --tc-caution-normal: rgb(255, 179, 0, 80%);
   --tc-caution-low: rgb(255, 179, 0, 60%);
+
+  --tc-caution-invert-high: var(--bg-caution-invert);
+  --tc-caution-invert-normal: rgb(255, 179, 0, 80%);
+  --tc-caution-invert-low: rgb(255, 179, 0, 60%);
   
   --tc-danger-high: var(--bg-danger);
   --tc-danger-normal: rgba(240, 71, 71, 88%);

@@ -42,7 +42,7 @@ Button.defaultProps = {
 Button.propTypes = {
   id: PropTypes.string,
   className: PropTypes.string,
-  variant: PropTypes.oneOf(['surface', 'primary', 'positive', 'caution', 'danger']),
+  variant: PropTypes.oneOf(['surface', 'primary', 'positive', 'caution', 'caution-invert', 'danger']),
   iconSrc: PropTypes.string,
   type: PropTypes.oneOf(['button', 'submit', 'reset']),
   onClick: PropTypes.func,

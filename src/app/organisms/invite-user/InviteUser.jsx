@@ -4,9 +4,9 @@ import './InviteUser.scss';
 
 import initMatrix from '../../../client/initMatrix';
 import cons from '../../../client/state/cons';
-import * as roomActions from '../../../client/action/room';
-import { selectRoom } from '../../../client/action/navigation';
-import { hasDMWith, hasDevices } from '../../../util/matrixUtil';
+// import * as roomActions from '../../../client/action/room';
+// import { selectRoom } from '../../../client/action/navigation';
+// import { hasDMWith, hasDevices } from '../../../util/matrixUtil';
 
 import Text from '../../atoms/text/Text';
 import Button from '../../atoms/button/Button';
@@ -17,7 +17,10 @@ import PopupWindow from '../../molecules/popup-window/PopupWindow';
 import RoomTile from '../../molecules/room-tile/RoomTile';
 
 import CrossIC from '../../../../public/res/ic/outlined/cross.svg';
-import UserIC from '../../../../public/res/ic/outlined/user.svg';
+import AddUserIC from '../../../../public/res/ic/outlined/add-user.svg';
+import CheckIC from '../../../../public/res/ic/outlined/check.svg';
+
+import Key from '../../../client/src/nostr/src/Key'
 
 function InviteUser({
   isOpen, roomId, searchTerm, onRequestClose,
@@ -45,10 +48,10 @@ function InviteUser({
     });
     return newMap;
   }
-  function addUserToProc(userId) {
-    procUsers.add(userId);
-    updateProcUsers(new Set(Array.from(procUsers)));
-  }
+  // function addUserToProc(userId) {
+  //   procUsers.add(userId);
+  //   updateProcUsers(new Set(Array.from(procUsers)));
+  // }
   function deleteUserFromProc(userId) {
     procUsers.delete(userId);
     updateProcUsers(new Set(Array.from(procUsers)));
@@ -103,101 +106,127 @@ function InviteUser({
     updateIsSearching(false);
   }
 
-  async function searchUserByNostr(username) {
-    const inputUsername = username.trim();
-    if (isSearching || inputUsername === '' || inputUsername === searchQuery.username) return;
-    updateIsSearching(true);
-    updateSearchQuery({ username: inputUsername });
+  async function addInviteUser(address) {
+    const inputAddress = address.trim();
+    if (isSearching || inputAddress === '' || inputAddress === searchQuery.username) return;
 
-    try {
-      const event = await mx.nostrClient.inviteUserToEncryptedChannel({ id: roomId }, inputUsername);
-      console.log('inviteUserToEncryptedChannel result to event:', event);
-    } catch (e) {
-      updateSearchQuery({ error: 'Something went wrong!' });
+    const user = {
+      user_id: inputAddress,
+      display_name: inputAddress,
+      avatar_url: '',
+    };
+    if (inputAddress.startsWith('npub')) {
+      user.display_name = inputAddress;
+      user.user_id = Key.toNostrHexAddress(inputAddress);
+    } else {
+      user.display_name = Key.toNostrBech32Address(inputAddress, 'npub');
+      user.user_id = inputAddress;
     }
 
-    updateIsSearching(false);
-  }
-
-  async function createDM(userId) {
-    if (mx.getUserId() === userId) return;
-    const dmRoomId = hasDMWith(userId);
-    if (dmRoomId) {
-      selectRoom(dmRoomId);
-      onRequestClose();
+    if (!user.user_id.match(/^[0-9a-fA-F]{64}$/)) {
+      updateSearchQuery({ error: 'Invalid npub or hex value!' });
       return;
     }
 
-    try {
-      addUserToProc(userId);
-      procUserError.delete(userId);
-      updateUserProcError(getMapCopy(procUserError));
+    updateSearchQuery({});
 
-      const result = await roomActions.createDM(userId, await hasDevices(userId));
-      roomIdToUserId.set(result.room_id, userId);
-      updateRoomIdToUserId(getMapCopy(roomIdToUserId));
-    } catch (e) {
-      deleteUserFromProc(userId);
-      if (typeof e.message === 'string') procUserError.set(userId, e.message);
-      else procUserError.set(userId, 'Something went wrong!');
-      updateUserProcError(getMapCopy(procUserError));
+    if (!users.find((u) => u.user_id === user.user_id)) {
+      users.push(user);
+      updateUsers([...users]);
     }
   }
 
-  async function inviteToRoom(userId) {
-    if (typeof roomId === 'undefined') return;
+  async function submitToInviteUsers() {
+    updateSearchQuery({});
     try {
-      addUserToProc(userId);
-      procUserError.delete(userId);
-      updateUserProcError(getMapCopy(procUserError));
-
-      await roomActions.invite(roomId, userId);
-
-      invitedUserIds.add(userId);
-      updateInvitedUserIds(new Set(Array.from(invitedUserIds)));
-      deleteUserFromProc(userId);
+      const invitePubkeys = users.map((user) => user.user_id);
+      const event = await mx.nostrClient.inviteUserToEncryptedChannel({ id: roomId }, invitePubkeys);
+      console.log('submitToInviteUsers result to event:', event);
+      onRequestClose();
     } catch (e) {
-      deleteUserFromProc(userId);
-      if (typeof e.message === 'string') procUserError.set(userId, e.message);
-      else procUserError.set(userId, 'Something went wrong!');
-      updateUserProcError(getMapCopy(procUserError));
+      updateSearchQuery({ error: 'Something went wrong!' });
     }
   }
+
+  // async function createDM(userId) {
+  //   if (mx.getUserId() === userId) return;
+  //   const dmRoomId = hasDMWith(userId);
+  //   if (dmRoomId) {
+  //     selectRoom(dmRoomId);
+  //     onRequestClose();
+  //     return;
+  //   }
+
+  //   try {
+  //     addUserToProc(userId);
+  //     procUserError.delete(userId);
+  //     updateUserProcError(getMapCopy(procUserError));
+
+  //     const result = await roomActions.createDM(userId, await hasDevices(userId));
+  //     roomIdToUserId.set(result.room_id, userId);
+  //     updateRoomIdToUserId(getMapCopy(roomIdToUserId));
+  //   } catch (e) {
+  //     deleteUserFromProc(userId);
+  //     if (typeof e.message === 'string') procUserError.set(userId, e.message);
+  //     else procUserError.set(userId, 'Something went wrong!');
+  //     updateUserProcError(getMapCopy(procUserError));
+  //   }
+  // }
+
+  // async function inviteToRoom(userId) {
+  //   if (typeof roomId === 'undefined') return;
+  //   try {
+  //     addUserToProc(userId);
+  //     procUserError.delete(userId);
+  //     updateUserProcError(getMapCopy(procUserError));
+
+  //     await roomActions.invite(roomId, userId);
+
+  //     invitedUserIds.add(userId);
+  //     updateInvitedUserIds(new Set(Array.from(invitedUserIds)));
+  //     deleteUserFromProc(userId);
+  //   } catch (e) {
+  //     deleteUserFromProc(userId);
+  //     if (typeof e.message === 'string') procUserError.set(userId, e.message);
+  //     else procUserError.set(userId, 'Something went wrong!');
+  //     updateUserProcError(getMapCopy(procUserError));
+  //   }
+  // }
 
   function renderUserList() {
-    const renderOptions = (userId) => {
-      const messageJSX = (message, isPositive) => <Text variant="b2"><span style={{ color: isPositive ? 'var(--bg-positive)' : 'var(--bg-negative)' }}>{message}</span></Text>;
+    // const renderOptions = (userId) => {
+    //   const messageJSX = (message, isPositive) => <Text variant="b2"><span style={{ color: isPositive ? 'var(--bg-positive)' : 'var(--bg-negative)' }}>{message}</span></Text>;
 
-      if (mx.getUserId() === userId) return null;
-      if (procUsers.has(userId)) {
-        return <Spinner size="small" />;
-      }
-      if (createdDM.has(userId)) {
-        // eslint-disable-next-line max-len
-        return <Button onClick={() => { selectRoom(createdDM.get(userId)); onRequestClose(); }}>Open</Button>;
-      }
-      if (invitedUserIds.has(userId)) {
-        return messageJSX('Invited', true);
-      }
-      if (typeof roomId === 'string') {
-        const member = mx.getRoom(roomId).getMember(userId);
-        if (member !== null) {
-          const userMembership = member.membership;
-          switch (userMembership) {
-            case 'join':
-              return messageJSX('Already joined', true);
-            case 'invite':
-              return messageJSX('Already Invited', true);
-            case 'ban':
-              return messageJSX('Banned', false);
-            default:
-          }
-        }
-      }
-      return (typeof roomId === 'string')
-        ? <Button onClick={() => inviteToRoom(userId)} variant="primary">Invite</Button>
-        : <Button onClick={() => createDM(userId)} variant="primary">Message</Button>;
-    };
+    //   if (mx.getUserId() === userId) return null;
+    //   if (procUsers.has(userId)) {
+    //     return <Spinner size="small" />;
+    //   }
+    //   if (createdDM.has(userId)) {
+    //     // eslint-disable-next-line max-len
+    //     return <Button onClick={() => { selectRoom(createdDM.get(userId)); onRequestClose(); }}>Open</Button>;
+    //   }
+    //   if (invitedUserIds.has(userId)) {
+    //     return messageJSX('Invited', true);
+    //   }
+    //   if (typeof roomId === 'string') {
+    //     const member = mx.getRoom(roomId).getMember(userId);
+    //     if (member !== null) {
+    //       const userMembership = member.membership;
+    //       switch (userMembership) {
+    //         case 'join':
+    //           return messageJSX('Already joined', true);
+    //         case 'invite':
+    //           return messageJSX('Already Invited', true);
+    //         case 'ban':
+    //           return messageJSX('Banned', false);
+    //         default:
+    //       }
+    //     }
+    //   }
+    //   return (typeof roomId === 'string')
+    //     ? <Button onClick={() => inviteToRoom(userId)} variant="primary">Invite</Button>
+    //     : <Button onClick={() => createDM(userId)} variant="primary">Message</Button>;
+    // };
     const renderError = (userId) => {
       if (!procUserError.has(userId)) return null;
       return <Text variant="b2"><span style={{ color: 'var(--bg-danger)' }}>{procUserError.get(userId)}</span></Text>;
@@ -212,7 +241,7 @@ function InviteUser({
           avatarSrc={typeof user.avatar_url === 'string' ? mx.mxcUrlToHttp(user.avatar_url, 42, 42, 'crop') : null}
           name={name}
           id={userId}
-          options={renderOptions(userId)}
+          // options={renderOptions(userId)}
           desc={renderError(userId)}
         />
       );
@@ -248,10 +277,11 @@ function InviteUser({
       onRequestClose={onRequestClose}
     >
       <div className="invite-user">
-        <form className="invite-user__form" onSubmit={(e) => { e.preventDefault(); searchUserByNostr(usernameRef.current.value); }}>
+        <form className="invite-user__form" onSubmit={(e) => { e.preventDefault(); submitToInviteUsers(); }}>
           {/* <Input value={searchTerm} forwardRef={usernameRef} label="Name or userId" /> */}
           <Input value={searchTerm} forwardRef={usernameRef} label="Npub or Hex key" />
-          <Button disabled={isSearching} iconSrc={UserIC} variant="primary" type="submit">Search</Button>
+          <Button disabled={isSearching} iconSrc={AddUserIC} variant="caution-invert" type="button" className="invite-user__add-invite-user" onClick={() => addInviteUser(usernameRef.current.value)}>Invite</Button>
+          <Button disabled={isSearching} iconSrc={CheckIC} variant="primary" type="submit" className="invite-user__submit-invite-user">Submit</Button>
         </form>
         <div className="invite-user__search-status">
           {

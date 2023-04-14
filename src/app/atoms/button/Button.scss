@@ -6,6 +6,7 @@
 .btn-primary,
 .btn-positive,
 .btn-caution,
+.btn-caution-invert,
 .btn-danger {
   display: inline-flex;
   align-items: center;
@@ -78,4 +79,14 @@
   @include state.hover(var(--bg-danger-hover));
   @include state.focus(var(--bs-danger-outline));
   @include state.active(var(--bg-danger-active));
+}
+
+
+.btn-caution-invert {
+  background-color: var(--bs-caution-invert-border);
+  @include color(var(--ic-primary-high), var(--ic-primary-normal));
+  // @include color(var(--tc-caution-invert-high), var(--ic-caution-invert-normal));
+  @include state.hover(var(--bg-caution-invert-hover));
+  @include state.focus(var(--bs-caution-invert-outline));
+  @include state.active(var(--bg-caution-invert-active));
 }
