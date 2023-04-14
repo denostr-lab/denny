@@ -14,7 +14,7 @@ import Key from "./Key";
 // export { Filter as NostrFilter };
 let allRooms = [];
 let allUsers = [];
-interface RomMetaUpdateData {
+export interface UpdateRoomMetadata {
     name: string;
     about: string;
     picture: string;
@@ -224,7 +224,7 @@ class NostrClient {
         this.relay.subscribe({ filters, id: `fetchUserMetadatas${Math.random()}`, once: true });
     }
 
-    async createRoom(metadata: RomMetaUpdateData) {
+    async createRoom(metadata: UpdateRoomMetadata) {
         if (metadata.isDM) {
             const event = {
                 kind: 4,
@@ -240,16 +240,21 @@ class NostrClient {
         if (metadata?.visibility === "private") {
             const olmDevice = this.client.crypto.olmDevice!;
             const sessionId = olmDevice.createOutboundGroupSession();
+            const key = olmDevice.getOutboundGroupSessionKey(sessionId);
+            const session = {
+                sessionId,
+                sessionKey: key.key,
+            };
             const event140 = await createKind140Event(
                 this.client,
-                sessionId,
                 JSON.stringify({
                     name: metadata.name || "Empty Room",
                     about: metadata.about || "",
                     ...{ picture: metadata.picture || "" },
                 }),
+                session,
             );
-            await createKind104Event(this.client, event140.id, Key.getPubKey(), sessionId);
+            await createKind104Event(this.client, event140.id, Key.getPubKey(), session);
             return event140;
         }
 
@@ -267,7 +272,7 @@ class NostrClient {
         return event;
     }
 
-    async updateRoomMetaData(roomId: string, metadata: RomMetaUpdateData) {
+    async updateRoomMetaData(roomId: string, metadata: UpdateRoomMetadata) {
         const event = {
             kind: 41,
             content: JSON.stringify({
@@ -439,12 +444,56 @@ class NostrClient {
         Events.handleDeCryptedRoomMeta(this.client, event);
     }
 
-    createKind104Event(roomId: string, pubkey: string, sessionId?: string) {
-        return createKind104Event(this.client, roomId, pubkey, sessionId);
+    createKind104Event(roomId: string, pubkey: string) {
+        const olmDevice = this.client.crypto.olmDevice!;
+        const sessionId = olmDevice.createOutboundGroupSession();
+        const key = olmDevice.getOutboundGroupSessionKey(sessionId);
+        const session = {
+            sessionId,
+            sessionKey: key.key,
+        };
+        return createKind104Event(this.client, roomId, pubkey, session);
     }
 
-    createKind141Event(roomId: string, payload: string, toPubkeys: string[], sessionId?: string) {
-        return createKind141Event(this.client, roomId, payload, toPubkeys, sessionId);
+    async inviteUserToEncryptedChannel(room: { id: string; relayUrl?: string }, pubkey: string) {
+        // 查找创建event事件
+        const currentRoom = this.client.getRoom(room.id);
+        if (!currentRoom) {
+            return;
+        }
+
+        const toPubkeys = [Key.getPubKey(), ...currentRoom.getMembers().map((member) => member.userId)];
+        if (toPubkeys.includes(pubkey)) {
+            return;
+        }
+        toPubkeys.push(pubkey);
+
+        const { currentState } = currentRoom;
+        const roomTopic = currentState.getStateEvents("m.room.topic")[0]?.getContent().topic;
+
+        const metadata: UpdateRoomMetadata = {
+            name: currentRoom.name,
+            about: roomTopic || "",
+            picture: currentRoom.getAvatarUrl(this.client.baseUrl, 24, 24, "crop") || "",
+        };
+
+        const olmDevice = this.client.crypto.olmDevice!;
+        const sessionId = olmDevice.createOutboundGroupSession();
+        const key = olmDevice.getOutboundGroupSessionKey(sessionId);
+        const session = {
+            sessionId,
+            sessionKey: key.key,
+        };
+        const event141 = createKind141Event(
+            this.client,
+            room,
+            JSON.stringify(metadata),
+            [...new Set(toPubkeys)].sort(),
+            session.sessionId,
+        );
+        await createKind104Event(this.client, room.id, pubkey, session);
+
+        return event141;
     }
 }
 

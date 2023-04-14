@@ -104,8 +104,18 @@ function InviteUser({
   }
 
   async function searchUserByNostr(username) {
+    const inputUsername = username.trim();
+    if (isSearching || inputUsername === '' || inputUsername === searchQuery.username) return;
     updateIsSearching(true);
-    updateSearchQuery({ error: 'Something went wrong!' });
+    updateSearchQuery({ username: inputUsername });
+
+    try {
+      const event = await mx.nostrClient.inviteUserToEncryptedChannel({ id: roomId }, inputUsername);
+      console.log('inviteUserToEncryptedChannel result to event:', event);
+    } catch (e) {
+      updateSearchQuery({ error: 'Something went wrong!' });
+    }
+
     updateIsSearching(false);
   }
 
@@ -240,7 +250,7 @@ function InviteUser({
       <div className="invite-user">
         <form className="invite-user__form" onSubmit={(e) => { e.preventDefault(); searchUserByNostr(usernameRef.current.value); }}>
           {/* <Input value={searchTerm} forwardRef={usernameRef} label="Name or userId" /> */}
-          <Input value={searchTerm} forwardRef={usernameRef} label="Name or npub key" />
+          <Input value={searchTerm} forwardRef={usernameRef} label="Npub or Hex key" />
           <Button disabled={isSearching} iconSrc={UserIC} variant="primary" type="submit">Search</Button>
         </form>
         <div className="invite-user__search-status">
