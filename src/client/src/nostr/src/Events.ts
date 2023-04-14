@@ -38,7 +38,7 @@ type UserProfile = {
 };
 
 class Events {
-    bufferEvent: ISyncResponse | null = null;
+    bufferEvent: ISyncResponse | undefined;
     operatedEvent: Record<string, boolean> = {};
 
     userProfileMap: { [key: string]: UserProfile } = {};
@@ -142,7 +142,7 @@ class Events {
             roomId = event.tags?.find((tag) => tag[0] === "p")?.[1];
         }
 
-        return client.nostrClient.getLeaveRooms().has(roomId);
+        return client.nostrClient.getLeaveRooms().has(roomId as string);
     }
 
     handle(client: MatrixClient, event: Event) {
@@ -173,13 +173,13 @@ class Events {
         try {
             this.bufferEvent = this.convertEventToSyncResponse(client, event, this.bufferEvent);
         } catch (e) {
-            console.info(e, "有错误了吗");
+            console.info(e, "get buffer error");
         }
     }
 
     getBufferEvent() {
         const data = this.bufferEvent;
-        this.bufferEvent = null;
+        this.bufferEvent = undefined;
         return data;
     }
 
@@ -249,12 +249,6 @@ class Events {
                 },
                 event_id: `${roomAttr.key}-${event.id}-${Math.random().toString(16).slice(2, 8)}`,
             });
-            // console.info(
-            //   syncResponse.rooms.join[roomid].state.events,
-            //   'syncResponse.rooms.join[roomid].state.events',
-            //   event,
-            //   'as水电费是的'
-            // );
         }
 
         this.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
@@ -272,7 +266,7 @@ class Events {
                 created_at,
             };
             this.userProfileMap[event.pubkey] = userProfile;
-            syncResponse.presence.events.push({
+            syncResponse.presence!.events.push({
                 content: {
                     avatar_url: content.picture,
                     displayname: content.name,
@@ -746,7 +740,7 @@ class Events {
                     algorithm: olmlib.MEGOLM_ALGORITHM,
                     sender_key: event.pubkey,
                     session_id: decryptoContent.session_id,
-                    session_key: decryptoContent.session_key.key,
+                    session_key: decryptoContent.session_key,
                     room_id: decryptoContent.room_id,
                 },
                 sender: event.pubkey,

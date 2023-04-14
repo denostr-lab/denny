@@ -126,13 +126,11 @@ class NostrClient {
 
             if (roomIds?.length) {
                 const prevAllids = allRooms;
-                console.info(prevAllids, "asasas ");
                 let currentAllIds = [...allRooms, ...roomIds];
                 currentAllIds = [...new Set(currentAllIds)];
                 const notSmae = currentAllIds.some((i) => !prevAllids.find((j) => i === j));
                 if (notSmae || currentAllIds.length !== prevAllids.length) {
                     allRooms = currentAllIds;
-                    console.info(allRooms, "allRoomsallRooms");
                     this.subscribeRooms(allRooms);
                 }
             }
@@ -143,8 +141,6 @@ class NostrClient {
             const ids = (data?.presence?.events || []).map((i) => i.user_id).filter(Boolean);
             if (ids?.length) {
                 const prevAllUsers = allUsers;
-                console.info(prevAllUsers, "asasas ");
-
                 let currentAllUsers = [...allUsers, ...ids];
                 currentAllUsers = [...new Set(currentAllUsers)];
                 const notSmae = currentAllUsers.some((i) => !prevAllUsers.find((j) => i === j));
@@ -364,9 +360,9 @@ class NostrClient {
                 Events.handle(this.client, event);
             }
         } catch (e) {
-            console.info(e, "发送错误");
+            console.info(e, "send message error");
         }
-        console.info("你来说,", event);
+        console.info("out bound message,", event);
         return { event_id: event.id };
     }
 
