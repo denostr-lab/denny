@@ -163,36 +163,36 @@ export async function handlePublishEvent(event: Event) {
     }
 }
 
-export async function createKind140Event(client: MatrixClient, payload: string, sessionId?: string) {
+export async function createKind140Event(
+    client: MatrixClient,
+    payload: string,
+    session: { sessionId: string; sessionKey: string },
+) {
     const olmDevice = client.crypto.olmDevice!;
-    if (!sessionId) {
-        // eslint-disable-next-line no-param-reassign
-        sessionId = olmDevice.createOutboundGroupSession();
-    }
     const event: Event = {
         kind: 140,
         tags: [["p", Key.getPubKey()]],
     };
-    const ciphertext = olmDevice.encryptGroupMessage(sessionId, payload);
-    event.content = `${ciphertext}?sid=${sessionId}`;
+    const ciphertext = olmDevice.encryptGroupMessage(session.sessionId, payload);
+    event.content = `${ciphertext}?sid=${session.sessionId}`;
     await handlePublishEvent(event);
     await client.nostrClient.relay.publishAsPromise(event);
     return event;
 }
 export const createEncryptedChannelEvent = createKind140Event;
 
-export async function createKind104Event(client: MatrixClient, roomId: string, pubkey: string, sessionId?: string) {
+export async function createKind104Event(
+    client: MatrixClient,
+    roomId: string,
+    pubkey: string,
+    session: { sessionId: string; sessionKey: string },
+) {
     const olmDevice = client.crypto.olmDevice!;
-    if (!sessionId) {
-        // eslint-disable-next-line no-param-reassign
-        sessionId = olmDevice.createOutboundGroupSession();
-    }
-    const sessionKey = olmDevice.getOutboundGroupSessionKey(sessionId);
     const event: Event = {
         kind: 104,
         content: JSON.stringify({
-            session_id: sessionId,
-            session_key: sessionKey,
+            session_id: session.sessionId,
+            session_key: session.sessionKey,
             room_id: roomId,
         }),
         tags: [["p", pubkey]],
@@ -209,13 +209,9 @@ export async function createKind141Event(
     room: { id: string; relayUrl?: string },
     payload: string,
     toPubkeys: string[],
-    sessionId?: string,
+    sessionId: string,
 ) {
     const olmDevice = client.crypto.olmDevice!;
-    if (!sessionId) {
-        // eslint-disable-next-line no-param-reassign
-        sessionId = olmDevice.createOutboundGroupSession();
-    }
     if (toPubkeys.length === 0) {
         toPubkeys.push(Key.getPubKey());
     }
@@ -226,7 +222,7 @@ export async function createKind141Event(
     }
     const event: Event = {
         kind: 141,
-        tags: [relatedEvent, ...toPubkeys.map((pubkey) => ["p", pubkey])],
+        tags: [relatedEvent, ...[...new Set(toPubkeys)].map((pubkey) => ["p", pubkey])],
     };
     const ciphertext = olmDevice.encryptGroupMessage(sessionId, payload);
     event.content = `${ciphertext}?sid=${sessionId}`;
