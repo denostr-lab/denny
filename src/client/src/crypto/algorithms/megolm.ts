@@ -1435,7 +1435,10 @@ export class MegolmDecryption extends DecryptionAlgorithm {
         return {
             clearEvent: {
                 type: EventType.RoomMessage,
-                content: payload,
+                content: {
+                    msgtype: MsgType.Text,
+                    body: payload,
+                },
             },
             senderCurve25519Key: res.senderKey,
             claimedEd25519Key: res.keysClaimed.ed25519,

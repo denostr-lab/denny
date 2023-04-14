@@ -53,10 +53,10 @@ class Events {
         const users = client.getUsers();
         users.forEach((user) => {
             const userProfile: UserProfile = {
-                about: user.displayName,
+                about: user.displayName ?? "",
                 created_at: user.getLastModifiedTime(),
-                name: user.displayName,
-                picture: user.avatarUrl,
+                name: user.displayName ?? "",
+                picture: user.avatarUrl ?? "",
             };
             this.userProfileMap[user.userId] = userProfile;
         });
@@ -83,10 +83,11 @@ class Events {
         }
 
         const created_at = event.getTs();
-        const content = event.getContent();
-        if (content?.msgtype === "m.bad.encrypted") {
+        const clearContent = event.getContent();
+        if (clearContent?.msgtype === "m.bad.encrypted") {
             return;
         }
+        const content = clearContent.body;
         const roomAttrs = [
             { key: "create", type: EventType.RoomCreate, content: { creator: event.sender?.userId }, state_key: "" },
             { key: "name", type: EventType.RoomName, content: { name: content.name }, state_key: "" },
