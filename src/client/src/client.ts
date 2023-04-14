@@ -5381,14 +5381,15 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
      * @returns Rejects: with an error response.
      */
     public kick(roomId: string, userId: string, reason?: string): Promise<{}> {
-        const path = utils.encodeUri("/rooms/$roomId/kick", {
-            $roomId: roomId,
-        });
-        const data = {
-            user_id: userId,
-            reason: reason,
-        };
-        return this.http.authedRequest(Method.Post, path, undefined, data);
+        return this.kickUserToEncryptedChannel({ id: roomId }, [userId]) as Promise<any>;
+        // const path = utils.encodeUri("/rooms/$roomId/kick", {
+        //     $roomId: roomId,
+        // });
+        // const data = {
+        //     user_id: userId,
+        //     reason: reason,
+        // };
+        // return this.http.authedRequest(Method.Post, path, undefined, data);
     }
 
     private membershipChange(
@@ -9911,8 +9912,12 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         return this.nostrClient.createKind104Event(roomId, pubkey, session);
     }
 
-    public inviteUserToEncryptedChannel(room: { id: string; relayUrl?: string }, pubkey: string, sessionId?: string) {
-        return this.nostrClient.inviteUserToEncryptedChannel(room, pubkey, sessionId);
+    public inviteUserToEncryptedChannel(room: { id: string; relayUrl?: string }, invitePubkeys: string[]) {
+        return this.nostrClient.inviteUserToEncryptedChannel(room, invitePubkeys, []);
+    }
+
+    public kickUserToEncryptedChannel(room: { id: string; relayUrl?: string }, kickPubkeys: string[]) {
+        return this.nostrClient.inviteUserToEncryptedChannel(room, [], kickPubkeys);
     }
 }
 

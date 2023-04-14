@@ -140,7 +140,7 @@ function InviteUser({
     updateSearchQuery({});
     try {
       const invitePubkeys = users.map((user) => user.user_id);
-      const event = await mx.nostrClient.inviteUserToEncryptedChannel({ id: roomId }, invitePubkeys);
+      const event = await mx.inviteUserToEncryptedChannel({ id: roomId }, invitePubkeys);
       console.log('submitToInviteUsers result to event:', event);
       onRequestClose();
     } catch (e) {
