@@ -111,7 +111,7 @@ export const addRoomMeta = (syncResponse, roomMetaInfo: RoomMetaInfo) => {
 };
 export const handMediaContent = (content: IContent): IContent => {
     for (const mediaType of mediaList) {
-        if (content.body.match(mediaType.reg)) {
+        if (content?.body?.match?.(mediaType.reg)) {
             const splitList = content.body.split(".");
             const ext = splitList[splitList.length - 1];
             const newContent = {

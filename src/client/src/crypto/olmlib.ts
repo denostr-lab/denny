@@ -545,6 +545,24 @@ export function isOlmEncrypted(event: MatrixEvent): boolean {
 }
 
 /**
+ * Check that an event was encrypted using olm.
+ */
+export function isOlmMegolmEncrypted(event: MatrixEvent): boolean {
+    if (!event.getSenderKey()) {
+        logger.error("Event has no sender key (not encrypted?)");
+        return false;
+    }
+    if (
+        // event.getWireType() !== EventType.RoomMessageEncrypted ||
+        !["m.megolm.v1.aes-sha2"].includes(event.getWireContent().algorithm)
+    ) {
+        logger.error("Event was not encrypted using an appropriate algorithm");
+        return false;
+    }
+    return true;
+}
+
+/**
  * Encode a typed array of uint8 as base64.
  * @param uint8Array - The data to encode.
  * @returns The base64.

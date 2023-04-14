@@ -1419,17 +1419,24 @@ export class MegolmDecryption extends DecryptionAlgorithm {
             this.removeEventFromPendingList(event);
         }
 
-        const payload = JSON.parse(res.result);
-
+        let payload = res.result;
+        try {
+            payload = JSON.parse(res.result);
+        } catch (e) {
+            payload = res.result;
+        }
         // belt-and-braces check that the room id matches that indicated by the HS
         // (this is somewhat redundant, since the megolm session is scoped to the
         // room, so neither the sender nor a MITM can lie about the room_id).
-        if (payload.room_id !== event.getRoomId()) {
-            throw new DecryptionError("MEGOLM_BAD_ROOM", "Message intended for room " + payload.room_id);
-        }
+        // if (payload.room_id !== event.getRoomId()) {
+        //     throw new DecryptionError("MEGOLM_BAD_ROOM", "Message intended for room " + payload.room_id);
+        // }
 
         return {
-            clearEvent: payload,
+            clearEvent: {
+                type: EventType.RoomMessage,
+                content: payload,
+            },
             senderCurve25519Key: res.senderKey,
             claimedEd25519Key: res.keysClaimed.ed25519,
             forwardingCurve25519KeyChain: res.forwardingCurve25519KeyChain,
@@ -1519,7 +1526,7 @@ export class MegolmDecryption extends DecryptionAlgorithm {
             return;
         }
 
-        if (!olmlib.isOlmEncrypted(event)) {
+        if (!olmlib.isOlmMegolmEncrypted(event)) {
             this.prefixedLogger.error("key event not properly encrypted");
             return;
         }
@@ -1844,7 +1851,6 @@ export class MegolmDecryption extends DecryptionAlgorithm {
             await this.onForwardedRoomKey(event);
         } else {
             const roomKey = this.roomKeyFromEvent(event);
-
             if (!roomKey) {
                 return;
             }
