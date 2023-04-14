@@ -363,6 +363,11 @@ export class MegolmEncryption extends EncryptionAlgorithm {
         // now check if we need to share with any devices
         const shareMap: Record<string, DeviceInfo[]> = {};
         const promiseList: Promise<any>[] = [];
+        const outboundKey = this.olmDevice.getOutboundGroupSessionKey(session.sessionId);
+        const sessionData = {
+            sessionId: session.sessionId,
+            sessionKey: outboundKey.key,
+        };
         for (const [userId, userDevices] of devicesInRoom) {
             for (const [deviceId, deviceInfo] of userDevices) {
                 // const key = deviceInfo.getIdentityKey();
@@ -374,7 +379,8 @@ export class MegolmEncryption extends EncryptionAlgorithm {
                 if (!session.sharedWithDevices.get(userId)?.get(deviceId)) {
                     shareMap[userId] = shareMap[userId] || [];
                     shareMap[userId].push(deviceInfo);
-                    promiseList.push(this.baseApis.createKind104Event(this.roomId, userId, session.sessionId));
+
+                    promiseList.push(this.baseApis.createKind104Event(this.roomId, userId, sessionData));
                 }
             }
         }

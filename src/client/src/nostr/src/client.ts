@@ -440,14 +440,17 @@ class NostrClient {
         Events.handleDeCryptedRoomMeta(this.client, event);
     }
 
-    createKind104Event(roomId: string, pubkey: string) {
-        const olmDevice = this.client.crypto.olmDevice!;
-        const sessionId = olmDevice.createOutboundGroupSession();
-        const key = olmDevice.getOutboundGroupSessionKey(sessionId);
-        const session = {
-            sessionId,
-            sessionKey: key.key,
-        };
+    createKind104Event(roomId: string, pubkey: string, session?: any) {
+        if (!session) {
+            const olmDevice = this.client.crypto.olmDevice!;
+            const sessionId = olmDevice.createOutboundGroupSession();
+            const key = olmDevice.getOutboundGroupSessionKey(sessionId);
+            session = {
+                sessionId,
+                sessionKey: key.key,
+            };
+        }
+
         return createKind104Event(this.client, roomId, pubkey, session);
     }
 
