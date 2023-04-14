@@ -84,6 +84,7 @@ class Events {
 
         const created_at = event.getTs();
         const clearContent = event.getContent();
+        const rowContent = event.getWireContent();
 
         if (event.isDecryptionFailure()) {
             return;
@@ -98,6 +99,7 @@ class Events {
                 key: "member",
                 type: EventType.RoomMember,
                 state_key: userId,
+                sender: userId,
                 content: { displayname: userId, membership: "join" },
             },
         ];
@@ -114,7 +116,7 @@ class Events {
             syncResponse.rooms.join[roomid].state.events.push({
                 content: roomAttr.content as unknown as IStateEvent,
                 origin_server_ts: created_at,
-                sender: event.sender?.userId as string,
+                sender: roomAttr.sender || (event.sender?.userId as string),
                 state_key: roomAttr.state_key as string,
                 type: roomAttr.type,
                 unsigned: {
@@ -773,10 +775,10 @@ class Events {
             // 判断自己是否在房间, 不在房间则立即标记自己退出了
             const mySelf = event.tags.find((tags) => tags[0] === "p" && tags[1] === userId)?.[1] as string;
             if (!mySelf) {
-                if (!syncResponse.rooms.leave?.[roomid]) {
-                    syncResponse.rooms.leave[roomid] = getDefaultRoomData();
+                if (!syncResponse.rooms.join?.[roomid]) {
+                    syncResponse.rooms.join[roomid] = getDefaultRoomData();
                 }
-                syncResponse.rooms.leave[roomid].state.events.push({
+                syncResponse.rooms.join[roomid].state.events.push({
                     content: {
                         avatar_url: "",
                         displayname: userId,
@@ -784,7 +786,7 @@ class Events {
                     },
                     origin_server_ts: created_at,
                     sender: userId,
-                    state_key: "",
+                    state_key: userId,
                     type: EventType.RoomMember,
                     unsigned: {
                         age: Date.now() - created_at,
