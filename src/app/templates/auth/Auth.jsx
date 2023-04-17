@@ -352,14 +352,20 @@ function LoginByPriKey() {
     privatekey: '',
   };
 
-  const validator = (values) => {
-    const errors = {};
-    const prikey = String(values.privatekey || '').trim();
+  const validPrivateKey = (errors, value) => {
+    const prikey = String(value || '').trim();
     if (prikey && prikey.length > 0) {
       if (!Key.toNostrHexAddress(prikey)) {
         errors.privatekey = 'invalid private key';
+        return true;
       }
     }
+    return false
+  };
+
+  const validator = (values) => {
+    const errors = {};
+    validPrivateKey(errors, values.privatekey);
     return errors;
   };
 
@@ -395,10 +401,31 @@ function LoginByPriKey() {
     window.location.reload();
   };
 
-  const handlePaste = (event, { values, handleSubmit }) => {
+  const handlePaste = (event, { values, errors, handleSubmit }) => {
     const pastedText = event.clipboardData.getData('text/plain').trim();
+    if (validPrivateKey(errors, pastedText)) {
+      return;
+    }
+
     values.privatekey = pastedText;
     handleSubmit();
+  };
+
+  const handleEnter = (event, { values, errors, handleSubmit }) => {
+    if (event.keyCode === 13) {
+      const inputText = event.target.value;
+      if (validPrivateKey(errors, inputText)) {
+        return;
+      }
+
+      values.privatekey = inputText;
+      handleSubmit();
+    }
+  };
+
+  const handleChangeValidate = (event, { errors, handleChange }) => {
+    validPrivateKey(errors, event.target.value)
+    handleChange(event);
   };
 
   return (
@@ -412,15 +439,16 @@ function LoginByPriKey() {
       }) => (
         <>
           {isSubmitting && <LoadingScreen message="Login in progress..." />}
-          <form className="auth-form">
+          <form className="auth-form" onSubmit={(e) => { e.preventDefault(); }}>
             <Input
               value={values.privatekey}
               name="privatekey"
-              onChange={handleChange}
-              type="privatekey"
+              onChange={(event) => handleChangeValidate(event, { errors, handleChange })}
+              type="text"
               required
               placeholder="Paste a private key"
-              onPaste={(event) => handlePaste(event, { values, handleSubmit })}
+              onKeyDown={(event) => handleEnter(event, { values, errors, handleSubmit })}
+              onPaste={(event) => handlePaste(event, { values, errors, handleSubmit })}
             />
             {errors.privatekey && <Text className="auth-form__error" variant="b3">{errors.privatekey}</Text>}
           </form>
