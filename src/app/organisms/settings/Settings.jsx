@@ -104,7 +104,7 @@ function RelaySection() {
                 <div className="toggle-margin">
                   {' '}
                   <Toggle
-                    isActive={relay.enabled}
+                    isActive={relay.status === 1 && relay.enabled}
                     onToggle={async () => {
                       await mx.toggleRelay(relay);
                       refreshState();

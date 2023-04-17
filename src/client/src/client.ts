@@ -9858,7 +9858,7 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     }
 
     public async toggleRelay(relay: NostrRelay) {
-        const enabled = relay.status === 1;
+        const enabled = relay.status === 1 && relay.enabled;
         if (enabled) {
             relay.close();
         } else {
