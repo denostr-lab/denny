@@ -359,7 +359,10 @@ class Relays {
                 Events.handle(this.client, event);
             });
             if (once) {
-                sub.on("eose", () => sub.unsub());
+                sub.on("eose", () => {
+                    callback?.(null);
+                    sub.unsub();
+                });
             }
             if (!PubSub.subscriptionsByName.has(id)) {
                 PubSub.subscriptionsByName.set(id, new Set());
