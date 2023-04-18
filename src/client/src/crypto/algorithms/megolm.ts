@@ -419,7 +419,7 @@ export class MegolmEncryption extends EncryptionAlgorithm {
 
         const callback = async (roomId, userId, session) => {
             let res: any;
-            let retry = 2;
+            let retry = 3;
             while (retry--) {
                 try {
                     res = await this.baseApis.createKind104Event(roomId, userId, session);
@@ -428,7 +428,7 @@ export class MegolmEncryption extends EncryptionAlgorithm {
                     this.prefixedLogger.debug(`Failed send to share ${userId}/${session.sessionId}`);
                 }
                 // 休息一下
-                await new Promise((resolve) => setTimeout(resolve, 3000));
+                await new Promise((resolve) => setTimeout(resolve, 1000));
             }
             return res;
         };
