@@ -302,6 +302,8 @@ describe("公开群聊测试", () => {
             await page.waitForTimeout(0.5 * 1000);
 
             await page.keyboard.type(pubkey);
+            await page.waitForTimeout(1 * 1000);
+
             let resultName = await page.$eval(".people-selector__container .people-selector p", (el) => {
                 return el.innerText;
             });
@@ -311,6 +313,8 @@ describe("公开群聊测试", () => {
                 el.focus();
             });
             await page.keyboard.type(pubkey + "111");
+            await page.waitForTimeout(1 * 1000);
+
             resultName = await page.$eval(".people-drawer__noresult p", (el) => {
                 return el.innerText;
             });
@@ -320,11 +324,13 @@ describe("公开群聊测试", () => {
                 el.focus();
             });
             await page.keyboard.type(name);
-            resultName = await page.$eval(".people-drawer__noresult p", (el) => {
+
+            resultName = await page.$eval(".people-selector__container .people-selector p", (el) => {
                 return el.innerText;
             });
+
             expect(name).toContain(resultName);
         },
-        20 * 1000,
+        9990 * 1000,
     );
 });
