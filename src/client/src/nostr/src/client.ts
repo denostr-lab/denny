@@ -404,17 +404,23 @@ class NostrClient {
                     kinds: [0],
                 },
             ];
-            const callback = (event: Event) => {
+            const callback = (event: Event | null) => {
+                if (!event) {
+                    return resolve({});
+                }
+
                 const content = JSON.parse(event.content) as MetaInfo;
-                const avatar_url = content.picture || "";
-                const displayname = content.name || "";
-                const about = content.about || "";
-                resolve({ avatar_url, displayname, about });
+                resolve({
+                    avatar_url: content.picture || "",
+                    displayname: content.name || "",
+                    about: content.about || "",
+                });
             };
             this.relay.subscribe({
                 filters,
                 id: `fetchUserMetadata-${userId}`,
                 callback,
+                once: true,
             });
         });
     }
