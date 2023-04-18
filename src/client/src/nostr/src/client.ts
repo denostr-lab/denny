@@ -395,7 +395,7 @@ class NostrClient {
         return { event_id: event.id };
     }
 
-    async fetchUserMetadata(userId: string): Promise<{ avatar_url?: string; displayname?: string }> {
+    async fetchUserMetadata(userId: string): Promise<{ avatar_url?: string; displayname?: string; about?: string }> {
         // 从中继中获取单个用户的信息
         return new Promise((resolve) => {
             const filters: Filter[] = [
@@ -408,7 +408,8 @@ class NostrClient {
                 const content = JSON.parse(event.content) as MetaInfo;
                 const avatar_url = content.picture || "";
                 const displayname = content.name || "";
-                resolve({ avatar_url, displayname });
+                const about = content.about || "";
+                resolve({ avatar_url, displayname, about });
             };
             this.relay.subscribe({
                 filters,

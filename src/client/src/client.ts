@@ -8452,7 +8452,7 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         userId: string,
         info?: string,
         // eslint-disable-next-line camelcase
-    ): Promise<{ avatar_url?: string; displayname?: string }> {
+    ): Promise<{ avatar_url?: string; displayname?: string; about?: string }> {
         // change by nostr
         return this.nostrClient.fetchUserMetadata(userId);
         // const path = info
