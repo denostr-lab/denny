@@ -234,3 +234,48 @@ export async function createKind141Event(
     return event;
 }
 export const updateEncryptedChannelMetadataEvent = createKind141Event;
+
+export function splitRequest(tasks: string[]) {
+    const maxPerRequest = 20;
+
+    let currentSlice: string[] = [];
+    const mapSlices = [currentSlice];
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const task of tasks) {
+        currentSlice.push(task);
+
+        if (currentSlice.length >= maxPerRequest) {
+            currentSlice = [];
+            mapSlices.push(currentSlice);
+        }
+    }
+
+    if (currentSlice.length === 0) {
+        mapSlices.pop();
+    }
+
+    return mapSlices;
+}
+
+export async function batchRequest(
+    roomId: string,
+    session: {
+        sessionId: string;
+        sessionKey: string;
+    },
+    users: string[],
+    failedUsers: string[],
+    callback: any,
+) {
+    await Promise.all(
+        users.map((userId) => {
+            try {
+                return callback(roomId, userId, session);
+            } catch (err) {
+                failedUsers.push(userId);
+            }
+            return null;
+        }),
+    );
+}

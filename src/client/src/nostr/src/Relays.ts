@@ -28,6 +28,8 @@ interface SubscriptionOption {
 }
 const DEFAULT_RELAYS = [
     "wss://nostr.paiyaapp.com",
+    // "wss://denostr.chickenkiller.com",
+    // "ws://192.168.0.99:8008",
     // 'wss://offchain.pub',
     // 'wss://node01.nostress.cc',
     // 'wss://nostr-pub.wellorder.net',
