@@ -124,6 +124,7 @@ function PeopleDrawer({ roomId }) {
   }, [roomId]);
 
   const mList = searchedMembers !== null ? searchedMembers.data : memberList.slice(0, itemCount);
+  console.info(mList, '嘎嘎嘎')
   return (
     <div className="people-drawer">
       <Header>

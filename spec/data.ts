@@ -1,0 +1,4 @@
+const PRIVATE_KEY = '5f8a22cb6e6af8ff63e1cc125b8f17876255645e4a3ca6fe61c0a0eef9453277'
+export {
+    PRIVATE_KEY
+}

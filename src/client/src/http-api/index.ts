@@ -49,6 +49,7 @@ export class MatrixHttpApi<O extends IHttpOpts> extends FetchHttpApi<O> {
     public uploadContent(file: FileType, opts: UploadOpts = {}): Promise<UploadResponse> {
         return new Promise(async (resolve) => {
             let formData = new FormData();
+            console.info("开始发送了吗", file);
             formData.append("fileToUpload", file);
 
             const response = await fetch("https://nostr.build/upload.php", {

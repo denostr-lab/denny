@@ -180,7 +180,11 @@ class Notifications extends EventEmitter {
       }
       if (!(noti.total || noti.highlight)) {
         noti = null
-      } else { }
+        this.roomIdToNoti.delete(id);
+
+        this.emit(cons.events.notifications.NOTI_CHANGED, id, 0, prevTotal);
+        return
+      }
       this.roomIdToNoti.set(id, noti);
       this.emit(cons.events.notifications.NOTI_CHANGED, id, noti.total, prevTotal);
     };

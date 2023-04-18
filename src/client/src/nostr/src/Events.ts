@@ -612,6 +612,9 @@ class Events {
         }
         const created_at = event.created_at * 1000;
         const replyEventId = event.tags.find((tags) => tags[0] === "e" && tags[3] === "reply")?.[1] as string;
+        if (event.id === "f6267be2be7a5528c6fd30977b6b922b348f6e57f8c8336d620dbdfe4ec6b333") {
+            console.info(event, "youasoas ");
+        }
         if (replyEventId) {
             content["m.relates_to"] = {
                 "m.in_reply_to": {

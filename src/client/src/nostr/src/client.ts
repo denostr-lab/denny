@@ -318,6 +318,7 @@ class NostrClient {
         const content = rawEvent.getWireContent();
         const roomId: string = rawEvent.getRoomId() as string;
         const room = this.client.getRoom(roomId);
+        console.info(room, "发送", rawEvent);
         if (!room) {
             return;
         }
@@ -352,9 +353,7 @@ class NostrClient {
         };
         const _getTags = () => {
             let tags = isDM ? [["p", roomId]] : [["e", roomId, "", "root"]];
-            if (isDM && citedEventId?.event_id) {
-                tags.push(["e", citedEventId.event_id, "", "reply"]);
-            } else if (emojiRelyEventId) {
+            if (emojiRelyEventId) {
                 const emojiRelyEvent = room.findEventById(emojiRelyEventId);
 
                 if (!body) {
@@ -366,10 +365,21 @@ class NostrClient {
             } else if (isDeleteEvent) {
                 body = content.reason ?? "";
                 tags = [["e", rawEvent.event.redacts]];
-            } else if (relatePersonList?.length) {
+            }
+            if (relatePersonList?.length) {
                 relatePersonList.forEach((pubkey: string) => {
-                    tags.push(["p", pubkey.replace("@", "")]);
+                    const pubkeyReplace = pubkey.replace("@", "");
+                    const hitOne = tags.find((i) => i[0] === "p" && i[1] === pubkeyReplace);
+                    if (!hitOne) {
+                        tags.push(["p", pubkeyReplace]);
+                    }
                 });
+            }
+            if (citedEventId?.event_id) {
+                const hitOne = tags.find((i) => i[0] === "e" && i[3] === "reply" && i[1] === citedEventId.event_id);
+                if (!hitOne) {
+                    tags.push(["e", citedEventId.event_id, "", "reply"]);
+                }
             }
             return tags;
         };
