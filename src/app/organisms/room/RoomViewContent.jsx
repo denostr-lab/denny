@@ -548,8 +548,6 @@ function RoomViewContent({ eventId, roomTimeline }) {
         return -1
       }
     })
-    console.info(timeline, '这是time阿萨斯')
-
     for (let i = limit.from; i < limit.length; i += 1) {
       if (i >= timeline.length) break;
       const mEvent = timeline[i];

@@ -1,9 +1,18 @@
 // import "expect-puppeteer";
-import puppeteer, { Browser, Page } from "puppeteer";
-import { Event, generatePrivateKey, getPublicKey, nip04, signEvent } from "nostr-tools";
+import { Browser, Page } from "puppeteer";
+import { getPublicKey } from "nostr-tools";
 
 import { PRIVATE_KEY, PRIVATE_KEY2 } from "../data";
-import { login, enterPublicRoom, privateChatFromRoom, findTimeLineText, createBrowserAndPage } from "../utils";
+import {
+    login,
+    enterPublicRoom,
+    privateChatFromRoom,
+    sendMessage,
+    findTimeLineText,
+    createBrowserAndPage,
+    createPrivateMessageRoomWithPubKey,
+    leaveRoom,
+} from "../utils";
 interface User {
     page: Page;
     browser: Browser;
@@ -59,6 +68,60 @@ describe("测试双人私聊聊天场景", () => {
             ]);
             const text1 = textResult[0].text;
             const text2 = textResult[1].text;
+            const textExceptResult = await Promise.all([
+                findTimeLineText(user2.page, text1),
+                findTimeLineText(user1.page, text2),
+            ]);
+            const [result, result2] = textExceptResult;
+
+            expect(result).toEqual(text1);
+            expect(result2).toEqual(text2);
+        },
+        90 * 1000,
+    );
+    it(
+        "测试搜索用户并且发送信息",
+        async () => {
+            await Promise.all([
+                createPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
+                createPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
+            ]);
+
+            const text1 = `你好-${Math.random()}`;
+            const text2 = `你好-${Math.random()}`;
+            await sendMessage(user1.page, text1);
+            await sendMessage(user2.page, text2);
+            const textExceptResult = await Promise.all([
+                findTimeLineText(user2.page, text1),
+                findTimeLineText(user1.page, text2),
+            ]);
+            const [result, result2] = textExceptResult;
+
+            expect(result).toEqual(text1);
+            expect(result2).toEqual(text2);
+        },
+        90 * 1000,
+    );
+    it(
+        "测试退出当前用户房间并且重新发送信息",
+        async () => {
+            await Promise.all([
+                createPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
+                createPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
+            ]);
+            await leaveRoom(user1.page, user2.pubkey);
+            await leaveRoom(user2.page, user1.pubkey);
+            await user1.page.waitForTimeout(1 * 1000);
+            await user2.page.waitForTimeout(1 * 1000);
+
+            await Promise.all([
+                createPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
+                createPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
+            ]);
+            const text1 = `你好我又回来了-${Math.random()}`;
+            const text2 = `你好我又回来了-${Math.random()}`;
+            await sendMessage(user1.page, text1);
+            await sendMessage(user2.page, text2);
             const textExceptResult = await Promise.all([
                 findTimeLineText(user2.page, text1),
                 findTimeLineText(user1.page, text2),
