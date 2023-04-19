@@ -250,13 +250,9 @@ class Relays {
     intervalRetry() {
         const go = () => {
             for (const relay of this.relays.values()) {
-                if (relay.enabled !== false && this.getStatus(relay) === 3) {
+                if (relay.enabled && this.getStatus(relay) === 3) {
                     this.connect(relay);
                 }
-                // if disabled
-                // if (relay.enabled === false && this.getStatus(relay) === 1) {
-                //   relay.close();
-                // }
             }
             for (const relay of this.searchRelays.values()) {
                 if (this.getStatus(relay) === 3) {
@@ -271,7 +267,7 @@ class Relays {
 
     add(url: string) {
         if (this.relays.has(url)) return;
-        const relay = this.relayInit(url);
+        const relay = this.relayInit(url, true, { enabled: false });
         relay.on("connect", () => this.resubscribe(relay));
         this.relays.set(url, relay);
     }
@@ -320,10 +316,20 @@ class Relays {
         relay.enabled = enabled;
         relay.read = read;
         relay.write = write;
-        subscribeAll && relay.on("connect", () => this.resubscribe(relay));
+        subscribeAll &&
+            relay.on("connect", () => {
+                relay.enabled = true;
+                this.resubscribe(relay);
+            });
         relay.on("notice", (notice) => {
             relay.enabled = true;
             console.log("notice from ", relay.url, notice);
+        });
+        relay.on("disconnect", () => {
+            relay.enabled = false;
+        });
+        relay.on("error", () => {
+            relay.enabled = false;
         });
         if (enabled) {
             this.connect(relay);

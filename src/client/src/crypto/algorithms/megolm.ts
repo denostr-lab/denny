@@ -44,7 +44,7 @@ import { RoomKeyRequestState } from "../OutgoingRoomKeyRequestManager";
 import { OlmGroupSessionExtraData } from "../../@types/crypto";
 import { MatrixError } from "../../http-api";
 import { immediate, MapWithDefault } from "../../utils";
-import { batchRequest, splitRequest } from "../../nostr/src/Helpers";
+import { batchRequest, splitRequest, initRoomKeyTask } from "../../nostr/src/Helpers";
 
 // determine whether the key can be shared with invitees
 export function isRoomSharedHistory(room: Room): boolean {
@@ -400,8 +400,8 @@ export class MegolmEncryption extends EncryptionAlgorithm {
             sessionId: session.sessionId,
             sessionKey: outboundKey.key,
         };
-        const userIds: string[] = [];
-        for (const [userId, userDevices] of devicesInRoom) {
+        const userIds: string[] = new Set<string>();
+        for (const [userId] of devicesInRoom) {
             // for (const [deviceId, deviceInfo] of userDevices) {
             //     // const key = deviceInfo.getIdentityKey();
             //     // if (key == this.olmDevice.deviceCurve25519Key) {
@@ -417,18 +417,14 @@ export class MegolmEncryption extends EncryptionAlgorithm {
             userIds.push(userId);
         }
 
-        const callback = async (roomId, userId, session) => {
-            let res: any;
-            let retry = 3;
-            while (retry--) {
-                try {
-                    res = await this.baseApis.createKind104Event(roomId, userId, session);
-                    break;
-                } catch {
-                    this.prefixedLogger.debug(`Failed send to share ${userId}/${session.sessionId}`);
-                }
-                // 休息一下
-                await new Promise((resolve) => setTimeout(resolve, 1000));
+        initRoomKeyTask(this.roomId, session, [...userIds]);
+
+        const callback = async (roomId: string, userId: string, session: any) => {
+            let res;
+            try {
+                res = await this.baseApis.createKind104Event(roomId, userId, session);
+            } catch {
+                this.prefixedLogger.debug(`Failed send to share ${userId}/${session.sessionId}`);
             }
             return res;
         };

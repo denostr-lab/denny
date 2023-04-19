@@ -9862,10 +9862,15 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         if (enabled) {
             relay.close();
         } else {
-            await relay.connect();
-            this.nostrClient.relay.resubscribe(relay);
+            try {
+                await relay.connect();
+                this.nostrClient.relay.resubscribe(relay);
+            } catch {
+                return;
+            }
         }
         relay.enabled = !enabled;
+        this.saveRelays();
     }
 
     public saveRelays() {
