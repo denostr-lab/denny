@@ -400,7 +400,7 @@ export class MegolmEncryption extends EncryptionAlgorithm {
             sessionId: session.sessionId,
             sessionKey: outboundKey.key,
         };
-        const userIds: string[] = new Set<string>();
+        const userIds: Set<string> = new Set<string>();
         for (const [userId] of devicesInRoom) {
             // for (const [deviceId, deviceInfo] of userDevices) {
             //     // const key = deviceInfo.getIdentityKey();
@@ -414,7 +414,7 @@ export class MegolmEncryption extends EncryptionAlgorithm {
             //         // promiseList.push(this.baseApis.createKind104Event(this.roomId, userId, sessionData));
             //     }
             // }
-            userIds.push(userId);
+            userIds.add(userId);
         }
 
         initRoomKeyTask(this.roomId, session, [...userIds]);

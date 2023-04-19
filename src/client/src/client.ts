@@ -8207,7 +8207,7 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         since,
         ...options
     }: IRoomDirectoryOptions = {}): Promise<IPublicRoomsResponse> {
-        const queryParams: QueryDict = { server, limit, since };
+        // const queryParams: QueryDict = { server, limit, since };
         // if (Object.keys(options).length === 0) {
         //   return this.http.authedRequest(Method.Get, '/publicRooms', queryParams);
         // } else {
@@ -8230,38 +8230,14 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
       next_batch: "abc"
       total_room_count_estimate: 999
      */
-        const search = options.filter.generic_search_term;
-        const start = !!since ? Number(since) : 0;
-        const end = start + limit;
-
-        const batch: any = {
-            next_batch: end + 1,
-        };
-        this.nostrClient.totalRoomCount / end;
-        if (start !== 0) {
-            batch.prev_batch = 0;
-        }
-
-        // this.nostrClient.getPublicRooms()
-        const chunk: IPublicRoomsChunkRoom[] = this.nostrClient.getPublicRooms(search);
-        // const rooms = this.getRooms();
-        // for (const room of rooms) {
-        //   chunk.push({
-        //     room_id: room.roomId,
-        //     name: room.name,
-        //     avatar_url: room.getAvatarUrl(window.location.href, 100, 100, 'scale'),
-        //     topic: '',
-        //     canonical_alias: room.roomId,
-        //     world_readable: true,
-        //     guest_can_join: true,
-        //     num_joined_members: 1,
-        //   });
-        // }
-
-        return {
-            chunk,
-            total_room_count_estimate: chunk.length,
-        };
+        const search = options?.filter?.generic_search_term || "";
+        const chunk: IPublicRoomsChunkRoom[] = this.nostrClient.getPublicRooms(search as string);
+        return Promise.resolve().then(() => {
+            return {
+                chunk,
+                total_room_count_estimate: chunk.length,
+            };
+        });
     }
 
     /**
