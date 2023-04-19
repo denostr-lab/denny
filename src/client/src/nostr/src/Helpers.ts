@@ -202,7 +202,7 @@ export async function createKind104Event(
         await client.nostrClient.relay.publishAsPromise(event);
         return event;
     } catch (e) {
-        console.info(e, "发送104错误");
+        console.info(e, "send kin 104 error");
     }
 }
 export const communicateMegolmSessionEvent = createKind104Event;

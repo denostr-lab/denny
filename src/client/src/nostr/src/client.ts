@@ -136,7 +136,7 @@ class NostrClient {
                 }
             }
         } catch (e) {
-            console.info(e, "错误");
+            console.info(e, "getBufferEvent error");
         }
         try {
             const ids = (data?.presence?.events || []).map((i) => i.user_id).filter(Boolean);
@@ -174,6 +174,7 @@ class NostrClient {
     }
 
     joinRoom(roomId: string) {
+        Events.handJoinRoom(this.client, roomId);
         this.leaveRooms.delete(roomId);
         this.saveLeaveRooms();
     }

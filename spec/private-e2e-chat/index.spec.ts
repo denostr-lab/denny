@@ -12,6 +12,7 @@ import {
     createBrowserAndPage,
     createPrivateMessageRoomWithPubKey,
     leaveRoom,
+    searchLocalUserAndEnterRoom,
 } from "../utils";
 interface User {
     page: Page;
@@ -109,8 +110,8 @@ describe("测试双人私聊聊天场景", () => {
                 createPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
                 createPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
             ]);
-            await leaveRoom(user1.page, user2.pubkey);
-            await leaveRoom(user2.page, user1.pubkey);
+            await leaveRoom(user1.page);
+            await leaveRoom(user2.page);
             await user1.page.waitForTimeout(1 * 1000);
             await user2.page.waitForTimeout(1 * 1000);
 
@@ -130,6 +131,30 @@ describe("测试双人私聊聊天场景", () => {
 
             expect(result).toEqual(text1);
             expect(result2).toEqual(text2);
+        },
+        90 * 1000,
+    );
+    it(
+        "测试搜索用户",
+        async () => {
+            await Promise.all([
+                searchLocalUserAndEnterRoom(user1.page, user2.pubkey),
+                searchLocalUserAndEnterRoom(user2.page, user1.pubkey),
+            ]);
+            await Promise.all([user1.page.waitForTimeout(1 * 1000), user2.page.waitForTimeout(1 * 1000)]);
+
+            // const text1 = `我通过搜进来-${Math.random()}`;
+            // const text2 = `我通过搜进来-${Math.random()}`;
+            // await sendMessage(user1.page, text1);
+            // await sendMessage(user2.page, text2);
+            // const textExceptResult = await Promise.all([
+            //     findTimeLineText(user2.page, text1),
+            //     findTimeLineText(user1.page, text2),
+            // ]);
+            // const [result, result2] = textExceptResult;
+
+            // expect(result).toEqual(text1);
+            // expect(result2).toEqual(text2);
         },
         90 * 1000,
     );

@@ -5882,6 +5882,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
      */
     public async getLatestTimeline(timelineSet: EventTimelineSet): Promise<Optional<EventTimeline>> {
         // don't allow any timeline support unless it's been enabled.
+        // change by nostr
+        return Promise.resolve(null);
         if (!this.timelineSupport) {
             throw new Error(
                 "timeline support is disabled. Set the 'timelineSupport'" +
@@ -5952,6 +5954,12 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         dir: Direction,
         timelineFilter?: Filter,
     ): Promise<IMessagesResponse> {
+        return Promise.resolve({
+            start: "",
+            end: "",
+            chunk: [],
+            state: [],
+        });
         const path = utils.encodeUri("/rooms/$roomId/messages", { $roomId: roomId });
 
         const params: Record<string, string> = {
@@ -7956,6 +7964,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
             name: options.name,
             about: options.topic || "",
         });
+
+        this.nostrClient.joinRoom(event.id);
 
         return { room_id: event.id };
     }

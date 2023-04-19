@@ -541,13 +541,13 @@ function RoomViewContent({ eventId, roomTimeline }) {
     //   tl.push(loadingMsgPlaceholders(1, PLACEHOLDER_COUNT));
     //   itemCountIndex += PLACEHOLDER_COUNT;
     // }
-    timeline = timeline.sort((a, b) => {
-      if (a.getTs() > b.getTs()) {
-        return 1
-      } else {
-        return -1
-      }
-    })
+    // timeline = timeline.sort((a, b) => {
+    //   if (a.getTs() > b.getTs()) {
+    //     return 1
+    //   } else {
+    //     return -1
+    //   }
+    // })
     for (let i = limit.from; i < limit.length; i += 1) {
       if (i >= timeline.length) break;
       const mEvent = timeline[i];
@@ -606,7 +606,6 @@ function RoomViewContent({ eventId, roomTimeline }) {
 
     return tl;
   };
-
   return (
     <ScrollView onScroll={handleTimelineScroll} ref={timelineSVRef} autoHide>
       <div className="room-view__content" onClick={handleOnClickCapture}>

@@ -144,6 +144,13 @@ class RoomTimeline extends EventEmitter {
       return;
     }
     this.timeline.push(mEvent);
+    this.timeline = this.timeline.sort((a, b) => {
+      if (a.getTs() > b.getTs()) {
+        return 1
+      } else {
+        return -1
+      }
+    })
   }
 
   _populateAllLinkedEvents(timeline) {

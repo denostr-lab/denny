@@ -64,7 +64,7 @@ class InitMatrix extends EventEmitter {
         console.log('NULL state');
       },
       SYNCING: () => {
-        console.log('SYNCING state');
+        // console.log('SYNCING state');
       },
       PREPARED: (prevState) => {
         // TODO: remove global.initMatrix at end

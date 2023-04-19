@@ -1849,7 +1849,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
                 allThreadsFilter,
             );
 
-            if (!events.length) return;
+            if (!events?.length) return;
 
             // Sorted by last_reply origin_server_ts
             const threadRoots = events.map(this.client.getEventMapper()).sort((eventA, eventB) => {

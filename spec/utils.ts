@@ -163,7 +163,6 @@ export const createPrivateMessageRoomWithPubKey = async (page: Page, pubkey: str
     await page.waitForSelector(".pw__content-container .invite-user__form input");
 
     await page.focus(".pw__content-container .invite-user__form input");
-    await page.focus(".pw__content-container .invite-user__form input");
     await page.keyboard.sendCharacter(pubkey);
     await page.waitForTimeout(0.5 * 1000);
     await page.keyboard.press("Enter");
@@ -172,7 +171,7 @@ export const createPrivateMessageRoomWithPubKey = async (page: Page, pubkey: str
     await page.waitForTimeout(2 * 1000);
 };
 
-export const leaveRoom = async (page: Page, pubkey: string) => {
+export const leaveRoom = async (page: Page) => {
     await page.waitForSelector(".room-header__btn");
     await page.click(".room-header__btn");
     await page.waitForTimeout(2 * 1000);
@@ -181,5 +180,19 @@ export const leaveRoom = async (page: Page, pubkey: string) => {
     await page.waitForTimeout(2 * 1000);
     await page.waitForSelector(".confirm-dialog__btn button");
     await page.click(".confirm-dialog__btn button");
+    await page.waitForTimeout(2 * 1000);
+};
+
+export const searchLocalUserAndEnterRoom = async (page: Page, pubkey: string) => {
+    await page.waitForSelector(".sidebar__sticky .sticky-container button");
+
+    await page.click(".sidebar__sticky .sticky-container button");
+    await page.waitForTimeout(1 * 1000);
+    await page.waitForSelector(".search-dialog__input input");
+
+    await page.focus(".search-dialog__input input");
+    await page.keyboard.sendCharacter(pubkey);
+    await page.waitForSelector(".search-dialog__content button");
+    await page.click(".search-dialog__content button");
     await page.waitForTimeout(2 * 1000);
 };
