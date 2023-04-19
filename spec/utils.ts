@@ -33,7 +33,41 @@ export const searchRoomMember = async (page: Page, text: string) => {
     await page.keyboard.sendCharacter(text);
 };
 
-export const findTimeLineText = async (page: Page, text: string) => {
+export const findTimeLineLastImage = (page: Page, text: string, type: string = "image"): Promise<string> => {
+    let t: number;
+    let count = 0;
+    return new Promise((res) => {
+        t = setInterval(async () => {
+            count += 1;
+            let name = "";
+            try {
+                if (type === "image") {
+                    name = await page.$eval(".timeline__wrapper>div:last-child img", (el) => {
+                        return el.alt;
+                    });
+                } else if (type === "emoji") {
+                    name = await page.$eval(".timeline__wrapper>div:last-child .message__reactions img", (el) => {
+                        return el.alt;
+                    });
+                } else {
+                    name = await page.$eval(".timeline__wrapper>div:last-child p", (el) => {
+                        return el.innerText;
+                    });
+                }
+            } catch (e) {}
+
+            if (name === text) {
+                clearInterval(t);
+                res(name);
+            } else if (count > 10) {
+                // 错误了
+                throw Error("传送错误");
+            }
+        }, 1000);
+    });
+};
+
+export const findTimeLineText = async (page: Page, text: string): Promise<string> => {
     // 在时间tiemlien 中找到消息
     let t: number;
     let count = 0;
@@ -69,6 +103,24 @@ export const findTimeLineText = async (page: Page, text: string) => {
         }, 1000);
     });
 };
+
+export const sendEmojitoLast = async (page: Page) => {
+    await page.waitForSelector(".timeline__wrapper");
+    await page.hover(".timeline__wrapper>div:last-child");
+    await page.waitForSelector(".timeline__wrapper");
+    await page.$eval(".timeline__wrapper>div:last-child .message__options button", (el) => {
+        el.click();
+    });
+    await page.waitForSelector(".emoji-board .emoji-row span");
+    const clickAlt = await page.$eval(".emoji-board .emoji-row span img", (el) => {
+        return el.alt;
+    });
+    await page.$eval(".emoji-board .emoji-row span img", (el) => {
+        el.click();
+    });
+    await page.waitForTimeout(1 * 1000);
+    return clickAlt;
+};
 export const sendMessage = async (page: Page, content: string, delay: number = 0) => {
     await page.waitForSelector(".room-input__input-container");
     await page.$eval(".room-input__input-container textarea", async (el) => {
@@ -78,6 +130,15 @@ export const sendMessage = async (page: Page, content: string, delay: number = 0
     await page.waitForTimeout(0.5 * 1000 + delay);
     await page.keyboard.press("Enter");
     await page.waitForTimeout(3 * 1000);
+};
+export const sendFile = async (page: Page, path: string = "spec/test.png", delay: number = 0) => {
+    await page.waitForSelector(".room-input__input-container");
+    const elementHandle = await page.$("input[type=file]");
+    await elementHandle!.uploadFile(path);
+    await page.waitForSelector(".room-attachment__info");
+    await page.waitForTimeout(1 * 1000 + delay);
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(1 * 1000);
 };
 export const privateChatFromRoom = async (page: Page, key: string, delay: number = 0) => {
     // 从房间中找到一个用户并且发一条私聊消息
@@ -143,16 +204,16 @@ export const enterPublicRoom = async (page: Page, roomName: string = "房间1号
     );
     await page.waitForSelector(".room-input__input-container");
 
-    await page.waitForTimeout(2 * 1000);
+    // await page.waitForTimeout(2 * 1000);
     // 随机加入一个房间
-    const text = `又来房间了${Math.random()}`;
-    await page.$eval(".room-input__input-container textarea", async (el) => {
-        el.focus();
-    });
-    await page.keyboard.sendCharacter(text);
-    await page.waitForTimeout(0.5 * 1000);
-    await page.keyboard.press("Enter");
-    await page.waitForTimeout(3 * 1000);
+    // const text = `又来房间了${Math.random()}`;
+    // await page.$eval(".room-input__input-container textarea", async (el) => {
+    //     el.focus();
+    // });
+    // await page.keyboard.sendCharacter(text);
+    // await page.waitForTimeout(0.5 * 1000);
+    // await page.keyboard.press("Enter");
+    // await page.waitForTimeout(3 * 1000);
 };
 
 export const createPrivateMessageRoomWithPubKey = async (page: Page, pubkey: string) => {
@@ -196,3 +257,5 @@ export const searchLocalUserAndEnterRoom = async (page: Page, pubkey: string) =>
     await page.click(".search-dialog__content button");
     await page.waitForTimeout(2 * 1000);
 };
+
+export const updateUserMeta = async (page: Page) => {};
