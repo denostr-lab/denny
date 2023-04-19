@@ -2334,7 +2334,6 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         // if (event.status !== EventStatus.SENDING && event.status !== EventStatus.NOT_SENT) {
         //     throw new Error("addPendingEvent called on an event with status " + event.status);
         // }
-        console.info("开始", event, this.pendingEventList);
         if (this.txnToEvent.get(txnId)) {
             throw new Error("addPendingEvent called on an event with known txnId " + txnId);
         }
@@ -2372,7 +2371,6 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
             }
         } else {
             for (const timelineSet of this.timelineSets) {
-                console.info(timelineSet.getFilter(), "timelineSet.getFilter()");
                 if (timelineSet.getFilter()) {
                     if (timelineSet.getFilter()!.filterRoomTimeline([event]).length) {
                         timelineSet.addEventToTimeline(event, timelineSet.getLiveTimeline(), {
@@ -2380,8 +2378,6 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
                         });
                     }
                 } else {
-                    console.info("timelineSet.加急撒()");
-
                     timelineSet.addEventToTimeline(event, timelineSet.getLiveTimeline(), {
                         toStartOfTimeline: false,
                     });

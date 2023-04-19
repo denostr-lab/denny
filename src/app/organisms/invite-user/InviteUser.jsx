@@ -172,6 +172,8 @@ function InviteUser({
       const result = await roomActions.createDM(userId, await hasDevices(userId));
       roomIdToUserId.set(result.room_id, userId);
       updateRoomIdToUserId(getMapCopy(roomIdToUserId));
+      selectRoom(result.room_id);
+      onRequestClose();
     } catch (e) {
       deleteUserFromProc(userId);
       if (typeof e.message === 'string') procUserError.set(userId, e.message);
@@ -202,7 +204,7 @@ function InviteUser({
 
   function renderUserList() {
     const renderOptions = (userId) => {
-    //   const messageJSX = (message, isPositive) => <Text variant="b2"><span style={{ color: isPositive ? 'var(--bg-positive)' : 'var(--bg-negative)' }}>{message}</span></Text>;
+      //   const messageJSX = (message, isPositive) => <Text variant="b2"><span style={{ color: isPositive ? 'var(--bg-positive)' : 'var(--bg-negative)' }}>{message}</span></Text>;
 
       if (mx.getUserId() === userId) return null;
       if (procUsers.has(userId)) {
@@ -217,27 +219,27 @@ function InviteUser({
 
       return (<Button onClick={() => createDM(userId)} variant="primary">Message</Button>);
 
-    //   if (invitedUserIds.has(userId)) {
-    //     return messageJSX('Invited', true);
-    //   }
-    //   if (typeof roomId === 'string') {
-    //     const member = mx.getRoom(roomId).getMember(userId);
-    //     if (member !== null) {
-    //       const userMembership = member.membership;
-    //       switch (userMembership) {
-    //         case 'join':
-    //           return messageJSX('Already joined', true);
-    //         case 'invite':
-    //           return messageJSX('Already Invited', true);
-    //         case 'ban':
-    //           return messageJSX('Banned', false);
-    //         default:
-    //       }
-    //     }
-    //   }
-    //   return (typeof roomId === 'string')
-    //     ? <Button onClick={() => inviteToRoom(userId)} variant="primary">Invite</Button>
-    //     : <Button onClick={() => createDM(userId)} variant="primary">Message</Button>;
+      //   if (invitedUserIds.has(userId)) {
+      //     return messageJSX('Invited', true);
+      //   }
+      //   if (typeof roomId === 'string') {
+      //     const member = mx.getRoom(roomId).getMember(userId);
+      //     if (member !== null) {
+      //       const userMembership = member.membership;
+      //       switch (userMembership) {
+      //         case 'join':
+      //           return messageJSX('Already joined', true);
+      //         case 'invite':
+      //           return messageJSX('Already Invited', true);
+      //         case 'ban':
+      //           return messageJSX('Banned', false);
+      //         default:
+      //       }
+      //     }
+      //   }
+      //   return (typeof roomId === 'string')
+      //     ? <Button onClick={() => inviteToRoom(userId)} variant="primary">Invite</Button>
+      //     : <Button onClick={() => createDM(userId)} variant="primary">Message</Button>;
     };
     const renderError = (userId) => {
       if (!procUserError.has(userId)) return null;

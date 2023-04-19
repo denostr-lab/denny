@@ -892,12 +892,7 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
             this.setPushActions(null);
 
             if (options.emit !== false) {
-                try {
-                    this.emit(MatrixEventEvent.Decrypted, this, err);
-                    console.info(this, "解密以后");
-                } catch (e) {
-                    console.info(e, "发送失败");
-                }
+                this.emit(MatrixEventEvent.Decrypted, this, err);
             }
 
             return;
