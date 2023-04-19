@@ -8,6 +8,10 @@ export const createBrowserAndPage = async () => {
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
+    await page.setViewport({
+        width: 1364,
+        height: 764,
+    });
     return { browser, page };
 };
 export const login = async (page: Page, key: string) => {
@@ -16,12 +20,81 @@ export const login = async (page: Page, key: string) => {
     await page.$eval('button[type="button"]', (el) => el.click());
     await page.waitForSelector("input[name='privatekey']");
     await page.focus("input[name='privatekey']");
-    await page.keyboard.type(key);
+    await page.keyboard.sendCharacter(key);
     await page.keyboard.press("Enter");
 };
+export const searchRoomMember = async (page: Page, text: string) => {
+    await page.$eval(".people-drawer__sticky .people-search input", (el) => {
+        el.value = "";
+        el.focus();
+    });
+    await page.waitForTimeout(0.5 * 1000);
 
-export const privateChatFromRoom = (page: Page) => {
-    // 从房间中
+    await page.keyboard.type(text);
+};
+
+export const findTimeLineText = async (page: Page, text: string) => {
+    // 在时间tiemlien 中找到消息
+    let t: number;
+    let count = 0;
+    return await new Promise((res) => {
+        t = setInterval(async () => {
+            let name = "";
+            try {
+                name = await page.$$eval(
+                    ".timeline__wrapper>div .message__body p",
+                    (el, matchText) => {
+                        let result = "";
+                        el.forEach((i) => {
+                            if (i.innerText === matchText) {
+                                result = i.innerText;
+                            }
+                        });
+
+                        return result;
+                    },
+                    text,
+                );
+            } catch (e) {}
+            if (name === text) {
+                clearInterval(t);
+                res(name);
+            } else if (count > 10) {
+                expect(name).toEqual(text);
+                clearInterval(t);
+                // 错误了
+                throw Error("传送错误");
+            }
+            count += 1;
+        }, 1000);
+    });
+};
+export const privateChatFromRoom = async (page: Page, key: string, delay: number = 0) => {
+    // 从房间中找到一个用户并且发一条私聊消息
+    await searchRoomMember(page, key);
+
+    await page.waitForSelector(".people-drawer__sticky .people-search");
+    await page.$eval(".people-selector__container button", (el) => {
+        return el.click();
+    });
+    await page.waitForTimeout(1 * 1000);
+
+    await page.waitForSelector(".profile-viewer__buttons button");
+    await page.click(".profile-viewer__buttons button");
+    await page.waitForTimeout(4 * 1000);
+    await page.waitForSelector(".room-input__input-container");
+
+    await page.waitForTimeout(2 * 1000);
+    // 随机加入一个房间
+    const text = `私聊信息${Math.random()}`;
+    await page.$eval(".room-input__input-container textarea", async (el) => {
+        el.focus();
+    });
+    await page.keyboard.type(text);
+    await page.waitForTimeout(0.5 * 1000 + delay);
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(3 * 1000);
+    return { text };
 };
 export const enterPublicRoom = async (page: Page, roomName: string = "房间1号") => {
     await page.waitForSelector(".header button");
@@ -55,11 +128,27 @@ export const enterPublicRoom = async (page: Page, roomName: string = "房间1号
 
     await page.waitForSelector(".room-selector__content");
 
-    await page.$$eval(".room-selector__content", (el) => {
-        el.map((i) => {
-            if (i.querySelectorAll("p")[0].innerText === roomName) {
-                i.click();
-            }
-        });
+    await page.$$eval(
+        ".room-selector__content",
+        (el, roomName) => {
+            el.map((i) => {
+                if (i.querySelectorAll("p")[0].innerText === roomName) {
+                    i.click();
+                }
+            });
+        },
+        roomName,
+    );
+    await page.waitForSelector(".room-input__input-container");
+
+    await page.waitForTimeout(2 * 1000);
+    // 随机加入一个房间
+    const text = `又来房间了${Math.random()}`;
+    await page.$eval(".room-input__input-container textarea", async (el) => {
+        el.focus();
     });
+    await page.keyboard.type(text);
+    await page.waitForTimeout(0.5 * 1000);
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(3 * 1000);
 };

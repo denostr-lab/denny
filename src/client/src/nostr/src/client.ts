@@ -318,7 +318,7 @@ class NostrClient {
         const content = rawEvent.getWireContent();
         const roomId: string = rawEvent.getRoomId() as string;
         const room = this.client.getRoom(roomId);
-        console.info(room, "发送", rawEvent);
+        console.info(room, "发送", rawEvent.getId());
         if (!room) {
             return;
         }
@@ -392,10 +392,17 @@ class NostrClient {
             content: body,
             pubkey: userId,
         } as Event;
-
+        console.info(event, "event发送前");
         try {
             await this.handPublishEvent(event);
+            console.info(event, "event发送前11");
+
+            rawEvent.replaceLocalEventId(event.id);
+            room?.addPendingEvent?.(rawEvent, event.id);
+
             await this.relay.publishAsPromise(event);
+            console.info(event, "event发送前112");
+
             if (event.kind === 7) {
                 Events.handle(this.client, event);
             }

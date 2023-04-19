@@ -37,42 +37,27 @@ function loadVideo(videoFile) {
     video.muted = true;
 
     const reader = new FileReader();
-    console.info("开始了吗")
     reader.onload = (ev) => {
       // Wait until we have enough data to thumbnail the first frame.
       video.onloadeddata = async () => {
-        console.info(video, '有video')
-        video.play();
-
         resolve(video);
         video.pause();
       };
       video.onerror = (e) => {
-        console.info(e, e.toString(), 'video有错误')
-
         reject(e);
       };
-      console.info(ev, '你啊汕德卡', ev.target.result)
       video.src = ev.target.result;
-      console.info('开始播')
-
-      // video.load();
-      console.info('播放下2')
-
-      console.info('播放下')
-
+      video.load();
+      video.play();
     };
     reader.onerror = (e) => {
-      console.info("load video error", e)
       reject(e);
     };
     if (videoFile.type === 'video/quicktime') {
       const quicktimeVideoFile = new File([videoFile], videoFile.name, { type: 'video/mp4' });
       reader.readAsDataURL(quicktimeVideoFile);
     } else {
-      console.info('开始读')
       reader.readAsDataURL(videoFile);
-      console.info('开始读结果了')
     }
   });
 }
@@ -273,7 +258,6 @@ class RoomsInput extends EventEmitter {
     const input = this.getInput(roomId);
     input.isSending = true;
     this.roomIdToInput.set(roomId, input);
-    console.info(input.attachment, '开始if奥松')
     if (input.attachment) {
       await this.sendFile(roomId, input.attachment.file);
       if (!this.isSending(roomId)) return;
@@ -338,10 +322,7 @@ class RoomsInput extends EventEmitter {
       content.body = file.name || 'Video';
 
       try {
-        console.info('有数据阿珂', file)
         const video = await loadVideo(file);
-        console.info('加载结束', file)
-
         info.w = video.videoWidth;
         info.h = video.videoHeight;
         info[blurhashField] = encodeBlurhash(video);
@@ -388,7 +369,6 @@ class RoomsInput extends EventEmitter {
 
   async uploadFile(roomId, file, progressHandler) {
     let isEncryptedRoom = this.matrixClient.isRoomEncrypted(roomId);
-    console.info(isEncryptedRoom, '有辣妈')
     isEncryptedRoom = false
     let encryptInfo = null;
     let encryptBlob = null;

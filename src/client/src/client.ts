@@ -1364,7 +1364,7 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         // state, such as highlights when the user's name is mentioned.
         this.on(MatrixEventEvent.Decrypted, (event) => {
             // change by nostr
-
+            console.info(event, "这里有接到吗");
             if (event.getWireType() === EventType.RoomMetaEncrypted) {
                 // 在这里传递给Event
                 this.nostrClient.handleDeCryptedRoomMeta(event);
@@ -4384,10 +4384,10 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
 
         // We always construct a MatrixEvent when sending because the store and scheduler use them.
         // We'll extract the params back out if it turns out the client has no scheduler or store.
+
         const localEvent = new MatrixEvent(
             Object.assign(eventObject, {
                 event_id: "~" + roomId + ":" + txnId,
-
                 user_id: this.credentials.userId,
                 sender: this.credentials.userId,
                 room_id: roomId,
@@ -4424,7 +4424,6 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         localEvent.setStatus(EventStatus.SENDING);
 
         // add this event immediately to the local store as 'sending'.
-        room?.addPendingEvent(localEvent, txnId);
 
         // addPendingEvent can change the state to NOT_SENT if it believes
         // that there's other events that have failed. We won't bother to

@@ -753,6 +753,7 @@ export class EventTimelineSet extends TypedEventEmitter<EmittedEvents, EventTime
             timeline: timeline,
             liveEvent: !toStartOfTimeline && timeline == this.liveTimeline && !fromCache,
         };
+        console.info("发出去了", event);
         this.emit(RoomEvent.Timeline, event, this.room, Boolean(toStartOfTimeline), false, data);
     }
 

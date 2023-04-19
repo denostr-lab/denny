@@ -122,7 +122,6 @@ function RoomMembers({ roomId }) {
   };
 
   const mList = searchMembers ? searchMembers.data : members.slice(0, itemCount);
-  console.info(mList, '嘎嘎嘎')
   return (
     <div className="room-members">
       <MenuHeader>Search member</MenuHeader>

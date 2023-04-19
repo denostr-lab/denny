@@ -81,6 +81,7 @@ class RoomTimeline extends EventEmitter {
     super();
     // These are local timelines
     this.timeline = [];
+    this.eventMap = {}
     this.editedTimeline = new Map();
     this.reactionTimeline = new Map();
     this.typingMembers = new Set();
@@ -142,13 +143,28 @@ class RoomTimeline extends EventEmitter {
       addToMap(this.editedTimeline, mEvent);
       return;
     }
+    console.info(this.timeline, '最终的', mEvent.getId(), '你看看')
     this.timeline.push(mEvent);
   }
 
   _populateAllLinkedEvents(timeline) {
+    this.eventMap = {}
     const firstTimeline = getFirstLinkedTimeline(timeline);
     iterateLinkedTimelines(firstTimeline, false, (tm) => {
-      tm.getEvents().forEach((mEvent) => this.addToTimeline(mEvent));
+
+      tm.getEvents().forEach((mEvent) => {
+        if (this.eventMap[mEvent.getId()]) {
+          return
+        }
+        if (mEvent.isEncrypted()) {
+          if (!mEvent.clearEvent) {
+            return;
+          }
+        }
+
+        this.eventMap[mEvent.getId()] = 1
+        this.addToTimeline(mEvent)
+      });
     });
   }
 
@@ -332,7 +348,9 @@ class RoomTimeline extends EventEmitter {
       if (event.isEncrypted()) {
         // We will add this event after it is being decrypted.
         this.ongoingDecryptionCount += 1;
-        return;
+        if (!event.clearEvent) {
+          return;
+        }
       }
 
       // FIXME: An unencrypted plain event can come
@@ -340,21 +358,35 @@ class RoomTimeline extends EventEmitter {
       // and has not been added to timeline
       // causing unordered timeline view.
 
+      if (this.eventMap[event.getId()]) {
+        return
+      }
+
+      this.eventMap[event.getId()] = 1
       this.addToTimeline(event);
       this.emit(cons.events.roomTimeline.EVENT, event);
     };
 
     this._listenDecryptEvent = (event) => {
+      console.info(event, '阿萨斯')
+
       if (event.getRoomId() !== this.roomId) return;
       if (this.isOngoingPagination) return;
 
       // Not a live event.
       // so we don't need to process it here
-      if (this.ongoingDecryptionCount === 0) return;
+      // if (this.ongoingDecryptionCount === 0) return;
 
-      if (this.ongoingDecryptionCount > 0) {
-        this.ongoingDecryptionCount -= 1;
+      // if (this.ongoingDecryptionCount > 0) {
+      //   this.ongoingDecryptionCount -= 1;
+      // }
+      if (this.eventMap[event.getId()]) {
+        return
       }
+
+      this.eventMap[event.getId()] = 1
+
+
       this.addToTimeline(event);
       this.emit(cons.events.roomTimeline.EVENT, event);
     };
@@ -393,6 +425,7 @@ class RoomTimeline extends EventEmitter {
 
     this.matrixClient.on('Room.timeline', this._listenRoomTimeline);
     this.matrixClient.on('Room.redaction', this._listenRedaction);
+    console.info("监听了", this._listenDecryptEvent, this.roomId)
     this.matrixClient.on('Event.decrypted', this._listenDecryptEvent);
     this.matrixClient.on('RoomMember.typing', this._listenTypingEvent);
     this.matrixClient.on('Room.receipt', this._listenReciptEvent);
@@ -402,6 +435,8 @@ class RoomTimeline extends EventEmitter {
     if (!this.initialized) return;
     this.matrixClient.removeListener('Room.timeline', this._listenRoomTimeline);
     this.matrixClient.removeListener('Room.redaction', this._listenRedaction);
+    console.info("取消咯额监听了", this._listenDecryptEvent, this.roomId)
+
     this.matrixClient.removeListener('Event.decrypted', this._listenDecryptEvent);
     this.matrixClient.removeListener('RoomMember.typing', this._listenTypingEvent);
     this.matrixClient.removeListener('Room.receipt', this._listenReciptEvent);

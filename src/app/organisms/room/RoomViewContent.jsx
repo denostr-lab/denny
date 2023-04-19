@@ -548,6 +548,8 @@ function RoomViewContent({ eventId, roomTimeline }) {
         return -1
       }
     })
+    console.info(timeline, '这是time阿萨斯')
+
     for (let i = limit.from; i < limit.length; i += 1) {
       if (i >= timeline.length) break;
       const mEvent = timeline[i];
@@ -573,7 +575,7 @@ function RoomViewContent({ eventId, roomTimeline }) {
           && prevMEvent?.getTs() <= readUptoEvent.getTs()
           && readUptoEvent.getTs() < mEvent.getTs());
         if (unreadDivider) {
-          isNewEvent = true;
+          // isNewEvent = true;
           // tl.push(<Divider key={`new-${mEvent.getId()}`} variant="positive" text="New messages" />);
           // itemCountIndex += 1;
           // if (jumpToItemIndex === -1) jumpToItemIndex = itemCountIndex;
