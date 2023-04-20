@@ -2,7 +2,14 @@ import { Filter, Event } from "nostr-tools";
 import { MatrixClient } from "../../client";
 import Relays from "./Relays";
 import Events from "./Events";
-import { createKind104Event, createKind140Event, createKind141Event, handlePublishEvent } from "./Helpers";
+import {
+    createKind104Event,
+    createKind140Event,
+    createKind141Event,
+    handlePublishEvent,
+    initRoomKeyTask,
+    removeLocalTask,
+} from "./Helpers";
 import * as utils from "../../utils";
 import { MetaInfo } from "./@types/index";
 import { EventType } from "../../@types/event";
@@ -569,7 +576,18 @@ class NostrClient {
             newToPubkeys,
             session.sessionId,
         );
-        await Promise.all(newToPubkeys.map((pubkey) => createKind104Event(this.client, room.id, pubkey, session)));
+
+        // 初始化共享RoomKey
+        initRoomKeyTask(room.id, session, newToPubkeys);
+
+        await Promise.all(
+            newToPubkeys.map(async (pubkey) => {
+                const res = await createKind104Event(this.client, room.id, pubkey, session);
+                if (res) {
+                    removeLocalTask(session.sessionId, [pubkey]);
+                }
+            }),
+        );
 
         return event141;
     }
