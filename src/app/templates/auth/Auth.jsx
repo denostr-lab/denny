@@ -435,7 +435,7 @@ function LoginByPriKey() {
       validate={validator}
     >
       {({
-        values, errors, handleChange, handleSubmit, isSubmitting,
+        values, errors, handleChange, handleSubmit, isSubmitting, actions
       }) => (
         <>
           {isSubmitting && <LoadingScreen message="Login in progress..." />}

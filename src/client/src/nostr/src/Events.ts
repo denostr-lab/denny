@@ -126,6 +126,37 @@ class Events {
             });
         }
     }
+    handJoinRoom = (client: MatrixClient, roomid: string) => {
+        let syncResponse = this.bufferEvent;
+
+        if (!syncResponse) {
+            syncResponse = getDefaultSyncResponse();
+            this.bufferEvent = syncResponse;
+        }
+        if (!syncResponse.rooms.join?.[roomid]) {
+            syncResponse.rooms.join[roomid] = getDefaultRoomData();
+        }
+        const created_at = Date.now();
+        const userId = client.getUserId();
+        const roomAttr = {
+            key: "member",
+            type: EventType.RoomMember,
+            state_key: userId,
+            sender: userId,
+            content: { displayname: userId, membership: "join" },
+        };
+        syncResponse.rooms.join[roomid].state.events.push({
+            content: roomAttr.content as unknown as IStateEvent,
+            origin_server_ts: created_at,
+            sender: userId as string,
+            state_key: roomAttr.state_key as string,
+            type: roomAttr.type,
+            unsigned: {
+                age: Date.now() - created_at,
+            },
+            event_id: `${roomAttr.key}-${Math.random().toString(16).slice(2, 8)}`,
+        });
+    };
     handleLeaveRoom(client: MatrixClient, event: Event) {
         if (![40, 41, 42, 4].includes(event?.kind)) return false;
         if (!Array.isArray(event?.tags)) return false;
@@ -211,10 +242,6 @@ class Events {
 
     handleCreateRoomEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
         const roomid = event.id;
-        // if (client.getRoom(roomid)) {
-        //   return syncResponse;
-        // }
-
         const created_at = event.created_at * 1000;
         const content = JSON.parse(event.content);
         const roomAttrs = [
@@ -698,13 +725,12 @@ class Events {
             try {
                 const ciphertext = event.content;
                 const priKey = Key.getPrivKey();
-                const a = await nip04.decrypt(priKey, event.pubkey, ciphertext);
                 const decryptoContent = JSON.parse(
                     await nip04.decrypt(priKey, event.pubkey, ciphertext),
                 ) as unknown as RoomKey;
                 return decryptoContent;
             } catch (e) {
-                console.info(e, "解密错误");
+                console.info(e, "decrypt error");
             }
         };
 

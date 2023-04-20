@@ -23,7 +23,12 @@ function RoomTile({
         />
       </div>
       <div className="room-tile__content">
-        <Text variant="s1">{twemojify(name)}</Text>
+        <Text variant="s1" style={{
+          overflow: "hidden",
+          "text-overflow": "ellipsis",
+          "white-space": "nowrap",
+          "max-width": "300px"
+        }}>{twemojify(name)}</Text>
         <Text variant="b3">
           {/* {
             inviterName !== null
@@ -38,7 +43,7 @@ function RoomTile({
             : desc
         }
       </div>
-      { options !== null && (
+      {options !== null && (
         <div className="room-tile__options">
           {options}
         </div>

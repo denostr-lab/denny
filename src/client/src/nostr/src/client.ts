@@ -136,7 +136,7 @@ class NostrClient {
                 }
             }
         } catch (e) {
-            console.info(e, "错误");
+            console.info(e, "getBufferEvent error");
         }
         try {
             const ids = (data?.presence?.events || []).map((i) => i.user_id).filter(Boolean);
@@ -174,6 +174,7 @@ class NostrClient {
     }
 
     joinRoom(roomId: string) {
+        Events.handJoinRoom(this.client, roomId);
         this.leaveRooms.delete(roomId);
         this.saveLeaveRooms();
     }
@@ -352,9 +353,7 @@ class NostrClient {
         };
         const _getTags = () => {
             let tags = isDM ? [["p", roomId]] : [["e", roomId, "", "root"]];
-            if (isDM && citedEventId?.event_id) {
-                tags.push(["e", citedEventId.event_id, "", "reply"]);
-            } else if (emojiRelyEventId) {
+            if (emojiRelyEventId) {
                 const emojiRelyEvent = room.findEventById(emojiRelyEventId);
 
                 if (!body) {
@@ -366,10 +365,21 @@ class NostrClient {
             } else if (isDeleteEvent) {
                 body = content.reason ?? "";
                 tags = [["e", rawEvent.event.redacts]];
-            } else if (relatePersonList?.length) {
+            }
+            if (relatePersonList?.length) {
                 relatePersonList.forEach((pubkey: string) => {
-                    tags.push(["p", pubkey.replace("@", "")]);
+                    const pubkeyReplace = pubkey.replace("@", "");
+                    const hitOne = tags.find((i) => i[0] === "p" && i[1] === pubkeyReplace);
+                    if (!hitOne) {
+                        tags.push(["p", pubkeyReplace]);
+                    }
                 });
+            }
+            if (citedEventId?.event_id) {
+                const hitOne = tags.find((i) => i[0] === "e" && i[3] === "reply" && i[1] === citedEventId.event_id);
+                if (!hitOne) {
+                    tags.push(["e", citedEventId.event_id, "", "reply"]);
+                }
             }
             return tags;
         };
@@ -382,10 +392,14 @@ class NostrClient {
             content: body,
             pubkey: userId,
         } as Event;
-
         try {
             await this.handPublishEvent(event);
+
+            rawEvent.replaceLocalEventId(event.id);
+            room?.addPendingEvent?.(rawEvent, event.id);
+
             await this.relay.publishAsPromise(event);
+
             if (event.kind === 7) {
                 Events.handle(this.client, event);
             }

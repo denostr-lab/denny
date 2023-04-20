@@ -37,7 +37,6 @@ function loadVideo(videoFile) {
     video.muted = true;
 
     const reader = new FileReader();
-
     reader.onload = (ev) => {
       // Wait until we have enough data to thumbnail the first frame.
       video.onloadeddata = async () => {
@@ -47,7 +46,6 @@ function loadVideo(videoFile) {
       video.onerror = (e) => {
         reject(e);
       };
-
       video.src = ev.target.result;
       video.load();
       video.play();
@@ -325,7 +323,6 @@ class RoomsInput extends EventEmitter {
 
       try {
         const video = await loadVideo(file);
-
         info.w = video.videoWidth;
         info.h = video.videoHeight;
         info[blurhashField] = encodeBlurhash(video);
@@ -340,7 +337,7 @@ class RoomsInput extends EventEmitter {
         }
       } catch (e) {
         this.emit(cons.events.roomsInput.FILE_UPLOAD_CANCELED, roomId);
-        return;
+        // return;
       }
     } else if (fileType === 'audio') {
       content.msgtype = 'm.audio';

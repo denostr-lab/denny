@@ -296,7 +296,7 @@ function RoomViewInput({
       roomsInput.cancelReplyTo(roomId);
       setReplyTo(null);
     }
-    if (e.key === 'Enter' && e.shiftKey === false) {
+    if (e.keyCode === 13) {
       e.preventDefault();
       sendMessage();
     }
@@ -362,7 +362,7 @@ function RoomViewInput({
     return (
       <>
         <div className={`room-input__option-container${attachment === null ? '' : ' room-attachment__option'}`}>
-          <input onChange={uploadFileChange} style={{ display: 'none' }} ref={uploadInputRef} type="file" />
+          <input onChange={uploadFileChange} style={{ display: 'none' }} ref={uploadInputRef} type="file" accept="image/png, image/gif, image/jpeg ,video/*" />
           <IconButton onClick={handleUploadClick} tooltip={attachment === null ? 'Upload' : 'Cancel'} src={CirclePlusIC} />
         </div>
         <div ref={inputBaseRef} className="room-input__input-container">

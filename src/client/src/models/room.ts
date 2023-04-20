@@ -1478,7 +1478,6 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         allowDefault = true,
     ): string | null {
         const roomAvatarEvent = this.currentState.getStateEvents(EventType.RoomAvatar, "");
-        console.info(roomAvatarEvent, this.roomId, "来爱");
         if (!roomAvatarEvent && !allowDefault) {
             return null;
         }
@@ -1850,7 +1849,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
                 allThreadsFilter,
             );
 
-            if (!events.length) return;
+            if (!events?.length) return;
 
             // Sorted by last_reply origin_server_ts
             const threadRoots = events.map(this.client.getEventMapper()).sort((eventA, eventB) => {
@@ -2332,10 +2331,9 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
      * Fires {@link RoomEvent.LocalEchoUpdated}
      */
     public addPendingEvent(event: MatrixEvent, txnId: string): void {
-        if (event.status !== EventStatus.SENDING && event.status !== EventStatus.NOT_SENT) {
-            throw new Error("addPendingEvent called on an event with status " + event.status);
-        }
-
+        // if (event.status !== EventStatus.SENDING && event.status !== EventStatus.NOT_SENT) {
+        //     throw new Error("addPendingEvent called on an event with status " + event.status);
+        // }
         if (this.txnToEvent.get(txnId)) {
             throw new Error("addPendingEvent called on an event with known txnId " + txnId);
         }

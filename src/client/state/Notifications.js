@@ -47,7 +47,7 @@ class Notifications extends EventEmitter {
     this.roomIdToPopupNotis = new Map();
     this.eventIdToPopupNoti = new Map();
 
-    // this._initNoti();
+    this._initNoti();
     this._listenEvents();
 
     // Ask for permission by default after loading
@@ -169,7 +169,7 @@ class Notifications extends EventEmitter {
   _setNoti(roomId, total, highlight) {
     const addNoti = (id, t, h, fromId) => {
       const prevTotal = this.roomIdToNoti.get(id)?.total ?? null;
-      const noti = this.getNoti(id);
+      let noti = this.getNoti(id);
 
       noti.total += t;
       noti.highlight += h;
@@ -177,6 +177,13 @@ class Notifications extends EventEmitter {
       if (fromId) {
         if (noti.from === null) noti.from = new Set();
         noti.from.add(fromId);
+      }
+      if (!(noti.total || noti.highlight)) {
+        noti = null
+        this.roomIdToNoti.delete(id);
+
+        this.emit(cons.events.notifications.NOTI_CHANGED, id, 0, prevTotal);
+        return
       }
       this.roomIdToNoti.set(id, noti);
       this.emit(cons.events.notifications.NOTI_CHANGED, id, noti.total, prevTotal);

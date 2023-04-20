@@ -37,7 +37,7 @@ export function getUsername(userId) {
 
 export function getUsernameOfRoomMember(roomMember) {
   const mx = initMatrix.matrixClient;
-  return mx.getUserName(roomMember.userId).slice(0, 20) || roomMember.name.slice(0, 4) || roomMember.userId.slice(0, 4);
+  return mx.getUserName(roomMember.userId) || roomMember.name.slice(0, 4) || roomMember.userId.slice(0, 4);
 }
 
 export async function isRoomAliasAvailable(alias) {

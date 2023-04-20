@@ -879,6 +879,7 @@ export class SyncApi {
         this.updateSyncState(SyncState.Prepared, null);
         this.client.initGlobalSubscribe();
         let start = 0;
+        let hasSyncing = false;
         while (this.running) {
             start = Date.now();
             const syncToken = this.client.store.getSyncToken();
@@ -890,8 +891,11 @@ export class SyncApi {
                 }
                 data = await this.currentSyncRequest;
                 if (!data) {
-                    this.updateSyncState(SyncState.Syncing, null);
-                    await utils.sleep(1000);
+                    await utils.sleep(60);
+                    if (!hasSyncing) {
+                        hasSyncing = true;
+                        this.updateSyncState(SyncState.Syncing, null);
+                    }
                     continue;
                 }
             } catch (e) {

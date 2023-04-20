@@ -203,7 +203,7 @@ function PublicRooms({ isOpen, searchTerm, onRequestClose }) {
   function renderRoomList(rooms) {
     return rooms.map((room) => {
       const alias = typeof room.canonical_alias === 'string' ? room.canonical_alias : room.room_id;
-      const name = typeof room.name === 'string' ? room.name : alias;
+      const name = typeof room.name === 'string' ? room.name.slice(0, 40) : alias.slice(0, 40);
       const isJoined = initMatrix.matrixClient.getRoom(room.room_id)?.getMyMembership() === 'join';
       return (
         <RoomTile
@@ -265,7 +265,7 @@ function PublicRooms({ isOpen, searchTerm, onRequestClose }) {
                 : <Text variant="b2">{`Search result for "${searchQuery.name}".`}</Text>
             )
           } */}
-          { searchQuery.error && (
+          {searchQuery.error && (
             <>
               <Text className="public-rooms__search-error" variant="b2">{searchQuery.error}</Text>
               {typeof searchQuery.alias === 'string' && (
@@ -274,17 +274,17 @@ function PublicRooms({ isOpen, searchTerm, onRequestClose }) {
             </>
           )}
         </div>
-        { publicRooms.length !== 0 && (
+        {publicRooms.length !== 0 && (
           <div className="public-rooms__content">
-            { renderRoomList(publicRooms) }
+            {renderRoomList(publicRooms)}
           </div>
         )}
-        { publicRooms.length !== 0 && publicRooms.length % SEARCH_LIMIT === 0 && (
+        {publicRooms.length !== 0 && publicRooms.length % SEARCH_LIMIT === 0 && (
           <div className="public-rooms__view-more">
-            { isViewMore !== true && (
+            {isViewMore !== true && (
               <Button onClick={() => searchRooms(true)}>View more</Button>
             )}
-            { isViewMore && <Spinner /> }
+            {isViewMore && <Spinner />}
           </div>
         )}
       </div>

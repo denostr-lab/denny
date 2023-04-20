@@ -1364,7 +1364,6 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         // state, such as highlights when the user's name is mentioned.
         this.on(MatrixEventEvent.Decrypted, (event) => {
             // change by nostr
-
             if (event.getWireType() === EventType.RoomMetaEncrypted) {
                 // 在这里传递给Event
                 this.nostrClient.handleDeCryptedRoomMeta(event);
@@ -4384,10 +4383,10 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
 
         // We always construct a MatrixEvent when sending because the store and scheduler use them.
         // We'll extract the params back out if it turns out the client has no scheduler or store.
+
         const localEvent = new MatrixEvent(
             Object.assign(eventObject, {
                 event_id: "~" + roomId + ":" + txnId,
-
                 user_id: this.credentials.userId,
                 sender: this.credentials.userId,
                 room_id: roomId,
@@ -4424,7 +4423,6 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         localEvent.setStatus(EventStatus.SENDING);
 
         // add this event immediately to the local store as 'sending'.
-        room?.addPendingEvent(localEvent, txnId);
 
         // addPendingEvent can change the state to NOT_SENT if it believes
         // that there's other events that have failed. We won't bother to
@@ -5109,6 +5107,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
      * @returns Rejects: with an error response.
      */
     public sendTyping(roomId: string, isTyping: boolean, timeoutMs: number): Promise<{}> {
+        // change by no str
+        return Promise.resolve({});
         if (this.isGuest()) {
             return Promise.resolve({}); // guests cannot send typing notifications so don't bother.
         }
@@ -5882,6 +5882,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
      */
     public async getLatestTimeline(timelineSet: EventTimelineSet): Promise<Optional<EventTimeline>> {
         // don't allow any timeline support unless it's been enabled.
+        // change by nostr
+        return Promise.resolve(null);
         if (!this.timelineSupport) {
             throw new Error(
                 "timeline support is disabled. Set the 'timelineSupport'" +
@@ -5952,6 +5954,12 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         dir: Direction,
         timelineFilter?: Filter,
     ): Promise<IMessagesResponse> {
+        return Promise.resolve({
+            start: "",
+            end: "",
+            chunk: [],
+            state: [],
+        });
         const path = utils.encodeUri("/rooms/$roomId/messages", { $roomId: roomId });
 
         const params: Record<string, string> = {
@@ -7956,6 +7964,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
             name: options.name,
             about: options.topic || "",
         });
+
+        this.nostrClient.joinRoom(event.id);
 
         return { room_id: event.id };
     }
