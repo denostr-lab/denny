@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import puppeteer, { Page } from "puppeteer";
 import { PageAndBrowser, userInfo } from "./@types/index";
 export const sleep = (ms = 1000) => new Promise((resolve) => setTimeout(resolve, ms));
 

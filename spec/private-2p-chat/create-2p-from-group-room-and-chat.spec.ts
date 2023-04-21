@@ -1,14 +1,6 @@
-import { Page } from "puppeteer";
 import { getPublicKey } from "nostr-tools";
 import { PRIVATE_KEY, PRIVATE_KEY2 } from "../data";
-import {
-    login,
-    enterPublicRoom,
-    createBrowserAndPage,
-    createGroupChat,
-    findPrivateMessageRoomWithPubKey,
-    searchRoomMember,
-} from "../utils";
+import { login, enterPublicRoom, createBrowserAndPage, searchRoomMember } from "../utils";
 import { executeRommOperations } from "../roomchatUtils";
 import { User } from "../@types/index";
 

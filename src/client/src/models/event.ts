@@ -900,7 +900,6 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
             this.setPushActions(null);
 
             if (options.emit !== false) {
-                console.info(this, MatrixEventEvent.Decrypted, this.emit, "看我打印解密以后得尼尔");
                 this.emit(MatrixEventEvent.Decrypted, this, err);
             }
 

@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import { Browser, Page } from "puppeteer";
 
 export interface PageAndBrowser {
     page: Page;

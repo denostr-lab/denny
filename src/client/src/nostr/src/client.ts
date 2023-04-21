@@ -156,7 +156,7 @@ class NostrClient {
                 }
             }
         } catch (e) {
-            console.info(e, "错误");
+            console.info(e, "subscribeUsersDeletion error");
         }
         return data;
     }

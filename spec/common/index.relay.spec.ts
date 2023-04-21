@@ -1,17 +1,6 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import { Browser, Page } from "puppeteer";
 import { PRIVATE_KEY } from "../data";
-import {
-    login,
-    enterPublicRoom,
-    privateChatFromRoom,
-    sendMessage,
-    findTimeLineText,
-    createBrowserAndPage,
-    findPrivateMessageRoomWithPubKey,
-    leaveRoom,
-    getReplayConnectCount,
-    searchLocalUserAndEnterRoom,
-} from "../utils";
+import { login, createBrowserAndPage, getReplayConnectCount } from "../utils";
 let relayUrl = "wss://nostr.paiyaapp.com";
 describe("teset relays", () => {
     let browser: Browser;
