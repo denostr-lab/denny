@@ -8,12 +8,12 @@ function Input({
   id, label, name, value, placeholder,
   required, type, onChange, forwardRef,
   resizable, minHeight, onResize, state,
-  onKeyDown, disabled, autoFocus, onPaste,
+  onKeyDown, disabled, autoFocus, onPaste, inputTestid
 }) {
   return (
     <div className="input-container">
-      { label !== '' && <label className="input__label text-b2" htmlFor={id}>{label}</label> }
-      { resizable
+      {label !== '' && <label className="input__label text-b2" htmlFor={id}>{label}</label>}
+      {resizable
         ? (
           <TextareaAutosize
             dir="auto"
@@ -36,6 +36,7 @@ function Input({
           />
         ) : (
           <input
+            data-testid={inputTestid}
             dir="auto"
             ref={forwardRef}
             id={id}

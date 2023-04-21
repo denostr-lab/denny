@@ -1,53 +1,40 @@
-// import "expect-puppeteer";
 import puppeteer, { Browser, Page } from "puppeteer";
 import { PRIVATE_KEY } from "../data";
-import { clearInterval } from "timers";
+import {
+    login,
+    enterPublicRoom,
+    privateChatFromRoom,
+    sendMessage,
+    findTimeLineText,
+    createBrowserAndPage,
+    findPrivateMessageRoomWithPubKey,
+    leaveRoom,
+    getReplayConnectCount,
+    searchLocalUserAndEnterRoom,
+} from "../utils";
 let relayUrl = "wss://nostr.paiyaapp.com";
-describe("测试公共功能", () => {
+describe("teset relays", () => {
     let browser: Browser;
     let page: Page;
     beforeAll(async () => {
-        browser = await puppeteer.launch({
-            headless: false,
-            args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        });
-        page = await browser.newPage();
-
-        // await page.goto("https://baidu.com");
+        const result = await createBrowserAndPage();
+        browser = result.browser;
+        page = result.page;
+        await login(page, PRIVATE_KEY);
     });
     afterAll(async () => {
-        await page.close();
         await browser.close();
     });
-
     it(
-        "登录",
+        "get default replay connect count",
         async () => {
-            await page.goto("http://localhost:8081/", { timeout: 90000 });
-            await page.evaluate(() => {});
-            await page.$eval('button[type="button"]', (el) => el.click());
-            await page.waitForSelector("input[name='privatekey']");
-            await page.focus("input[name='privatekey']");
-            await page.keyboard.type(PRIVATE_KEY);
-            await page.keyboard.press("Enter");
-        },
-        30 * 1000,
-    );
-    it(
-        "进入页面后的中继情况",
-        async () => {
-            await page.waitForSelector(".relay-signal");
-            await page.waitForTimeout(5 * 1000);
-
-            let relayConnectCount = await page.$eval(".relay-signal small", async (el) => {
-                return el.innerText;
-            });
-            expect(parseInt(relayConnectCount)).toEqual(1);
+            const count = await getReplayConnectCount(page);
+            expect(count).toEqual(1);
         },
         20 * 1000,
     );
     it(
-        "取消当前的节点连接",
+        "cancel relay connect",
         async () => {
             await page.click(".relay-signal");
             await page.waitForTimeout(2 * 1000);
@@ -63,20 +50,20 @@ describe("测试公共功能", () => {
         20 * 1000,
     );
     it(
-        "恢复中继连接",
+        "reconnect relay connect",
         async () => {
             await page.waitForSelector(".relay-signal");
             await page.click(".settings-appearance__card:nth-child(2) .toggle-margin button");
-            await page.waitForTimeout(1 * 1000);
-            const relayConnectCount = await page.$eval(".relay-signal small", async (el) => {
+            await page.waitForTimeout(4 * 1000);
+
+            await page.$eval(".relay-signal small", async (el) => {
                 return el.innerText;
             });
-            // expect(parseInt(relayConnectCount)).toEqual(1);
         },
         20 * 1000,
     );
     it(
-        "添加新的中继",
+        "add new relay",
         async () => {
             await page.waitForSelector(".relay-signal");
             await page.$eval(".settings-window__cards-wrapper .keyword-notification__keyword input", async (el) => {
@@ -93,7 +80,7 @@ describe("测试公共功能", () => {
         20 * 1000,
     );
     it(
-        "保存中继",
+        "save relays",
         async () => {
             await page.click(".settings-window__cards-wrapper .keyword-notification__keyword .relay-buttons button");
             await page.waitForTimeout(0.5 * 1000);
@@ -107,7 +94,7 @@ describe("测试公共功能", () => {
         20 * 1000,
     );
     it(
-        "重置中继",
+        "reset relays",
         async () => {
             await page.click(
                 ".settings-window__cards-wrapper .keyword-notification__keyword .relay-buttons button:nth-child(2)",
@@ -128,7 +115,7 @@ describe("测试公共功能", () => {
         90 * 1000,
     );
     it(
-        "删除中继",
+        "delete relays",
         async () => {
             await page.click(".relay-signal");
             await page.waitForTimeout(2 * 1000);

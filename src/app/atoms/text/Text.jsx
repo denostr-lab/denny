@@ -4,23 +4,23 @@ import './Text.scss';
 
 function Text({
   className, style, variant, weight,
-  primary, span, children,
+  primary, span, children, textTestid
 }) {
   const classes = [];
   if (className) classes.push(className);
 
   classes.push(`text text-${variant} text-${weight}`);
   if (primary) classes.push('font-primary');
-
   const textClass = classes.join(' ');
-  if (span) return <span className={textClass} style={style}>{ children }</span>;
-  if (variant === 'h1') return <h1 className={textClass} style={style}>{ children }</h1>;
-  if (variant === 'h2') return <h2 className={textClass} style={style}>{ children }</h2>;
-  if (variant === 's1') return <h4 className={textClass} style={style}>{ children }</h4>;
-  return <p className={textClass} style={style}>{ children }</p>;
+  if (span) return <span className={textClass} style={style} data-testid={textTestid}>{children}</span>;
+  if (variant === 'h1') return <h1 className={textClass} style={style} data-testid={textTestid}>{children}</h1>;
+  if (variant === 'h2') return <h2 className={textClass} style={style} data-testid={textTestid}>{children}</h2>;
+  if (variant === 's1') return <h4 className={textClass} style={style} data-testid={textTestid}>{children}</h4>;
+  return <p className={textClass} style={style}>{children}</p>;
 }
 
 Text.defaultProps = {
+  textTestid: '',
   className: null,
   style: null,
   variant: 'b1',
@@ -30,6 +30,7 @@ Text.defaultProps = {
 };
 
 Text.propTypes = {
+  textTestid: PropTypes.string,
   className: PropTypes.string,
   style: PropTypes.shape({}),
   variant: PropTypes.oneOf(['h1', 'h2', 's1', 'b1', 'b2', 'b3']),

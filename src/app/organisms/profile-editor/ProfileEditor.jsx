@@ -81,12 +81,13 @@ function ProfileEditor({ userId }) {
       onSubmit={(e) => { e.preventDefault(); saveDisplayName(); }}
     >
       <Input
+        inputTestid="my-name-input"
         label={`Display name of ${mx.getUserId()}`}
         onChange={onDisplayNameInputChange}
         value={mx.getUser(mx.getUserId()).displayName}
         forwardRef={displayNameRef}
       />
-      <Button variant="primary" type="submit" disabled={disabled}>Save</Button>
+      <Button variant="primary" type="submit" disabled={disabled} buttonTestid='save-my-name'>Save</Button>
       <Button onClick={cancelDisplayNameChanges}>Cancel</Button>
     </form>
   );
@@ -99,8 +100,10 @@ function ProfileEditor({ userId }) {
           "text-overflow": "ellipsis",
           "white-space": "nowrap",
           "max-width": "300px"
-        }}>{twemojify(username) ?? userId}</Text>
+        }}
+          textTestid='my-name'>{twemojify(username) ?? userId}</Text>
         <IconButton
+          buttonTestid="edit-self-name"
           src={PencilIC}
           size="extra-small"
           tooltip="Edit"
@@ -117,6 +120,7 @@ function ProfileEditor({ userId }) {
   return (
     <div className="profile-editor">
       <ImageUpload
+        inputTestid="upload-self-picture-input"
         text={username ?? userId}
         bgColor={colorMXID(userId)}
         imageSrc={avatarSrc}

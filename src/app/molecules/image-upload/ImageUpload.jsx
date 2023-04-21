@@ -13,7 +13,7 @@ import PlusIC from '../../../../public/res/ic/outlined/plus.svg';
 
 function ImageUpload({
   text, bgColor, imageSrc, onUpload, onRequestRemove,
-  size,
+  size, inputTestid
 }) {
   const [uploadPromise, setUploadPromise] = useState(null);
   const uploadImageRef = useRef(null);
@@ -65,7 +65,7 @@ function ImageUpload({
           {uploadPromise !== null && <Spinner size="small" />}
         </div>
       </button>
-      { (typeof imageSrc === 'string' || uploadPromise !== null) && (
+      {(typeof imageSrc === 'string' || uploadPromise !== null) && (
         <button
           className="img-upload__btn-cancel"
           type="button"
@@ -74,7 +74,7 @@ function ImageUpload({
           <Text variant="b3">{uploadPromise ? 'Cancel' : 'Remove'}</Text>
         </button>
       )}
-      <input onChange={uploadImage} style={{ display: 'none' }} ref={uploadImageRef} type="file" accept="image/*" />
+      <input onChange={uploadImage} style={{ display: 'none' }} ref={uploadImageRef} type="file" accept="image/*" data-testid={inputTestid} />
     </div>
   );
 }

@@ -2165,7 +2165,6 @@ export class MegolmDecryption extends DecryptionAlgorithm {
         if (!senderPendingEvents) {
             return true;
         }
-
         const pending = senderPendingEvents.get(sessionId);
         if (!pending) {
             return true;

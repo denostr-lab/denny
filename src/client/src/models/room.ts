@@ -2331,9 +2331,9 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
      * Fires {@link RoomEvent.LocalEchoUpdated}
      */
     public addPendingEvent(event: MatrixEvent, txnId: string): void {
-        // if (event.status !== EventStatus.SENDING && event.status !== EventStatus.NOT_SENT) {
-        //     throw new Error("addPendingEvent called on an event with status " + event.status);
-        // }
+        if (event.status !== EventStatus.SENDING && event.status !== EventStatus.NOT_SENT) {
+            throw new Error("addPendingEvent called on an event with status " + event.status);
+        }
         if (this.txnToEvent.get(txnId)) {
             throw new Error("addPendingEvent called on an event with known txnId " + txnId);
         }
@@ -2510,7 +2510,8 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
 
         // if the message was sent, we expect an event id
         if (newStatus == EventStatus.SENT && !newEventId) {
-            throw new Error("updatePendingEvent called with status=SENT, but no new event id");
+            return;
+            // throw new Error("updatePendingEvent called with status=SENT, but no new event id");
         }
 
         // SENT races against /sync, so we have to special-case it.

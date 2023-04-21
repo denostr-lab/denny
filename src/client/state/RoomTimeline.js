@@ -143,6 +143,20 @@ class RoomTimeline extends EventEmitter {
       addToMap(this.editedTimeline, mEvent);
       return;
     }
+    if (mEvent.isEncrypted()) {
+      // We will add this event after it is being decrypted.
+      if (!mEvent.clearEvent || mEvent.isDecryptionFailure()) {
+        return;
+      }
+    }
+    const id = mEvent.getNostrId()
+    if (this.eventMap[id]) {
+      return
+    }
+
+
+    this.eventMap[id] = 1
+    console.info(mEvent, id, 'mEventmEventmEvent')
     this.timeline.push(mEvent);
     this.timeline = this.timeline.sort((a, b) => {
       if (a.getTs() > b.getTs()) {
@@ -159,16 +173,6 @@ class RoomTimeline extends EventEmitter {
     iterateLinkedTimelines(firstTimeline, false, (tm) => {
 
       tm.getEvents().forEach((mEvent) => {
-        if (this.eventMap[mEvent.getId()]) {
-          return
-        }
-        if (mEvent.isEncrypted()) {
-          if (!mEvent.clearEvent) {
-            return;
-          }
-        }
-
-        this.eventMap[mEvent.getId()] = 1
         this.addToTimeline(mEvent)
       });
     });
@@ -354,7 +358,7 @@ class RoomTimeline extends EventEmitter {
       if (event.isEncrypted()) {
         // We will add this event after it is being decrypted.
         this.ongoingDecryptionCount += 1;
-        if (!event.clearEvent) {
+        if (!event.clearEvent || event.isDecryptionFailure()) {
           return;
         }
       }
@@ -364,11 +368,6 @@ class RoomTimeline extends EventEmitter {
       // and has not been added to timeline
       // causing unordered timeline view.
 
-      if (this.eventMap[event.getId()]) {
-        return
-      }
-
-      this.eventMap[event.getId()] = 1
       this.addToTimeline(event);
       this.emit(cons.events.roomTimeline.EVENT, event);
     };
@@ -384,12 +383,12 @@ class RoomTimeline extends EventEmitter {
       // if (this.ongoingDecryptionCount > 0) {
       //   this.ongoingDecryptionCount -= 1;
       // }
-      if (this.eventMap[event.getId()]) {
-        return
+      if (event.isEncrypted()) {
+        // We will add this event after it is being decrypted.
+        if (!event.clearEvent || event.isDecryptionFailure()) {
+          return;
+        }
       }
-
-      this.eventMap[event.getId()] = 1
-
 
       this.addToTimeline(event);
       this.emit(cons.events.roomTimeline.EVENT, event);

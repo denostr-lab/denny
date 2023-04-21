@@ -10,16 +10,11 @@ import {
     sendMessage,
     findTimeLineText,
     createBrowserAndPage,
-    createPrivateMessageRoomWithPubKey,
+    findPrivateMessageRoomWithPubKey,
     leaveRoom,
     searchLocalUserAndEnterRoom,
 } from "../utils";
-interface User {
-    page: Page;
-    browser: Browser;
-    pubkey: string;
-    close: () => void;
-}
+import { User } from "../@types/index";
 describe("测试双人私聊聊天场景", () => {
     let user1: User = {
         page: null,
@@ -84,8 +79,8 @@ describe("测试双人私聊聊天场景", () => {
         "测试搜索用户并且发送信息",
         async () => {
             await Promise.all([
-                createPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
-                createPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
+                findPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
+                findPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
             ]);
 
             const text1 = `你好-${Math.random()}`;
@@ -107,8 +102,8 @@ describe("测试双人私聊聊天场景", () => {
         "测试退出当前用户房间并且重新发送信息",
         async () => {
             await Promise.all([
-                createPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
-                createPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
+                findPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
+                findPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
             ]);
             await leaveRoom(user1.page);
             await leaveRoom(user2.page);
@@ -116,8 +111,8 @@ describe("测试双人私聊聊天场景", () => {
             await user2.page.waitForTimeout(1 * 1000);
 
             await Promise.all([
-                createPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
-                createPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
+                findPrivateMessageRoomWithPubKey(user1.page, user2.pubkey),
+                findPrivateMessageRoomWithPubKey(user2.page, user1.pubkey),
             ]);
             const text1 = `你好我又回来了-${Math.random()}`;
             const text2 = `你好我又回来了-${Math.random()}`;
