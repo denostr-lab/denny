@@ -81,7 +81,6 @@ class RoomTimeline extends EventEmitter {
     super();
     // These are local timelines
     this.timeline = [];
-    this.eventMap = {}
     this.editedTimeline = new Map();
     this.reactionTimeline = new Map();
     this.typingMembers = new Set();
@@ -149,14 +148,14 @@ class RoomTimeline extends EventEmitter {
         return;
       }
     }
-    const id = mEvent.getNostrId()
-    if (this.eventMap[id]) {
-      return
+    const id = mEvent.getId()
+    const nostrid = mEvent.getNostrId()
+    if (nostrid) {
+      const index = this.timeline.findIndex(i => i.getId() === id)
+      if (index > -1) {
+        this.timeline.splice(index, 1)
+      }
     }
-
-
-    this.eventMap[id] = 1
-    console.info(mEvent, id, 'mEventmEventmEvent')
     this.timeline.push(mEvent);
     this.timeline = this.timeline.sort((a, b) => {
       if (a.getTs() > b.getTs()) {
@@ -168,7 +167,6 @@ class RoomTimeline extends EventEmitter {
   }
 
   _populateAllLinkedEvents(timeline) {
-    this.eventMap = {}
     const firstTimeline = getFirstLinkedTimeline(timeline);
     iterateLinkedTimelines(firstTimeline, false, (tm) => {
 

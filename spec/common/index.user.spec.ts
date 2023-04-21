@@ -19,7 +19,7 @@ describe("test user meta operation", () => {
         browser = result.browser;
         page = result.page;
         await login(page, PRIVATE_KEY);
-    });
+    }, 360 * 1000);
     afterAll(async () => {
         await browser.close();
     });
@@ -32,7 +32,7 @@ describe("test user meta operation", () => {
             const resultName = await findMyUserMeta(page);
             expect(resultName).toEqual(name);
         },
-        900 * 1000,
+        90 * 1000,
     );
     it(
         "logout and rescan my profile",
@@ -45,7 +45,7 @@ describe("test user meta operation", () => {
             const resultName = await findMyUserMeta(page);
             expect(resultName).toEqual(lastName);
         },
-        900 * 1000,
+        90 * 1000,
     );
     it(
         "other user confirm user meta",
@@ -59,6 +59,6 @@ describe("test user meta operation", () => {
             expect(res.name).toEqual(lastName);
             await browser.close();
         },
-        900 * 1000,
+        90 * 1000,
     );
 });

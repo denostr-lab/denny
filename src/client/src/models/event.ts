@@ -1328,7 +1328,7 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
         this.emit(MatrixEventEvent.LocalEventIdReplaced, this);
     }
 
-    public replaceLocalNostrEventId(eventId: string): void {
+    public replaceLocalNostrEventId(eventId: string | undefined): void {
         this.event.nostr_event_id = eventId;
         this.emit(MatrixEventEvent.LocalEventIdReplaced, this);
     }

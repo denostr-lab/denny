@@ -31,7 +31,7 @@ describe("测试双人私聊聊天场景", () => {
         user1 = { ...user1, ...result1 };
         const result2 = (await createBrowserAndPage()) as unknown as User;
         user2 = { ...user2, ...result2 };
-    });
+    }, 360 * 1000);
     afterAll(async () => {
         await user1.browser.close();
         await user2.browser.close();

@@ -2556,7 +2556,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         if (newStatus == EventStatus.SENT) {
             // update the event id
             event.replaceLocalEventId(newEventId!);
-
+            event.replaceLocalNostrEventId(undefined);
             const { shouldLiveInRoom, threadId } = this.eventShouldLiveIn(event);
             const thread = threadId ? this.getThread(threadId) : undefined;
             thread?.setEventMetadata(event);

@@ -1052,12 +1052,6 @@ class Events {
             case 142:
                 this.handlePrivateGroupRoomMessageEvent(client, event, syncResponse);
                 break;
-            // case 20001:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
-            // case 20002:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
         }
         return syncResponse;
     }

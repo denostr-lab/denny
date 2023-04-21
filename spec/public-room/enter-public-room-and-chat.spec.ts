@@ -1,7 +1,7 @@
 import { Page } from "puppeteer";
 import { getPublicKey } from "nostr-tools";
 import { PRIVATE_KEY, PRIVATE_KEY2 } from "../data";
-import { login, enterPublicRoom, createBrowserAndPage } from "../utils";
+import { login, enterPublicRoom, createBrowserAndPage, findRoomFromRoomList, createGroupChat } from "../utils";
 import { executeRommOperations } from "../roomchatUtils";
 import { User } from "../@types/index";
 
@@ -23,8 +23,14 @@ describe("test two person enter public room and chat", () => {
         const result2 = (await createBrowserAndPage()) as unknown as User;
         user2 = { ...user2, ...result2 };
         await Promise.all([login(user1.page, PRIVATE_KEY), login(user2.page, PRIVATE_KEY2)]);
+        const roomName = await findRoomFromRoomList(user1.page);
+        if (!roomName) {
+            const roomName = "public room global";
+            await createGroupChat(user1.page, roomName);
+            await user1.page.waitForTimeout(3 * 1000);
+        }
         await Promise.all([enterPublicRoom(user1.page), enterPublicRoom(user2.page)]);
-    }, 120 * 1000);
+    }, 360 * 1000);
     afterAll(async () => {
         await user1.browser.close();
         await user2.browser.close();

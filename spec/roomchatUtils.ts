@@ -24,9 +24,8 @@ export const executeRommOperations = () => {
             async func(user1: User, user2: User) {
                 const { page, page2 } = getPage(user1, user2);
                 const text1 = `hellow-${new Date().toISOString()}-${Math.random()}`;
-                await sendMessage(page, text1);
                 const text2 = `hellow-${new Date().toISOString()}-${Math.random()}`;
-                await sendMessage(page2, text2);
+                await Promise.all([sendMessage(page, text1), sendMessage(page2, text2)]);
                 const resultText = await findTimeLineText(page, text1);
                 expect(text1).toEqual(resultText);
                 await page.waitForTimeout(1 * 1000);
@@ -55,7 +54,9 @@ export const executeRommOperations = () => {
                 const file = "spec/test.mp4";
                 await sendFile(page, file);
                 await page.waitForTimeout(4 * 1000);
-
+                await page.$eval(".room-view__scrollable .scrollbar", (el) => {
+                    el.scrollBy(0, 20000);
+                });
                 const resultText = await findLastFileSourceName(page);
                 const resultText2 = await findTimeLineLastMessage(page2, resultText, "video");
 

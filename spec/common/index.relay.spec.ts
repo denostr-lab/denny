@@ -21,7 +21,7 @@ describe("teset relays", () => {
         browser = result.browser;
         page = result.page;
         await login(page, PRIVATE_KEY);
-    });
+    }, 360 * 1000);
     afterAll(async () => {
         await browser.close();
     });
@@ -36,11 +36,15 @@ describe("teset relays", () => {
     it(
         "cancel relay connect",
         async () => {
-            await page.click(".relay-signal");
+            await page.$eval(".relay-signal", (el) => {
+                el.click();
+            });
             await page.waitForTimeout(2 * 1000);
             await page.waitForSelector(".settings-appearance__card");
             // 取消当前的节点连接
-            await page.click(".settings-appearance__card:nth-child(2) .toggle-margin button");
+            await page.$eval(".settings-appearance__card:nth-child(2) .toggle-margin button", (el) => {
+                el.click();
+            });
             await page.waitForTimeout(1 * 1000);
             const relayConnectCount = await page.$eval(".relay-signal small", async (el) => {
                 return el.innerText;
@@ -53,7 +57,9 @@ describe("teset relays", () => {
         "reconnect relay connect",
         async () => {
             await page.waitForSelector(".relay-signal");
-            await page.click(".settings-appearance__card:nth-child(2) .toggle-margin button");
+            await page.$eval(".settings-appearance__card:nth-child(2) .toggle-margin button", (el) => {
+                el.click();
+            });
             await page.waitForTimeout(4 * 1000);
 
             await page.$eval(".relay-signal small", async (el) => {
@@ -70,7 +76,9 @@ describe("teset relays", () => {
                 el.focus();
             });
             await page.keyboard.type(relayUrl);
-            await page.click(".settings-window__cards-wrapper .keyword-notification__keyword button");
+            await page.$eval(".settings-window__cards-wrapper .keyword-notification__keyword button", (el) => {
+                el.click();
+            });
             await page.waitForTimeout(5 * 1000);
             const relayConnectCount = await page.$eval(".relay-signal small", async (el) => {
                 return el.innerText;
@@ -82,7 +90,12 @@ describe("teset relays", () => {
     it(
         "save relays",
         async () => {
-            await page.click(".settings-window__cards-wrapper .keyword-notification__keyword .relay-buttons button");
+            await page.$eval(
+                ".settings-window__cards-wrapper .keyword-notification__keyword .relay-buttons button",
+                (el) => {
+                    el.click();
+                },
+            );
             await page.waitForTimeout(0.5 * 1000);
 
             let relays = await page.evaluate(() => {
@@ -96,8 +109,11 @@ describe("teset relays", () => {
     it(
         "reset relays",
         async () => {
-            await page.click(
+            await page.$eval(
                 ".settings-window__cards-wrapper .keyword-notification__keyword .relay-buttons button:nth-child(2)",
+                (el) => {
+                    el.click();
+                },
             );
             await page.waitForSelector(".confirm-dialog__btn");
 
@@ -117,10 +133,14 @@ describe("teset relays", () => {
     it(
         "delete relays",
         async () => {
-            await page.click(".relay-signal");
+            await page.$eval(".relay-signal", (el) => {
+                el.click();
+            });
             await page.waitForTimeout(2 * 1000);
             await page.waitForSelector(".settings-appearance__card");
-            await page.click(".settings-appearance__card:nth-child(2) .relay-manage button");
+            await page.$eval(".settings-appearance__card:nth-child(2) .relay-manage button", (el) => {
+                el.click();
+            });
             await page.waitForTimeout(1 * 1000);
             const relayConnectCount = await page.$eval(".relay-signal small", async (el) => {
                 return el.innerText;

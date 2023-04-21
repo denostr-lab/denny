@@ -9,7 +9,7 @@ describe("test public group change roon metadata", () => {
         browser = result.browser;
         page = result.page;
         await login(page, PRIVATE_KEY);
-    });
+    }, 360 * 1000);
     afterAll(async () => {
         await browser.close();
     });
@@ -19,7 +19,7 @@ describe("test public group change roon metadata", () => {
             const roomName = `public room ${new Date().toISOString()}`;
             await createGroupChat(page, roomName);
         },
-        900 * 1000,
+        90 * 1000,
     );
     it(
         "update public room meta",
@@ -27,6 +27,6 @@ describe("test public group change roon metadata", () => {
             const roomName = `public new room name ${new Date().toISOString()}`;
             await updateGroupChatMeta(page, roomName);
         },
-        9000 * 1000,
+        90 * 1000,
     );
 });
