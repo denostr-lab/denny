@@ -236,8 +236,9 @@ export async function createKind141Event(
 }
 export const updateEncryptedChannelMetadataEvent = createKind141Event;
 
-export function splitRequest(tasks: string[]) {
-    const maxPerRequest = 20;
+export function splitRequest(tasks: string[], defaultMaxPerRequest = 20) {
+    const maxPerRequestWithFormat = Number(defaultMaxPerRequest);
+    const maxPerRequest = Number.isNaN(maxPerRequestWithFormat) ? 20 : maxPerRequestWithFormat;
 
     let currentSlice: string[] = [];
     const mapSlices = [currentSlice];

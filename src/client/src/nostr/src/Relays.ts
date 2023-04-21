@@ -1,18 +1,15 @@
 import { shuffle, throttle } from "lodash-es";
+import { Event, Filter, Relay, relayInit } from "nostr-tools";
 // import { TypedEventEmitter } from "../../models/typed-event-emitter";
 // import { MatrixEvent } from "../../models/event";
 import { MatrixClient } from "../../client";
 
-import { Event, Filter, Relay, relayInit } from "nostr-tools";
-
 import Events from "./Events";
-import Key from "./Key";
 import PubSub from "./PubSub";
 
 type SavedRelays = {
     [key: string]: {
         enabled?: boolean;
-        lastSeen?: number;
     };
 };
 
@@ -28,8 +25,9 @@ interface SubscriptionOption {
 }
 const DEFAULT_RELAYS = [
     // "wss://nostr.paiyaapp.com",
-    "ws://localhost:8008",
-
+    // "ws://localhost:8008",
+    // "wss://denostr.chickenkiller.com",
+    "ws://192.168.0.99:8008",
     // 'wss://offchain.pub',
     // 'wss://node01.nostress.cc',
     // 'wss://nostr-pub.wellorder.net',
@@ -62,7 +60,7 @@ class Relays {
         this.saveToLocalStorage();
     }
 
-    initRelays(relays: { url: string; enabled: boolean }[]) {
+    initRelays(relays: NostrRelay[]) {
         this.relays = new Map<string, NostrRelay>(
             relays.map((relay) => [relay.url, this.relayInit(relay.url, true, { enabled: relay.enabled })]),
         );
@@ -71,7 +69,7 @@ class Relays {
 
     getLocalRelays() {
         const localRelays = localStorage.getItem("nostr.relays");
-        let relays: { url: string; enabled: boolean; read: boolean; write: boolean }[] = [];
+        let relays: NostrRelay[] = [];
         if (localRelays) {
             relays = JSON.parse(localRelays);
         }
@@ -79,16 +77,23 @@ class Relays {
     }
 
     getDefaultRelays(initRelays?: string[]) {
-        return [...new Set([...(initRelays || []), ...DEFAULT_RELAYS])].map((url) => ({
-            url,
-            enabled: true,
-            read: true,
-            write: true,
-        }));
+        return [...new Set([...(initRelays || []), ...DEFAULT_RELAYS])].map(
+            (url) =>
+                ({
+                    url,
+                    enabled: true,
+                    read: true,
+                    write: true,
+                } as NostrRelay),
+        );
     }
 
-    saveToLocalStorage() {
-        const relays = [...this.relays.entries()].map(([url, relay]) => {
+    saveToLocalStorage(toRelays?: NostrRelay[]) {
+        let currentRelays = [...this.relays.values()];
+        if (toRelays && Array.isArray(toRelays)) {
+            currentRelays = [...toRelays];
+        }
+        const relays = currentRelays.map((relay: NostrRelay) => {
             const options = ["enabled", "read", "write"].map((optionKey) => {
                 let optionValue = relay[optionKey] || false;
                 if (typeof relay[optionKey] !== "boolean") {
@@ -96,7 +101,7 @@ class Relays {
                 }
                 return [optionKey, optionValue];
             });
-            return { url, ...Object.fromEntries(options) };
+            return { url: relay.url, ...Object.fromEntries(options) };
         });
         localStorage.setItem("nostr.relays", JSON.stringify(relays));
     }
@@ -325,12 +330,6 @@ class Relays {
             relay.enabled = true;
             console.log("notice from ", relay.url, notice);
         });
-        relay.on("disconnect", () => {
-            relay.enabled = false;
-        });
-        relay.on("error", () => {
-            relay.enabled = false;
-        });
         if (enabled) {
             this.connect(relay);
         }
@@ -354,13 +353,14 @@ class Relays {
         const subId = PubSub.getSubscriptionIdForName(id);
         const relays = this.relays.values();
         for (const relay of relays) {
-            if (sinceLastSeen && savedRelays[relay.url] && savedRelays[relay.url].lastSeen) {
-                filters.forEach((filter) => {
-                    filter.since = savedRelays[relay.url].lastSeen;
-                });
-            }
+            // if (sinceLastSeen && savedRelays[relay.url] && savedRelays[relay.url].lastSeen) {
+            //     filters.forEach((filter) => {
+            //         filter.since = savedRelays[relay.url].lastSeen;
+            //     });
+            // }
             const sub = relay.sub(filters, { id: subId });
             sub.on("event", (event) => {
+                // this.up
                 callback?.(event);
                 Events.handle(this.client, event);
             });
@@ -411,13 +411,14 @@ class Relays {
             callback,
         });
         const subId = PubSub.getSubscriptionIdForName(id);
-        if (sinceLastSeen && savedRelays[relay.url] && savedRelays[relay.url].lastSeen) {
-            filters.forEach((filter) => {
-                filter.since = savedRelays[relay.url].lastSeen;
-            });
-        }
+        // if (sinceLastSeen && savedRelays[relay.url] && savedRelays[relay.url].lastSeen) {
+        //     filters.forEach((filter) => {
+        //         filter.since = savedRelays[relay.url].lastSeen;
+        //     });
+        // }
         const sub = relay.sub(filters, { id: subId });
         sub.on("event", (event) => {
+            this.updateLastSeen(relay.url);
             callback?.(event);
             Events.handle(this.client, event);
         });
