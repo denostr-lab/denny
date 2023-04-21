@@ -1,7 +1,7 @@
 import { Browser, Page } from "puppeteer";
 import { PRIVATE_KEY } from "../data";
 import { login, createBrowserAndPage, createGroupChat, updateGroupChatMeta } from "../utils";
-describe("test private group change roon metadata", () => {
+describe("test public group change roon metadata", () => {
     let browser: Browser;
     let page: Page;
     beforeAll(async () => {
@@ -14,17 +14,17 @@ describe("test private group change roon metadata", () => {
         await browser.close();
     });
     it(
-        "create private group room",
+        "create public group room",
         async () => {
-            const roomName = `private room ${new Date().toISOString()}`;
-            await createGroupChat(page, roomName, true);
+            const roomName = `public room ${new Date().toISOString()}`;
+            await createGroupChat(page, roomName);
         },
         90 * 1000,
     );
     it(
-        "update private room meta",
+        "update public room meta",
         async () => {
-            const roomName = `private new room name ${new Date().toISOString()}`;
+            const roomName = `public new room name ${new Date().toISOString()}`;
             await updateGroupChatMeta(page, roomName);
         },
         90 * 1000,

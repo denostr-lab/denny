@@ -36,6 +36,10 @@ type UserProfile = {
     name: string;
     about: string;
 };
+type lastFetchInfo = {
+    fetchTime: number;
+    updateTime: number;
+};
 
 class Events {
     bufferEvent: ISyncResponse | undefined;
@@ -46,9 +50,9 @@ class Events {
     roomJoinMap: Record<string, Set<string>> = {};
 
     NprevAccountData = {};
-
+    userMetaFetchTs: Map<string, lastFetchInfo> = new Map();
+    roomMetaFetchTs: Map<string, lastFetchInfo> = new Map();
     rooms: Map<string, any> = new Map();
-
     initUsersAndRooms = (client: MatrixClient) => {
         const users = client.getUsers();
         users.forEach((user) => {
@@ -756,6 +760,7 @@ class Events {
                 type: roomState.type,
                 state_key: roomState.state_key ?? "",
             };
+
             addRoomMeta(syncResponse, metadata);
         };
         const _addTodevice = (decryptoContent: RoomKey) => {
@@ -775,6 +780,12 @@ class Events {
         let decryptoContent = await _decryptoMessage();
         if (!decryptoContent?.room_id || !decryptoContent?.session_key || !decryptoContent?.session_id) {
             return;
+        }
+        syncResponse = this.bufferEvent;
+
+        if (!syncResponse) {
+            syncResponse = getDefaultSyncResponse();
+            this.bufferEvent = syncResponse;
         }
         _createRoom(decryptoContent?.room_id);
         _addTodevice(decryptoContent);
@@ -1041,12 +1052,6 @@ class Events {
             case 142:
                 this.handlePrivateGroupRoomMessageEvent(client, event, syncResponse);
                 break;
-            // case 20001:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
-            // case 20002:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
         }
         return syncResponse;
     }

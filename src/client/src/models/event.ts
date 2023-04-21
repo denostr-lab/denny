@@ -73,6 +73,7 @@ export interface IThreadBundledRelationship {
 
 export interface IEvent {
     event_id: string;
+    nostr_event_id?: string;
     type: string;
     content: IContent;
     sender: string;
@@ -436,7 +437,14 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
     public getId(): string | undefined {
         return this.event.event_id;
     }
-
+    /**
+     * Get the event_id for this nostr event.
+     * @returns The event ID, e.g. <code>$143350589368169JsLZx:localhost
+     * </code>
+     */
+    public getNostrId(): string | undefined {
+        return this.event.nostr_event_id || this.event.event_id;
+    }
     /**
      * Get the user_id for this event.
      * @returns The user ID, e.g. `@alice:matrix.org`
@@ -1316,6 +1324,11 @@ export class MatrixEvent extends TypedEventEmitter<MatrixEventEmittedEvents, Mat
 
     public replaceLocalEventId(eventId: string): void {
         this.event.event_id = eventId;
+        this.emit(MatrixEventEvent.LocalEventIdReplaced, this);
+    }
+
+    public replaceLocalNostrEventId(eventId: string | undefined): void {
+        this.event.nostr_event_id = eventId;
         this.emit(MatrixEventEvent.LocalEventIdReplaced, this);
     }
 

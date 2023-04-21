@@ -14,7 +14,7 @@
     "check:prettier": "prettier --check .",
     "fix:prettier": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest --runInBand"
   },
   "keywords": [],
   "author": "Ajay Bura",

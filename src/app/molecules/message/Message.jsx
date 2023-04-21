@@ -81,8 +81,14 @@ const MessageAvatar = React.memo(({ roomId, avatarSrc, userId, username }) => (
 const MessageHeader = React.memo(({ userId, username, timestamp, fullTime }) => (
   <div className="message__header">
     <Text
-      style={{ color: colorMXID(userId) }}
+      style={{
+        color: colorMXID(userId), overflow: "hidden",
+        "text-overflow": "ellipsis",
+        "white-space": "nowrap",
+        "max-width": "300px"
+      }}
       className="message__profile"
+
       variant="b1"
       weight="medium"
       span

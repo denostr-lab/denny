@@ -310,7 +310,10 @@ function useHandleScroll(
     }
     if (roomTimeline.isServingLiveTimeline()) {
       limit.setFrom(roomTimeline.timeline.length - limit.maxEvents);
-      timelineScroll.scrollToBottom();
+      setTimeout(() => {
+        timelineScroll.scrollToBottom();
+
+      }, 1000);
       forceUpdateLimit();
       return;
     }

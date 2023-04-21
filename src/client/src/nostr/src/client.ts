@@ -57,10 +57,10 @@ class NostrClient {
         const userIds = this.client.getUsers().map((user) => user.userId) as string[];
 
         const pubkey = this.client.getUserId() as string;
-        const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since }];
+        const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since, "limit": 5000 }];
         const filters: Filter[] = [
-            { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since },
-            { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since },
+            { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since, limit: 5000 },
+            { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since, "limit": 5000 },
         ];
 
         this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
@@ -97,8 +97,13 @@ class NostrClient {
 
         if (roomIds.length) {
             const roomFilters = [
-                { "kinds": [...publicGroupMessage, ...privateGroupMessage], "#e": roomIds as string[], since },
-                { kinds: [40, 140], ids: roomIds, since },
+                {
+                    "kinds": [...publicGroupMessage, ...privateGroupMessage],
+                    "#e": roomIds as string[],
+                    since,
+                    "limit": 5000,
+                },
+                { kinds: [40, 140], ids: roomIds, since, limit: 5000 },
             ] as Filter[];
             this.relay.subscribe({ filters: roomFilters, id: "global-room" });
         }
@@ -158,7 +163,7 @@ class NostrClient {
                 }
             }
         } catch (e) {
-            console.info(e, "错误");
+            console.info(e, "subscribeUsersDeletion error");
         }
         return data;
     }
@@ -401,10 +406,7 @@ class NostrClient {
         } as Event;
         try {
             await this.handPublishEvent(event);
-
-            rawEvent.replaceLocalEventId(event.id);
-            room?.addPendingEvent?.(rawEvent, event.id);
-
+            rawEvent.replaceLocalNostrEventId(event.id);
             await this.relay.publishAsPromise(event);
 
             if (event.kind === 7) {

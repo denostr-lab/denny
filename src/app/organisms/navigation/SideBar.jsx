@@ -81,6 +81,7 @@ function ProfileAvatarMenu() {
     <SidebarAvatar
       onClick={openSettings}
       tooltip="Settings"
+      buttonTestid="my-self-avatar"
       avatar={(
         <Avatar
           text={profile.displayName}
@@ -163,6 +164,8 @@ function FeaturedTab() {
       />
       <SidebarAvatar
         tooltip="People"
+        buttonTestid="people-tab"
+
         active={selectedTab === cons.tabs.DIRECTS}
         onClick={() => selectTab(cons.tabs.DIRECTS)}
         avatar={<Avatar iconSrc={UserIC} size="normal" />}

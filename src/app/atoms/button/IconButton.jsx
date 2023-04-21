@@ -11,10 +11,11 @@ const IconButton = React.forwardRef(({
   variant, size, type,
   tooltip, tooltipPlacement, src,
   onClick, tabIndex, disabled, isImage,
-  className,
+  className, buttonTestid
 }, ref) => {
   const btn = (
     <button
+      data-testid={buttonTestid}
       ref={ref}
       className={`ic-btn ic-btn-${variant} ${className}`}
       onMouseUp={(e) => blurOnBubbling(e, `.ic-btn-${variant}`)}

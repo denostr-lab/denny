@@ -4421,7 +4421,7 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
 
         localEvent.setTxnId(txnId);
         localEvent.setStatus(EventStatus.SENDING);
-
+        room?.addPendingEvent(localEvent, txnId);
         // add this event immediately to the local store as 'sending'.
 
         // addPendingEvent can change the state to NOT_SENT if it believes
@@ -4708,7 +4708,6 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
             content = threadId as IContent;
             threadId = null;
         }
-
         const eventType: string = EventType.RoomMessage;
         const sendContent: IContent = content as IContent;
         return this.sendEvent(roomId, threadId as string | null, eventType, sendContent, txnId);

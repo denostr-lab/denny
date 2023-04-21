@@ -53,7 +53,7 @@ export function HomeSpaceOptions({ spaceId, afterOptionSelect }) {
       >
         Create new room
       </MenuItem>
-      { !spaceId && (
+      {!spaceId && (
         <MenuItem
           iconSrc={HashGlobeIC}
           onClick={() => { afterOptionSelect(); openPublicRooms(); }}
@@ -111,7 +111,7 @@ function RelayStatus() {
   }, []);
 
   return (
-    <div className="relay-signal" onClick={openSettings}>
+    <div className="relay-signal" onClick={openSettings} data-testid="relay-signal">
       <div>
         {' '}
         <svg
@@ -144,7 +144,7 @@ function RelayStatus() {
           </g>
         </svg>
       </div>
-      <small style={{ color: count > 0 ? 'green' : 'black' }}>{count}</small>
+      <small style={{ color: count > 0 ? 'green' : 'black' }} data-testid="relay-count">{count}</small>
     </div>
   );
 }
@@ -197,8 +197,8 @@ function DrawerHeader({ selectedTab, spaceId }) {
 
       <RelayStatus />
 
-      { isDMTab && <IconButton onClick={() => openInviteUser()} tooltip="Start DM" src={PlusIC} size="small" /> }
-      { !isDMTab && <IconButton onClick={openHomeSpaceOptions} tooltip="Add rooms/spaces" src={PlusIC} size="small" /> }
+      {isDMTab && <IconButton onClick={() => openInviteUser()} tooltip="Start DM" src={PlusIC} size="small" buttonTestid="start-dm" />}
+      {!isDMTab && <IconButton onClick={openHomeSpaceOptions} tooltip="Add rooms/spaces" src={PlusIC} size="small" />}
     </Header>
   );
 }

@@ -450,7 +450,7 @@ function Settings() {
       title={<Text variant="s1" weight="medium" primary>Settings</Text>}
       contentOptions={(
         <>
-          <Button variant="danger" iconSrc={PowerIC} onClick={handleLogout}>
+          <Button variant="danger" iconSrc={PowerIC} onClick={handleLogout} buttonTestid="logout">
             Logout
           </Button>
           <IconButton src={CrossIC} onClick={requestClose} tooltip="Close" />

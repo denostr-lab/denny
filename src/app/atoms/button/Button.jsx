@@ -8,11 +8,12 @@ import { blurOnBubbling } from './script';
 
 const Button = React.forwardRef(({
   id, className, variant, iconSrc,
-  type, onClick, children, disabled,
+  type, onClick, children, disabled, buttonTestid
 }, ref) => {
   const iconClass = (iconSrc === null) ? '' : `btn-${variant}--icon`;
   return (
     <button
+      data-testid={buttonTestid}
       ref={ref}
       id={id === '' ? undefined : id}
       className={`${className ? `${className} ` : ''}btn-${variant} ${iconClass} noselect`}
@@ -23,8 +24,8 @@ const Button = React.forwardRef(({
       disabled={disabled}
     >
       {iconSrc !== null && <RawIcon size="small" src={iconSrc} />}
-      {typeof children === 'string' && <Text variant="b1">{ children }</Text>}
-      {typeof children !== 'string' && children }
+      {typeof children === 'string' && <Text variant="b1">{children}</Text>}
+      {typeof children !== 'string' && children}
     </button>
   );
 });
@@ -37,9 +38,11 @@ Button.defaultProps = {
   type: 'button',
   onClick: null,
   disabled: false,
+  buttonTestid: ''
 };
 
 Button.propTypes = {
+  buttonTestid: PropTypes.string,
   id: PropTypes.string,
   className: PropTypes.string,
   variant: PropTypes.oneOf(['surface', 'primary', 'positive', 'caution', 'caution-invert', 'danger']),

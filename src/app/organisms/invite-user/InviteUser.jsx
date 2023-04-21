@@ -293,14 +293,14 @@ function InviteUser({
       <div className="invite-user">
         <form className="invite-user__form" onSubmit={(e) => { e.preventDefault(); submitToInviteUsers(); }}>
           {/* <Input value={searchTerm} forwardRef={usernameRef} label="Name or userId" /> */}
-          <Input value={searchTerm} forwardRef={usernameRef} label="Npub or Hex key" />
+          <Input value={searchTerm} forwardRef={usernameRef} label="Npub or Hex key" inputTestid="invite-user-input" />
           {typeof roomId === 'string' ? (
             <>
-              <Button disabled={isSearching} iconSrc={AddUserIC} variant="caution-invert" type="button" className="invite-user__add-invite-user" onClick={() => addInviteUser(usernameRef.current.value)}>Invite</Button>
-              <Button disabled={isSearching} iconSrc={CheckIC} variant="primary" type="submit" className="invite-user__submit-invite-user">Submit</Button>
+              <Button disabled={isSearching} iconSrc={AddUserIC} variant="caution-invert" type="button" className="invite-user__add-invite-user" onClick={() => addInviteUser(usernameRef.current.value)} buttonTestid="invite-user-invite">Invite</Button>
+              <Button disabled={isSearching} iconSrc={CheckIC} variant="primary" type="submit" className="invite-user__submit-invite-user" buttonTestid="invite-user-confirm">Submit</Button>
             </>
           ) : (
-            <Button disabled={isSearching} iconSrc={CheckIC} variant="primary" type="submit">Search</Button>
+            <Button disabled={isSearching} iconSrc={CheckIC} variant="primary" type="submit" buttonTestid="invite-user-search">Search</Button>
           )
           }
         </form>
