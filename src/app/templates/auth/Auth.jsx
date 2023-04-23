@@ -345,6 +345,7 @@ function LoginByName(props) {
 LoginByName.propTypes = {}
 
 function LoginByNameConfirm(props) {
+
   const key = Key.getOrCreate({ autologin: true });
   const initialValues = {
     nickname: props.name,
@@ -397,11 +398,11 @@ function LoginByNameConfirm(props) {
           <form className="auth-form" onSubmit={handleSubmit}>
             <Text style={{ marginTop: '12px', color: "rgba(133, 133, 133, 1)" }}>{`Your private key is your password. If you lose this key, you will lose access to your account! Copy it and keep it in a safe place. There is no way to reset your private key.`}</Text>
             <div className="auth-form__pass-eye-wrapper">
-              <Input name='pubkey' value={values.pubkey} label="Your public key" disabled />
+              <Input name='pubkey' value={Key.toNostrBech32Address(values.pubkey, 'npub')} label="Your public key" disabled />
               <IconButton onClick={onPubClick} size="extra-small" src={copyIC} tooltip={'copy'} />
             </div>
             <div className="auth-form__pass-eye-wrapper">
-              <Input name='private' value={values.prikey} label="Your private key" disabled />
+              <Input name='private' value={Key.toNostrBech32Address(values.prikey, 'nsec')} label="Your private key" disabled />
 
               <IconButton onClick={onPrivateClick} size="extra-small" src={copyIC} tooltip={'copy'} />
             </div>

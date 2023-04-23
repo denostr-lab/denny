@@ -42,9 +42,9 @@ export function getUsername(userId) {
 export function getUsernameOfRoomMember(roomMember) {
   const mx = initMatrix.matrixClient;
   const name = mx.getUserName(roomMember.userId) || mx.getUserPubKey(roomMember.userId)
-  if (name.match(/^[0-9a-fA-F]{64}$/)) {
-    return mx.getUserPubKey(name);
-  }
+  // if (name.match(/^[0-9a-fA-F]{64}$/)) {
+  //   return mx.getUserPubKey(name);
+  // }
   return name
 }
 
