@@ -29,7 +29,7 @@
     "@scure/base": "1.1.1",
     "@tippyjs/react": "4.2.6",
     "bech32-buffer": "0.2.1",
-    "blurhash": "2.0.4",
+    "blurhash": "2.0.5",
     "browser-encrypt-attachment": "0.3.0",
     "dateformat": "5.0.3",
     "emojibase-data": "7.0.1",
