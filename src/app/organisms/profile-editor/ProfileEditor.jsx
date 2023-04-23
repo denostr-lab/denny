@@ -110,7 +110,7 @@ function ProfileEditor({ userId }) {
           onClick={() => setIsEditing(true)}
         />
       </div>
-      <Text variant="b3">{mx.getUserId()}</Text>
+      <Text variant="b3">{mx.getUserPubKey()}</Text>
     </div>
   );
 
