@@ -123,7 +123,7 @@ class NostrClient {
             if (event !== null) {
                 return;
             }
-            await new Promise((resolve) => setTimeout(resolve, 30));
+            await utils.sleep(5);
 
             const lastSince = until || since;
             const lastUntil = lastSince + period;
@@ -158,35 +158,36 @@ class NostrClient {
     }
 
     async initGlobalSubscribe() {
-        const since = utils.now() - utils.timedelta(7, "days");
         const roomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const userIds = this.client.getUsers().map((user) => user.userId) as string[];
-
         const pubkey = this.client.getUserId() as string;
 
-        const period = 12 * 60 * 60;
-        const until = since + period;
+        const period = 1 * 60 * 60;
+        const since = utils.now() - utils.timedelta(7, "days");
 
+        const globalOnceId = "global-once";
         const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey] }];
-        this.batchSubscribe([onceFilters], "global-once", {
+        const globalOnceSince = this.relay.getLastSinceById(globalOnceId) || since;
+        this.batchSubscribe([onceFilters], globalOnceId, {
             alwaysOnce: true,
-            since: this.relay.getLastSinceById("global-once") || since,
-            until,
+            since: globalOnceSince,
+            until: globalOnceSince + period,
             period,
         });
 
-        await utils.sleep(2 * 1000);
+        await utils.sleep(1 * 1000);
+        const globalId = "global";
         const filters: Filter[] = [
             { kinds: [0, 40, 42, 4, 7], authors: [pubkey] },
             { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey] },
         ];
-        this.batchSubscribe([filters], "global", {
-            since: this.relay.getLastSinceById("global") || since,
-            until,
+        const globalSince = this.relay.getLastSinceById(globalId) || since;
+        this.batchSubscribe([filters], globalId, {
+            since: globalSince,
+            until: globalSince + period,
             period,
         });
 
-        await utils.sleep(2 * 1000);
         if (roomIds?.length) {
             this.subscribeRooms(roomIds);
         }
@@ -198,10 +199,10 @@ class NostrClient {
 
     subscribePublicRooms() {
         this.readySubscribeRooms = true;
-        const period = 24 * 60 * 60;
+        const period = 8 * 60 * 60;
         const since = utils.now() - utils.timedelta(30, "days");
         const until = since + period;
-        const filters: Filter[] = [{ kinds: [40, 41] }];
+        const filters: Filter[] = [{ kinds: [40, 41], limit: 2000 }];
         this.batchSubscribe([filters], "public-rooms", { since, until, period });
     }
 
@@ -222,78 +223,122 @@ class NostrClient {
         return Number.MIN_SAFE_INTEGER;
     }
 
+    async subscribeFirstMetadataOfRooms(
+        roomIds: string[],
+        { createChannelKinds, channelMetadataKinds }: { createChannelKinds: number[]; channelMetadataKinds: number[] },
+    ) {
+        return new Promise((resolve, reject) => {
+            const callback = (event: Event | null) => {
+                if (event === null) {
+                    resolve(true);
+                }
+            };
+            const id = "global-room-metadata";
+            const filters: Filter[] = [
+                { "kinds": channelMetadataKinds, "#e": roomIds, "limit": 1000 },
+                { kinds: createChannelKinds, ids: roomIds, limit: 1000 },
+            ];
+            const since = this.relay.getLastSinceById(id);
+            if (since) {
+                filters.forEach((filter) => {
+                    filter.since = since;
+                });
+            } else {
+                this.relay.setLastSince(id);
+            }
+            this.relay.subscribe({ id, filters, once: true, callback });
+        });
+    }
+
+    async subscribeFirstRooms(
+        roomIds: string[],
+        { createChannelKinds, channalMessageKinds }: { createChannelKinds: number[]; channalMessageKinds: number[] },
+    ) {
+        const firstJoinSubscribe = (roomId: string, lastActiveTimestamp: number) =>
+            new Promise((resolve, reject) => {
+                const id = `room/${roomId}`;
+                const since = this.relay.getLastSinceById(id) || lastActiveTimestamp;
+                const filters: Filter[] = [
+                    { "kinds": channalMessageKinds, "#e": [roomId], since },
+                    { kinds: createChannelKinds, ids: [roomId], since },
+                ];
+                let lastCreatedAt = 0;
+                const callback = (event: Event) => {
+                    if (event !== null) {
+                        if (event.created_at >= lastCreatedAt) {
+                            lastCreatedAt = event.created_at + 1;
+                        }
+                        return;
+                    }
+
+                    const newFilters: Filter[] = [];
+                    if (lastCreatedAt >= lastActiveTimestamp) {
+                        filters.forEach((filter) => {
+                            if (filter?.since) {
+                                delete filter.since;
+                            }
+                            if (filter?.until) {
+                                delete filter.until;
+                            }
+
+                            newFilters.push({
+                                ...filter,
+                                since: lastCreatedAt,
+                            });
+                        });
+                    }
+                    this.relay.setLastSince(id);
+                    resolve(true);
+                };
+                this.relay.subscribe({ once: true, id, callback, filters });
+            });
+
+        const since = utils.now() - utils.timedelta(7, "days");
+        const newRoomIds: string[] = [];
+        const batchRoomIds = splitRequest([...roomIds], 1);
+        for (const roomIds of batchRoomIds) {
+            let lastActiveTimestamp = since;
+            const roomId = roomIds[0];
+            const room = this.client.getRoom(roomId);
+            if (room) {
+                const newLastActiveTimestamp = Math.round(this.getLastActiveTimestamp(room) / 1000);
+                if (newLastActiveTimestamp > 0 && newLastActiveTimestamp >= since) {
+                    lastActiveTimestamp = newLastActiveTimestamp;
+                }
+            }
+
+            await firstJoinSubscribe(roomId, lastActiveTimestamp);
+            newRoomIds.push(roomId);
+        }
+
+        return newRoomIds;
+    }
+
     async subscribeRooms(roomsIds: string[]) {
         const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
         const publicGroupMessage = [41, 42, 7];
-        const privateGroupMessage = [142, 141]; // 拿到房间的
-        // 这里要过滤掉用户
+        const privateGroupMessage = [142, 141];
 
         if (roomIds.length) {
-            const firstJoinSubscribe = (roomId: string, lastActiveTimestamp: number) =>
-                new Promise((resolve, reject) => {
-                    const id = `room/${roomId}`;
-                    const since = this.relay.getLastSinceById(id) || lastActiveTimestamp;
-                    const filters: Filter[] = [
-                        { "kinds": [...publicGroupMessage, ...privateGroupMessage], "#e": [roomId], since },
-                        { kinds: [40, 140], ids: [roomId], since },
-                    ];
-                    let lastCreatedAt = 0;
-                    const callback = (event: Event) => {
-                        if (event !== null) {
-                            if (event.created_at >= lastCreatedAt) {
-                                lastCreatedAt = event.created_at + 1;
-                            }
-                            return;
-                        }
+            const createChannelKinds = [40, 140];
+            const channelMetadataKinds = [41, 141];
+            const channalMessageKinds = [...publicGroupMessage, ...privateGroupMessage];
 
-                        const newFilters: Filter[] = [];
-                        if (lastCreatedAt >= lastActiveTimestamp) {
-                            filters.forEach((filter) => {
-                                if (filter?.since) {
-                                    delete filter.since;
-                                }
-                                if (filter?.until) {
-                                    delete filter.until;
-                                }
-
-                                newFilters.push({
-                                    ...filter,
-                                    since: lastCreatedAt,
-                                });
-                            });
-                        }
-                        resolve(true);
-                    };
-                    this.relay.setLastSince(id, since);
-                    this.relay.subscribe({ once: true, id, callback, filters });
-                });
-
-            const since = utils.now() - utils.timedelta(7, "days");
-            const newRoomIds: string[] = [];
-            const batchRoomIds = splitRequest([...roomIds], 1);
-            for (const roomIds of batchRoomIds) {
-                let lastActiveTimestamp = since;
-                const roomId = roomIds[0];
-                const room = this.client.getRoom(roomId);
-                if (room) {
-                    const newLastActiveTimestamp = Math.round(this.getLastActiveTimestamp(room) / 1000);
-                    if (newLastActiveTimestamp > 0 && newLastActiveTimestamp >= since) {
-                        lastActiveTimestamp = newLastActiveTimestamp;
-                    }
-                }
-
-                await firstJoinSubscribe(roomId, lastActiveTimestamp);
-                newRoomIds.push(roomId);
-            }
+            const newRoomIds = await this.subscribeFirstRooms([...roomIds], {
+                createChannelKinds,
+                channalMessageKinds,
+            });
+            await this.subscribeFirstMetadataOfRooms([...newRoomIds], { createChannelKinds, channelMetadataKinds });
 
             const filters: Filter[] = [
-                { "kinds": [...publicGroupMessage, ...privateGroupMessage], "#e": [...newRoomIds] },
-                { kinds: [40, 140], ids: [...newRoomIds] },
+                { "kinds": channalMessageKinds, "#e": [...newRoomIds] },
+                { kinds: channelMetadataKinds, ids: [...newRoomIds] },
             ];
+            const since = utils.now() - utils.timedelta(7, "days");
             this.batchSubscribe([filters], "global-room", {
                 since: this.relay.getLastSinceById("global-room") || since,
-                period: 6 * 60 * 60,
+                period: 1 * 60 * 60,
             });
         }
     }

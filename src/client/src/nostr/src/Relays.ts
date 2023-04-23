@@ -96,8 +96,11 @@ class Relays {
         return lastSinces.get(id) || 0;
     }
 
-    setLastSince(id: string, since: number) {
+    setLastSince(id: string, since?: number) {
         const lastSinces = this.getLastSinces();
+        if (!since) {
+            since = Math.round(Date.now() / 1000);
+        }
         lastSinces.set(id, since);
         localStorage.setItem("nostr.last_sinces", JSON.stringify([...lastSinces.entries()]));
     }
