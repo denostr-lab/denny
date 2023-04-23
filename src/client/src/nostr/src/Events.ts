@@ -12,6 +12,7 @@ import {
     getDefaultSyncResponse,
     handMediaContent,
     getQuery,
+    getRoomMetaUpdateTs,
 } from "./Helpers";
 import * as olmlib from "../../crypto/olmlib";
 import * as algorithms from "../../crypto/algorithms";
@@ -94,10 +95,7 @@ class Events {
             return;
         }
         const content = clearContent.body;
-        const roomAttrs = [
-            { key: "name", type: EventType.RoomName, content: { name: content.name }, state_key: "" },
-            { key: "topic", type: EventType.RoomTopic, content: { topic: content.about }, state_key: "" },
-            { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture }, state_key: "" },
+        let roomAttrs = [
             { key: "join-rules", type: EventType.RoomJoinRules, content: { join_rule: "private" }, state_key: "" },
             {
                 key: "member",
@@ -110,7 +108,16 @@ class Events {
         if (!syncResponse.rooms.join?.[roomid]) {
             syncResponse.rooms.join[roomid] = getDefaultRoomData();
         }
+        const currentTs = getRoomMetaUpdateTs(client, roomid, syncResponse);
 
+        if (currentTs < created_at) {
+            const roomStateAttrs = [
+                { key: "name", type: EventType.RoomName, content: { name: content.name }, state_key: "" },
+                { key: "topic", type: EventType.RoomTopic, content: { topic: content.about }, state_key: "" },
+                { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture }, state_key: "" },
+            ];
+            roomAttrs = roomAttrs.concat(roomStateAttrs);
+        }
         for (const roomAttr of roomAttrs) {
             if (roomAttr.key === "member") {
                 const isLeave = client.nostrClient.hasLeaveRoom(roomid) && Key.getPubKey() === userId;
@@ -248,11 +255,9 @@ class Events {
         const roomid = event.id;
         const created_at = event.created_at * 1000;
         const content = JSON.parse(event.content);
-        const roomAttrs = [
+        let roomAttrs = [
             { key: "create", type: EventType.RoomCreate, content: { creator: event.pubkey } },
-            { key: "name", type: EventType.RoomName, content: { name: content.name } },
-            { key: "topic", type: EventType.RoomTopic, content: { topic: content.about } },
-            { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture } },
+
             { key: "join-rules", type: EventType.RoomJoinRules, content: { join_rule: "public" } },
             {
                 key: "member",
@@ -264,13 +269,21 @@ class Events {
         if (!syncResponse.rooms.join?.[roomid]) {
             syncResponse.rooms.join[roomid] = getDefaultRoomData();
         }
+        const currentTs = getRoomMetaUpdateTs(client, roomid, syncResponse);
 
+        if (currentTs < created_at) {
+            const roomStateAttrs = [
+                { key: "name", type: EventType.RoomName, content: { name: content.name } },
+                { key: "topic", type: EventType.RoomTopic, content: { topic: content.about } },
+                { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture } },
+            ];
+            roomAttrs = roomAttrs.concat(roomStateAttrs);
+        }
         for (const roomAttr of roomAttrs) {
             if (roomAttr.key === "member") {
                 const isLeave = client.nostrClient.hasLeaveRoom(roomid) && Key.getPubKey() === event.pubkey;
                 roomAttr.content.membership = isLeave ? "leave" : "join";
             }
-
             syncResponse.rooms.join[roomid].state.events.push({
                 content: roomAttr.content,
                 origin_server_ts: created_at,
@@ -667,27 +680,14 @@ class Events {
         // 这里构造房间的一些用户信息
         if (!this.roomJoinMap[roomid]) {
             this.roomJoinMap[roomid] = new Set();
-            const room = client.getRoom(roomid);
-            if (!room) {
-                roomStates = [
-                    {
-                        content: {
-                            topic: roomid,
-                        },
-                        type: EventType.RoomTopic,
-                        sender: null,
-                        created_at: 1,
-                    },
-                    // {
-                    //     content: {
-                    //         name: roomid,
-                    //     },
-                    //     type: EventType.RoomName,
-                    //     sender: null,
-                    //     created_at: 1,
-                    // },
-                ];
-            }
+        }
+        const currentTs = getRoomMetaUpdateTs(client, roomid, syncResponse);
+
+        if (currentTs < created_at) {
+            roomStates = [
+                { key: "name", type: EventType.RoomName, content: { name: roomid }, state_key: "" },
+                { key: "topic", type: EventType.RoomTopic, content: { topic: roomid }, state_key: "" },
+            ];
         }
         const memberStates = [
             {

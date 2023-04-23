@@ -21,8 +21,8 @@ import Key from "./Key";
 import { Room } from "../../models/room";
 
 // export { Filter as NostrFilter };
-let allRooms = [];
-let allUsers = [];
+let allRooms: string[] = [];
+let allUsers: string[] = [];
 export interface UpdateRoomMetadata {
     name: string;
     about: string;
@@ -313,7 +313,7 @@ class NostrClient {
             let joinRoomIds = Object.keys(data?.rooms?.join || {}) as string[];
             let rooms = Object.values(data?.rooms?.join || {}) as IJoinedRoom[];
             const userIds = new Set();
-            const roomIds = [];
+            const roomIds: string[] = [];
             rooms.forEach((room, index) => {
                 const roomId = joinRoomIds[index];
                 if (!this.hasLeaveRoom(roomId)) {
@@ -409,19 +409,35 @@ class NostrClient {
         return this.client.getUser(userId).displayName ?? "";
     }
 
-    fetchUserMetadatas(userIds: string[]) {
+    async fetchUserMetadatas(userIds: string[], count: number = 0) {
         /*
             批量获取房间的MetaData信息,
             如果出现中继提示连接过多的错误，则后续继续获取
         */
+        userIds = userIds.filter((i) => {
+            return !Events.userProfileMap[i];
+        });
         if (!userIds?.length) return;
+
         const filters: Filter[] = [
             {
                 authors: userIds,
                 kinds: [0],
             },
         ];
-        this.relay.subscribe({ filters, id: `fetchUserMetadatas${Math.random()}`, once: true });
+
+        const result = new Promise((resolve) => {
+            const callback = (event: Event | null) => {
+                resolve("ok");
+            };
+            this.relay.subscribe({ filters, id: `fetchUserMetadatas-${Math.random()}`, once: true, callback });
+        });
+        const presult = await Promise.race([utils.sleep(3 * 1000), result]);
+        if (!presult && count < 3) {
+            setTimeout(() => {
+                this.fetchUserMetadatas(userIds, count + 1);
+            }, 1000);
+        }
     }
 
     async createRoom(metadata: UpdateRoomMetadata) {
@@ -631,7 +647,7 @@ class NostrClient {
             };
             this.relay.subscribe({
                 filters,
-                id: `fetchUserMetadata-${userId}`,
+                id: `fetchUserMetadata-${userId}-${Math.random()}`,
                 callback,
                 once: true,
             });

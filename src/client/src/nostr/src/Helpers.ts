@@ -93,6 +93,24 @@ export const ROOM_META_TYPES = {
         field: "url",
     },
 };
+export const getRoomMetaUpdateTs = (client: MatrixClient, roomid: string, syncResponse: ISyncResponse) => {
+    const events = syncResponse?.rooms?.join?.[roomid]?.state?.events || [];
+    const event = events.find((i) => i.type === EventType.RoomName);
+    let eventTs = 0;
+    let roomStateTs = 0;
+    if (event) {
+        eventTs = event.origin_server_ts;
+    }
+
+    const room = client.getRoom(roomid);
+    if (room?.currentState) {
+        const event = room.currentState.getStateEvents(EventType.RoomName, "");
+        if (event) {
+            roomStateTs = event.getTs();
+        }
+    }
+    return Math.max(roomStateTs, eventTs);
+};
 export const addRoomMeta = (syncResponse, roomMetaInfo: RoomMetaInfo) => {
     if (!syncResponse.rooms.join?.[roomMetaInfo.roomId]) {
         syncResponse.rooms.join[roomMetaInfo.roomId] = getDefaultRoomData();
