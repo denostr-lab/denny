@@ -44,7 +44,7 @@
     "matrix-js-sdk": "22.0.0",
     "nostr-tools": "1.7.5",
     "prop-types": "15.8.1",
-    "ramda": "0.28.0",
+    "ramda": "0.29.0",
     "react": "17.0.2",
     "react-autosize-textarea": "7.1.0",
     "react-blurhash": "0.2.0",
