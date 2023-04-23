@@ -191,7 +191,7 @@ class NostrClient {
             if (!jsonData) {
                 return;
             }
-            this.setUserMetaData({ displayname: jsonData.name });
+            this.setUserMetaData({ displayname: jsonData.name, avatar_url: "" });
         } catch (e) {
             console.info(e, "erro init user");
         } finally {
@@ -694,7 +694,6 @@ class NostrClient {
         const userId = this.client.getUserId();
 
         const user = this.client.getUser(userId);
-
         const content = {
             picture: avatar_url ?? user?.avatarUrl,
             name: displayname ?? user?.displayName,
@@ -707,6 +706,7 @@ class NostrClient {
             content: JSON.stringify(content),
             pubkey: userId,
         } as Event;
+
         await this.handPublishEvent(event);
         await this.relay.publishAsPromise(event);
     }
