@@ -1651,10 +1651,10 @@
     estree-walker "^2.0.2"
     magic-string "^0.27.0"
 
-"@rollup/plugin-wasm@6.1.1":
-  version "6.1.1"
-  resolved "https://registry.npmjs.org/@rollup/plugin-wasm/-/plugin-wasm-6.1.1.tgz#4433583997703c46ac22ebd7d079cf8f165a909b"
-  integrity sha512-dccyb8OvtpY21KiYjaNmibWlQJd/kBg+IVP24x9l1dsIRXBmGqLt+wsPjU296FNO8ap0SSEsTpi/7AfrlvQvBQ==
+"@rollup/plugin-wasm@6.1.2":
+  version "6.1.2"
+  resolved "https://registry.yarnpkg.com/@rollup/plugin-wasm/-/plugin-wasm-6.1.2.tgz#faf57f8e2ed12b9e0e898ba67963c52e1cd5f4c3"
+  integrity sha512-YdrQ7zfnZ54Y+6raCev3tR1PrhQGxYKSTajGylhyP0oBacouuNo6KcNCk+pYKw9M98jxRWLFFca/udi76IDXzg==
 
 "@rollup/pluginutils@^5.0.1":
   version "5.0.2"
