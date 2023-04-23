@@ -441,8 +441,6 @@ function RoomViewContent({ eventId, roomTimeline }) {
         return
       }
       const member = room.getMember(userId)
-      console.info(member, event.gets, 'SaSa是')
-
       if (member) {
         forceUpdateLimit()
 
