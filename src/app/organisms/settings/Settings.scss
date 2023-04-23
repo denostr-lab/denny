@@ -1,40 +1,40 @@
-@use '../../partials/flex';
-@use '../../partials/dir';
-@use '../../partials/screen';
+@use "../../partials/flex";
+@use "../../partials/dir";
+@use "../../partials/screen";
 
 .settings-window {
-  & .pw {
-    background-color: var(--bg-surface-low);
-  }
-  
-  .header .btn-danger {
-    margin: 0 var(--sp-tight);
-    box-shadow: none;
-  }
+    & .pw {
+        background-color: var(--bg-surface-low);
+    }
 
-  & .profile-editor {
-    padding: var(--sp-loose) var(--sp-extra-loose);
-  } 
+    .header .btn-danger {
+        margin: 0 var(--sp-tight);
+        box-shadow: none;
+    }
 
-  & .tabs__content {
-    padding: 0 var(--sp-normal);
-  }
+    & .profile-editor {
+        padding: var(--sp-loose) var(--sp-extra-loose);
+    }
 
-  &__cards-wrapper {
-    padding: 0 var(--sp-normal);
-    @include dir.side(padding, var(--sp-normal), var(--sp-extra-tight));
-  }
+    & .tabs__content {
+        padding: 0 var(--sp-normal);
+    }
+
+    &__cards-wrapper {
+        padding: 0 var(--sp-normal);
+        @include dir.side(padding, var(--sp-normal), var(--sp-extra-tight));
+    }
 }
 .settings-window__card {
-  margin: var(--sp-normal) 0;
-  background-color: var(--bg-surface);
-  border-radius: var(--bo-radius);
-  box-shadow: var(--bs-surface-border);
-  overflow: hidden;
+    margin: var(--sp-normal) 0;
+    background-color: var(--bg-surface);
+    border-radius: var(--bo-radius);
+    box-shadow: var(--bs-surface-border);
+    overflow: hidden;
 
-  & > .context-menu__header:first-child {
-    margin-top: 2px;
-  }
+    & > .context-menu__header:first-child {
+        margin-top: 2px;
+    }
 }
 .settings-appearance__card,
 .settings-notifications,
@@ -45,64 +45,82 @@
 .settings-security .device-manage,
 .settings-about__card,
 .settings-emoji__card {
-  @extend .settings-window__card;
+    @extend .settings-window__card;
 }
 
-.settings-window__cards-wrapper{
-  & .setting-tile {
-    margin: 0 var(--sp-normal);
-    margin-top: var(--sp-normal);
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--bg-surface-border);
-    &:last-child {
-      border-bottom: none;
+.settings-window__cards-wrapper {
+    & .setting-tile {
+        margin: 0 var(--sp-normal);
+        margin-top: var(--sp-normal);
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--bg-surface-border);
+        &:last-child {
+            border-bottom: none;
+        }
     }
-  }
 }
 
 .settings-notifications {
-  &__not-supported {
-    padding: 0 var(--sp-ultra-tight);
-  }
+    &__not-supported {
+        padding: 0 var(--sp-ultra-tight);
+    }
 }
 
 .settings-about {
-  &__branding {
-    padding: var(--sp-normal);
-    display: flex;
-    
-    & > div {
-      margin: 0 var(--sp-loose);
+    &__branding {
+        padding: var(--sp-normal);
+        display: flex;
+
+        & > div {
+            margin: 0 var(--sp-loose);
+        }
     }
-    
-  }
-  &__btns {
-    & button {
-      margin-top: var(--sp-tight);
-      @include dir.side(margin, 0, var(--sp-tight));
+    &__btns {
+        & button {
+            margin-top: var(--sp-tight);
+            @include dir.side(margin, 0, var(--sp-tight));
+        }
     }
-  }
-  
-  &__credits {
-    padding: 0 var(--sp-normal);
-    & ul {
-      color: var(--tc-surface-low);
-      padding: var(--sp-normal);
-      margin: var(--sp-extra-tight) 0;
+
+    &__credits {
+        padding: 0 var(--sp-normal);
+        & ul {
+            color: var(--tc-surface-low);
+            padding: var(--sp-normal);
+            margin: var(--sp-extra-tight) 0;
+        }
     }
-  }
 }
 
 .relay-manage {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .relay-buttons {
-  display: flex;
-  justify-content: left;
-  align-items: center;
+    display: flex;
+    justify-content: left;
+    align-items: center;
 }
 .toggle-margin {
-  margin-right: 5px;
+    margin-right: 5px;
+}
+
+.keyword-notification {
+    &__keyword {
+        & form,
+        & > div:last-child {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--sp-tight);
+        }
+
+        & form,
+        .key-form {
+            margin: var(--sp-extra-tight) 0 var(--sp-normal);
+            .input-container {
+                flex-grow: 1;
+            }
+        }
+    }
 }

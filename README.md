@@ -12,7 +12,7 @@
         <img alt="Sponsor Denny" src="https://img.shields.io/opencollective/all/cinny?logo=opencollective&style=social"></a>
 </p>
 
-A Matrix client focusing primarily on simple, elegant and secure interface. The main goal is to have an instant messaging application that is easy on people and has a modern touch.
+A Denny client focusing primarily on simple, elegant and secure interface. The main goal is to have an instant messaging application that is easy on people and has a modern touch.
 - [Roadmap](https://github.com/ajbura/cinny/projects/11)
 - [Contributing](./CONTRIBUTING.md)
 

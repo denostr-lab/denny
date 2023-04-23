@@ -747,7 +747,9 @@ function Message({
   const content = mEvent.getContent();
   const eventId = mEvent.getId();
   const msgType = content?.msgtype;
-  const senderId = mEvent.getSender();
+  const mx = initMatrix.matrixClient;
+
+  const senderId = mx.getUserPubKey(mEvent.getSender());
   let { body } = content;
   const username = mEvent.sender ? getUsernameOfRoomMember(mEvent.sender) : getUsername(senderId);
   const avatarSrc = mEvent?.sender?.userId ? initMatrix.matrixClient.getUserAvatar(mEvent.sender.userId) : '';

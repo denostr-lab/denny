@@ -1,7 +1,7 @@
 {
     "name": "Denny",
     "short_name": "Denny",
-    "description": "Yet another matrix client",
+    "description": "Yet another denny client",
     "dir": "auto",
     "lang": "en-US",
     "display": "standalone",

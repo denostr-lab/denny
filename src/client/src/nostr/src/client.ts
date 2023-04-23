@@ -844,6 +844,14 @@ class NostrClient {
 
         return event141;
     }
+
+    getUserPubKey(pubKey: string) {
+        return Key.toNostrBech32Address(pubKey, "npub");
+    }
+
+    getUserPrivateKey(privateKey: string) {
+        return Key.toNostrBech32Address(privateKey, "nsec");
+    }
 }
 
 export default NostrClient;

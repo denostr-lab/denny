@@ -9909,6 +9909,16 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     public kickUserToEncryptedChannel(room: { id: string; relayUrl?: string }, kickPubkeys: string[]) {
         return this.nostrClient.inviteUserToEncryptedChannel(room, [], kickPubkeys);
     }
+
+    public getUserPubKey(): string |null {
+        const userId = this.getUserId();
+        return this.nostrClient.getUserPubKey(userId as string);
+    }
+
+    public getUserPrivateKey(): string |null {
+        const token = this.getAccessToken();
+        return this.nostrClient.getUserPrivateKey(token as string);
+    }
 }
 
 /**
