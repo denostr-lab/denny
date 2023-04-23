@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Settings.scss';
 
 import initMatrix from '../../../client/initMatrix';
@@ -300,37 +300,79 @@ function EmojiSection() {
 }
 
 function SecuritySection() {
+  // change by nostr
+  const mx = initMatrix.matrixClient;
+  const onPrivateClick = () => {
+    const clipboard = navigator.clipboard;
+    clipboard.writeText(mx.getAccessToken())
+  }
+  const onPubClick = () => {
+    const clipboard = navigator.clipboard;
+    clipboard.writeText(mx.getUserId())
+  }
   return (
     <div className="settings-security">
       <div className="settings-security__card">
-        <MenuHeader>Cross signing and backup</MenuHeader>
-        <CrossSigning />
-        <KeyBackup />
-      </div>
-      <DeviceManage />
-      <div className="settings-security__card">
-        <MenuHeader>Export/Import encryption keys</MenuHeader>
+        <MenuHeader>Keys</MenuHeader>
         <SettingTile
-          title="Export E2E room keys"
-          content={(
-            <>
-              <Text variant="b3">Export end-to-end encryption room keys to decrypt old messages in other session. In order to encrypt keys you need to set a password, which will be used while importing.</Text>
-              <ExportE2ERoomKeys />
-            </>
-          )}
+          title='Your public key'
+          content={<div className="keyword-notification__keyword">
+            <div className='key-form'>
+              <Input name="new-relay-url" disabled value={mx.getUserId()} />
+              <Button variant="primary" onClick={onPubClick}>
+                Copy
+              </Button>
+            </div>
+
+          </div>}
         />
         <SettingTile
-          title="Import E2E room keys"
-          content={(
-            <>
-              <Text variant="b3">{'To decrypt older messages, Export E2EE room keys from Element (Settings > Security & Privacy > Encryption > Cryptography) and import them here. Imported keys are encrypted so you\'ll have to enter the password you set in order to decrypt it.'}</Text>
-              <ImportE2ERoomKeys />
-            </>
-          )}
+          title='Your private key'
+          content={<div className="keyword-notification__keyword">
+            <div className='key-form'>
+
+              <Input name="private" disabled value={mx.getAccessToken()} type="password" />
+              <Button variant="primary" onClick={onPrivateClick}>
+                Copy
+              </Button>
+            </div>
+
+          </div>}
         />
       </div>
-    </div>
-  );
+    </div >
+  )
+  // return (
+  //   <div className="settings-security">
+  //     <div className="settings-security__card">
+  //       <MenuHeader>Cross signing and backup</MenuHeader>
+  //       <CrossSigning />
+  //       <KeyBackup />
+  //     </div>
+  //     <DeviceManage />
+  //     <div className="settings-security__card">
+  //       <MenuHeader>Export/Import encryption keys</MenuHeader>
+  //       <SettingTile
+  //         title="Export E2E room keys"
+  //         content={(
+  //           <>
+  //             <Text variant="b3">Export end-to-end encryption room keys to decrypt old messages in other session. In order to encrypt keys you need to set a password, which will be used while importing.</Text>
+  //             <ExportE2ERoomKeys />
+  //           </>
+  //         )}
+  //       />
+  //       <SettingTile
+  //         title="Import E2E room keys"
+  //         content={(
+  //           <>
+  //             <Text variant="b3">{'To decrypt older messages, Export E2EE room keys from Element (Settings > Security & Privacy > Encryption > Cryptography) and import them here. Imported keys are encrypted so you\'ll have to enter the password you set in order to decrypt it.'}</Text>
+  //             <ImportE2ERoomKeys />
+  //           </>
+  //         )}
+  //       />
+  //     </div>
+  //   </div>
+  // );
 }
 
 function AboutSection() {
