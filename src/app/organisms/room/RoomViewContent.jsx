@@ -402,7 +402,9 @@ function RoomViewContent({ eventId, roomTimeline }) {
   const eventLimitRef = useRef(null);
   const [editEventId, setEditEventId] = useState(null);
   const cancelEdit = () => setEditEventId(null);
-
+  const roomId = roomTimeline.roomId
+  const mx = initMatrix.matrixClient;
+  const room = mx.getRoom(roomId);
   const readUptoEvtStore = useStore(roomTimeline);
   const [onLimitUpdate, forceUpdateLimit] = useForceUpdate();
 
@@ -431,7 +433,27 @@ function RoomViewContent({ eventId, roomTimeline }) {
       eventLimitRef.current = new EventLimit();
     }
   });
+  useEffect(() => {
+    const mx = initMatrix.matrixClient;
+    const _handle = () => {
+      const userId = event?.event?.user_id
+      if (!userId || !room) {
+        return
+      }
+      const member = room.getMember(userId)
+      console.info(member, event.gets, 'SaSa是')
 
+      if (member) {
+        forceUpdateLimit()
+
+      }
+    }
+    mx.on('event', _handle)
+    return () => {
+      mx.off('event', _handle)
+
+    }
+  }, [room])
   // when active timeline changes
   useEffect(() => {
     if (!roomTimeline.initialized) return undefined;
