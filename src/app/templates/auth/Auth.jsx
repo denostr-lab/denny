@@ -25,7 +25,9 @@ import Avatar from '../../atoms/avatar/Avatar';
 // import ChevronBottomIC from '../../../../public/res/ic/outlined/chevron-bottom.svg';
 // import EyeIC from '../../../../public/res/ic/outlined/eye.svg';
 // import EyeBlindIC from '../../../../public/res/ic/outlined/eye-blind.svg';
-import CinnySvg from '../../../../public/res/svg/cinny.svg';
+// import CinnySvg from '../../../../public/res/svg/cinny.svg';
+import DennyLogo from '../../../../public/res/web/dennylogo.png';
+
 // import SSOButtons from '../../molecules/sso-buttons/SSOButtons';
 
 // const LOCALPART_SIGNUP_REGEX = /^[a-z0-9_\-.=/]+$/;
@@ -749,7 +751,7 @@ function Auth() {
           {!loginToken && (
             <div className="auth-card">
               <Header>
-                <Avatar size="extra-small" imageSrc={CinnySvg} />
+                <Avatar size="extra-small" imageSrc={DennyLogo} />
                 <TitleWrapper>
                   <Text variant="h2" weight="medium">Denny</Text>
                 </TitleWrapper>
@@ -768,9 +770,7 @@ function Auth() {
           <Text variant="b2">
             <a href="https://github.com/ajbura/cinny/releases" target="_blank" rel="noreferrer">{`v${cons.version}`}</a>
           </Text>
-          <Text variant="b2">
-            <a href="https://twitter.com/cinnyapp" target="_blank" rel="noreferrer">Twitter</a>
-          </Text>
+
           <Text variant="b2">
             <a href="https://matrix.org" target="_blank" rel="noreferrer">Powered by Matrix</a>
           </Text>
