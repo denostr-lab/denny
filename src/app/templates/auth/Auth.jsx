@@ -357,11 +357,13 @@ function LoginByNameConfirm(props) {
   const validator = () => ({});
   const onPrivateClick = () => {
     const clipboard = navigator.clipboard;
-    clipboard.writeText(initialValues.prikey)
+    const prikey = Key.toNostrBech32Address(initialValues.prikey, 'nsec');
+    clipboard.writeText(prikey)
   }
   const onPubClick = () => {
     const clipboard = navigator.clipboard;
-    clipboard.writeText(initialValues.pubkey)
+    const pubkey = Key.toNostrBech32Address(initialValues.pubkey, 'npub');
+    clipboard.writeText(pubkey)
   }
   const submitter = async (values, actions) => {
     localStorage.setItem(cons.secretKey.USER_ID, values.pubkey);
