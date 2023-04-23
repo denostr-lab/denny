@@ -435,7 +435,7 @@ function RoomViewContent({ eventId, roomTimeline }) {
   });
   useEffect(() => {
     const mx = initMatrix.matrixClient;
-    const _handle = () => {
+    const _handle = (event) => {
       const userId = event?.event?.user_id
       if (!userId || !room) {
         return
