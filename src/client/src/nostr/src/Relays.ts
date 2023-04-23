@@ -39,6 +39,7 @@ type PublicRelaySettings = {
     read?: boolean;
     write?: boolean;
     enabled?: boolean;
+    lastSince?: number;
 };
 
 export interface NostrRelay extends Relay, PublicRelaySettings {}
@@ -57,7 +58,7 @@ class Relays {
         }
         this.initRelays(relays);
         this.intervalRetry();
-        this.saveToLocalStorage();
+        // this.saveToLocalStorage();
     }
 
     initRelays(relays: NostrRelay[]) {
@@ -76,6 +77,37 @@ class Relays {
         return relays;
     }
 
+    getLastSinces() {
+        const localSinces = localStorage.getItem("nostr.last_sinces");
+        const sinces: Map<string, number> = new Map();
+        if (localSinces) {
+            (JSON.parse(localSinces) as [string, number][]).forEach(([id, since]) => {
+                sinces.set(id, since);
+            });
+        }
+        return sinces;
+    }
+
+    getLastSinceById(id: string) {
+        const lastSinces = this.getLastSinces();
+        if (!lastSinces.has(id)) {
+            return 0;
+        }
+        return lastSinces.get(id) || 0;
+    }
+
+    setLastSince(id: string, since: number) {
+        const lastSinces = this.getLastSinces();
+        lastSinces.set(id, since);
+        localStorage.setItem("nostr.last_sinces", JSON.stringify([...lastSinces.entries()]));
+    }
+
+    removeLastSince(id: string) {
+        const lastSinces = this.getLastSinces();
+        lastSinces.delete(id);
+        localStorage.setItem("nostr.last_sinces", JSON.stringify([...lastSinces.entries()]));
+    }
+
     getDefaultRelays(initRelays?: string[]) {
         return [...new Set([...(initRelays || []), ...DEFAULT_RELAYS])].map(
             (url) =>
@@ -84,6 +116,7 @@ class Relays {
                     enabled: true,
                     read: true,
                     write: true,
+                    lastSince: 0,
                 } as NostrRelay),
         );
     }
@@ -94,9 +127,11 @@ class Relays {
             currentRelays = [...toRelays];
         }
         const relays = currentRelays.map((relay: NostrRelay) => {
-            const options = ["enabled", "read", "write"].map((optionKey) => {
+            const options = ["enabled", "read", "write", "lastSince"].map((optionKey) => {
                 let optionValue = relay[optionKey] || false;
-                if (typeof relay[optionKey] !== "boolean") {
+                if (typeof relay[optionKey] === "number") {
+                    optionValue = Number(relay[optionKey]);
+                } else if (typeof relay[optionKey] !== "boolean") {
                     optionValue = true;
                 }
                 return [optionKey, optionValue];
@@ -315,12 +350,13 @@ class Relays {
     }
 
     relayInit(url: string, subscribeAll = true, options?: PublicRelaySettings) {
-        const { read = true, write = true, enabled = true } = options || {};
+        const { read = true, write = true, enabled = true, lastSince = 0 } = options || {};
 
         const relay = relayInit(url) as NostrRelay;
         relay.enabled = enabled;
         relay.read = read;
         relay.write = write;
+        relay.lastSince = lastSince;
         subscribeAll &&
             relay.on("connect", () => {
                 relay.enabled = true;
