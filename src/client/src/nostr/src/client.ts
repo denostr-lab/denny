@@ -162,31 +162,14 @@ class NostrClient {
         const userIds = this.client.getUsers().map((user) => user.userId) as string[];
         const pubkey = this.client.getUserId() as string;
 
-        const period = 8 * 60 * 60;
         const since = utils.now() - utils.timedelta(7, "days");
-
-        const globalOnceId = "global-once";
-        const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey] }];
-        const globalOnceSince = this.relay.getLastSinceById(globalOnceId) || since;
-        this.batchSubscribe([onceFilters], globalOnceId, {
-            alwaysOnce: true,
-            since: globalOnceSince,
-            until: globalOnceSince + period,
-            period,
-        });
-
-        await utils.sleep(1 * 1000);
-        const globalId = "global";
+        const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since }];
+        this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
         const filters: Filter[] = [
-            { kinds: [0, 40, 42, 4, 7], authors: [pubkey] },
-            { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey] },
+            { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since },
+            { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since },
         ];
-        const globalSince = this.relay.getLastSinceById(globalId) || since;
-        this.batchSubscribe([filters], globalId, {
-            since: globalSince,
-            until: globalSince + period,
-            period,
-        });
+        this.relay.subscribe({ filters, id: "global" });
 
         if (roomIds?.length) {
             this.subscribeRooms(roomIds);
@@ -199,11 +182,9 @@ class NostrClient {
 
     subscribePublicRooms() {
         this.readySubscribeRooms = true;
-        const period = 12 * 60 * 60;
         const since = utils.now() - utils.timedelta(30, "days");
-        const until = since + period;
-        const filters: Filter[] = [{ kinds: [40, 41], limit: 2000 }];
-        this.batchSubscribe([filters], "public-rooms", { since, until, period });
+        const filters: Filter[] = [{ kinds: [40, 41], since }];
+        this.relay.subscribe({ filters, id: "public-rooms" });
     }
 
     unsubscribePublicRooms() {
@@ -315,31 +296,22 @@ class NostrClient {
     }
 
     async subscribeRooms(roomsIds: string[]) {
+        const since = utils.now() - utils.timedelta(7, "days");
         const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
         const publicGroupMessage = [41, 42, 7];
         const privateGroupMessage = [142, 141];
 
         if (roomIds.length) {
-            const createChannelKinds = [40, 140];
-            const channelMetadataKinds = [41, 141];
-            const channalMessageKinds = [...publicGroupMessage, ...privateGroupMessage];
-
-            const newRoomIds = await this.subscribeFirstRooms([...roomIds], {
-                createChannelKinds,
-                channalMessageKinds,
-            });
-            await this.subscribeFirstMetadataOfRooms([...newRoomIds], { createChannelKinds, channelMetadataKinds });
-
-            const filters: Filter[] = [
-                { "kinds": channalMessageKinds, "#e": [...newRoomIds] },
-                { kinds: channelMetadataKinds, ids: [...newRoomIds] },
-            ];
-            const since = utils.now() - utils.timedelta(7, "days");
-            this.batchSubscribe([filters], "global-room", {
-                since: this.relay.getLastSinceById("global-room") || since,
-                period: 6 * 60 * 60,
-            });
+            const roomFilters = [
+                {
+                    "kinds": [...publicGroupMessage, ...privateGroupMessage],
+                    "#e": roomIds as string[],
+                    since,
+                },
+                { kinds: [40, 140], ids: roomIds, since },
+            ] as Filter[];
+            this.relay.subscribe({ filters: roomFilters, id: "global-room" });
         }
     }
 
@@ -416,7 +388,7 @@ class NostrClient {
 
     leaveRoom(roomId: string) {
         this.leaveRooms.add(roomId);
-        this.relay.removeLastSince(`room/${roomId}`);
+        // this.relay.removeLastSince(`room/${roomId}`);
         this.saveLeaveRooms();
     }
 
