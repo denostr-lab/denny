@@ -394,15 +394,15 @@ function LoginByNameConfirm(props) {
           {isSubmitting && <LoadingScreen message="Login in progress..." />}
           <Text variant="h2" weight="medium">Save Key</Text>
           <form className="auth-form" onSubmit={handleSubmit}>
-            <Text style={{ marginTop: '30px', color: "rgba(133, 133, 133, 1)" }}>{`Your private key is your password. If you lose this key, you will lose access to your account! Copy it and keep it in a safe place. There is no way to reset your private key.`}</Text>
+            <Text style={{ marginTop: '12px', color: "rgba(133, 133, 133, 1)" }}>{`Your private key is your password. If you lose this key, you will lose access to your account! Copy it and keep it in a safe place. There is no way to reset your private key.`}</Text>
             <div className="auth-form__pass-eye-wrapper">
               <Input name='pubkey' value={values.pubkey} label="Your public key" disabled />
-              <IconButton onClick={onPubClick} size="extra-small" src={copyIC} />
+              <IconButton onClick={onPubClick} size="extra-small" src={copyIC} tooltip={'copy'} />
             </div>
             <div className="auth-form__pass-eye-wrapper">
               <Input name='private' value={values.prikey} label="Your private key" disabled />
 
-              <IconButton onClick={onPrivateClick} size="extra-small" src={copyIC} />
+              <IconButton onClick={onPrivateClick} size="extra-small" src={copyIC} tooltip={'copy'} />
             </div>
             <div className="auth-form__btns">
               <Button variant="primary" type="submit" disabled={isSubmitting}>Save and continue</Button>
@@ -429,7 +429,6 @@ function LoginByPriKey() {
         return true;
       }
     }
-    errors.privatekey = '';
     return false
   };
 
@@ -482,6 +481,7 @@ function LoginByPriKey() {
   };
 
   const handleEnter = (event, { values, errors, handleSubmit }) => {
+
     if (event.keyCode === 13) {
       const inputText = event.target.value;
       if (validPrivateKey(errors, inputText)) {
@@ -495,7 +495,7 @@ function LoginByPriKey() {
 
   const handleChangeValidate = (event, { errors, handleChange }) => {
     validPrivateKey(errors, event.target.value)
-    handleChange(event);
+    // handleChange(event);
   };
 
   return (
@@ -846,14 +846,14 @@ function Auth() {
 
         <div className="auth-footer">
           <Text variant="b2">
-            <a href="https://cinny.in" target="_blank" rel="noreferrer">About</a>
+            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">About</a>
           </Text>
           <Text variant="b2">
-            <a href="https://github.com/ajbura/cinny/releases" target="_blank" rel="noreferrer">{`v${cons.version}`}</a>
+            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">{`v${cons.version}`}</a>
           </Text>
 
           <Text variant="b2">
-            <a href="https://matrix.org" target="_blank" rel="noreferrer">Powered by Matrix</a>
+            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">Powered by GuakaMoli</a>
           </Text>
         </div>
       </div>

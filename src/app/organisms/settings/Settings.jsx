@@ -387,11 +387,11 @@ function AboutSection() {
               Denny
               <span className="text text-b3" style={{ margin: '0 var(--sp-extra-tight)' }}>{`v${cons.version}`}</span>
             </Text>
-            <Text>Yet another matrix client</Text>
+            <Text>Yet another denny client</Text>
 
             <div className="settings-about__btns">
-              <Button onClick={() => window.open('https://github.com/ajbura/cinny')}>Source code</Button>
-              <Button onClick={() => window.open('https://cinny.in/#sponsor')}>Support</Button>
+              <Button onClick={() => window.open('https://github.com/Guakamoli/denny')}>Source code</Button>
+              {/* <Button onClick={() => window.open('https://cinny.in/#sponsor')}>Support</Button> */}
               <Button onClick={() => initMatrix.clearCacheAndReload()} variant="danger">Clear cache & reload</Button>
             </div>
           </div>
@@ -403,15 +403,7 @@ function AboutSection() {
           <ul>
             <li>
               {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-              <Text>The <a href="https://github.com/matrix-org/matrix-js-sdk" rel="noreferrer noopener" target="_blank">matrix-js-sdk</a> is © <a href="https://matrix.org/foundation" rel="noreferrer noopener" target="_blank">The Matrix.org Foundation C.I.C</a> used under the terms of <a href="http://www.apache.org/licenses/LICENSE-2.0" rel="noreferrer noopener" target="_blank">Apache 2.0</a>.</Text>
-            </li>
-            <li>
-              {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-              <Text>The <a href="https://twemoji.twitter.com" target="_blank" rel="noreferrer noopener">Twemoji</a> emoji art is © <a href="https://twemoji.twitter.com" target="_blank" rel="noreferrer noopener">Twitter, Inc and other contributors</a> used under the terms of <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC-BY 4.0</a>.</Text>
-            </li>
-            <li>
-              {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-              <Text>The <a href="https://material.io/design/sound/sound-resources.html" target="_blank" rel="noreferrer noopener">Material sound resources</a> are © <a href="https://google.com" target="_blank" rel="noreferrer noopener">Google</a> used under the terms of <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC-BY 4.0</a>.</Text>
+              <Text>The <a href="https://github.com/Guakamoli/matrix-nostr-js-sdk" rel="noreferrer noopener" target="_blank">matrix-nostr-js-sdk</a> is © <a rel="noreferrer noopener" target="_blank">Guakamoli Media Technology Corporation</a> used under the terms of <a href="http://www.apache.org/licenses/LICENSE-2.0" rel="noreferrer noopener" target="_blank">Apache 2.0</a>.</Text>
             </li>
           </ul>
         </div>
