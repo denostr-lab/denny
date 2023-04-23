@@ -304,11 +304,11 @@ function SecuritySection() {
   const mx = initMatrix.matrixClient;
   const onPrivateClick = () => {
     const clipboard = navigator.clipboard;
-    clipboard.writeText(mx.getAccessToken())
+    clipboard.writeText(mx.getUserPrivateKey())
   }
   const onPubClick = () => {
     const clipboard = navigator.clipboard;
-    clipboard.writeText(mx.getUserId())
+    clipboard.writeText(mx.getUserPubKey())
   }
   return (
     <div className="settings-security">
@@ -318,7 +318,7 @@ function SecuritySection() {
           title='Your public key'
           content={<div className="keyword-notification__keyword">
             <div className='key-form'>
-              <Input name="new-relay-url" disabled value={mx.getUserId()} />
+              <Input name="new-relay-url" disabled value={mx.getUserPubKey()} />
               <Button variant="primary" onClick={onPubClick}>
                 Copy
               </Button>
@@ -331,7 +331,7 @@ function SecuritySection() {
           content={<div className="keyword-notification__keyword">
             <div className='key-form'>
 
-              <Input name="private" disabled value={mx.getAccessToken()} type="password" />
+              <Input name="private" disabled value={mx.getUserPrivateKey()} type="password" />
               <Button variant="primary" onClick={onPrivateClick}>
                 Copy
               </Button>
@@ -494,7 +494,7 @@ function Settings() {
     >
       {isOpen && (
         <div className="settings-window__content">
-          <ProfileEditor userId={initMatrix.matrixClient.getUserId()} />
+          <ProfileEditor userId={initMatrix.matrixClient.getUserPubKey()} />
           <Tabs
             items={tabItems}
             defaultSelected={tabItems.findIndex((tab) => tab.text === selectedTab.text)}

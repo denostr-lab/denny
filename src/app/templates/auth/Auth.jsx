@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import './Auth.scss';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { Formik } from 'formik';
+import { getPublicKey, getEventHash } from "nostr-tools";
 
 import * as auth from '../../../client/action/auth';
 import cons from '../../../client/state/cons';
@@ -424,6 +425,10 @@ function LoginByPriKey() {
   const validPrivateKey = (errors, value) => {
     const prikey = String(value || '').trim();
     if (prikey && prikey.length > 0) {
+      if (prikey.startsWith('npub')) {
+        errors.privatekey = 'invalid private key';
+        return false
+      }
       if (!Key.toNostrHexAddress(prikey)) {
         errors.privatekey = 'invalid private key';
         return true;
