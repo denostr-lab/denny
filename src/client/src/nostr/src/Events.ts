@@ -257,7 +257,6 @@ class Events {
         const content = JSON.parse(event.content);
         let roomAttrs = [
             { key: "create", type: EventType.RoomCreate, content: { creator: event.pubkey } },
-
             { key: "join-rules", type: EventType.RoomJoinRules, content: { join_rule: "public" } },
             {
                 key: "member",
@@ -630,7 +629,7 @@ class Events {
             const metadata: RoomMetaInfo = {
                 roomId: roomid,
                 sender: roomState.sender ?? event.pubkey,
-                eventId: `${roomState.type}-${event.id}`,
+                eventId: `private-${roomState.type}-${event.id}`,
                 createdAt: roomState?.created_at || created_at,
                 content: roomState.content,
                 type: roomState.type,
@@ -683,10 +682,10 @@ class Events {
         }
         const currentTs = getRoomMetaUpdateTs(client, roomid, syncResponse);
 
-        if (currentTs < created_at) {
+        if (!currentTs) {
             roomStates = [
-                { key: "name", type: EventType.RoomName, content: { name: roomid }, state_key: "" },
-                { key: "topic", type: EventType.RoomTopic, content: { topic: roomid }, state_key: "" },
+                { key: "name", type: EventType.RoomName, content: { name: roomid }, state_key: "", created_at: 1 },
+                { key: "topic", type: EventType.RoomTopic, content: { topic: roomid }, state_key: "", created_at: 1 },
             ];
         }
         const memberStates = [
