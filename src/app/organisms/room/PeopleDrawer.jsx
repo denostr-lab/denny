@@ -42,11 +42,8 @@ function PeopleDrawer({ roomId }) {
   const PER_PAGE_MEMBER = 50;
   const mx = initMatrix.matrixClient;
   const room = mx.getRoom(roomId);
-  const isDM = initMatrix.roomList.directs.has(roomId);
-  let canInvite = !isDM && room?.canInvite(mx.getUserId());
-  if (!room?.currentState?.getStateEvents?.("m.room.encryption", "")) {
-    canInvite = false
-  }
+  let canInvite = room?.canInvite(mx.getUserId());
+
   const [itemCount, setItemCount] = useState(PER_PAGE_MEMBER);
   const [membership, setMembership] = useState('join');
   const [memberList, setMemberList] = useState([]);

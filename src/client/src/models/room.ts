@@ -65,6 +65,7 @@ import { IStateEventWithRoomId } from "../@types/search";
 import { RelationsContainer } from "./relations-container";
 import { ReadReceipt, synthesizeReceipt } from "./read-receipt";
 import { Poll, PollEvent } from "./poll";
+import * as olmlib from "../crypto/olmlib";
 
 // These constants are used as sane defaults when the homeserver doesn't support
 // the m.room_versions capability. In practice, KNOWN_SAFE_ROOM_VERSION should be
@@ -2983,6 +2984,16 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
      */
     public canInvite(userId: string): boolean {
         let canInvite = this.getMyMembership() === "join";
+        const roomEncryptionprivate = this.currentState.getStateEvents(EventType.RoomEncryption, "");
+        const roomEncryption = this.currentState.getStateEvents(EventType.RoomMetaEncrypted, "");
+
+        if (roomEncryptionprivate) {
+            return false;
+        }
+        if (!roomEncryptionprivate && !roomEncryption) {
+            return false;
+        }
+
         const powerLevelsEvent = this.currentState.getStateEvents(EventType.RoomPowerLevels, "");
         const powerLevels = powerLevelsEvent && powerLevelsEvent.getContent();
         const me = this.getMember(userId);
