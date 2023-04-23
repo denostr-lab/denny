@@ -9,6 +9,7 @@ import {
     handlePublishEvent,
     initRoomKeyTask,
     removeLocalTask,
+    splitRequest,
 } from "./Helpers";
 import * as utils from "../../utils";
 import { MetaInfo } from "./@types/index";
@@ -51,25 +52,145 @@ class NostrClient {
         Events.initUsersAndRooms(this.client);
     }
 
-    initGlobalSubscribe() {
-        const since = utils.now() - utils.timedelta(30, "days");
+    handleFilters(
+        batchFilters: Filter[][],
+        opts: {
+            since?: number;
+            until?: number;
+            isLastActiveTimestamp?: boolean;
+            alwaysOnce?: boolean;
+            initialSeens?: Map<string, number>;
+        },
+    ) {
+        const { since, until, isLastActiveTimestamp = false } = opts;
+
+        const newFilters: Filter[] = [];
+        const filters = batchFilters.shift() as Filter[];
+        filters.forEach((filter) => {
+            if (filter?.since) {
+                delete filter.since;
+            }
+            if (filter?.until) {
+                delete filter.until;
+            }
+
+            newFilters.push({
+                ...filter,
+                since,
+                ...(!isLastActiveTimestamp ? { until } : {}),
+            });
+        });
+        return newFilters;
+    }
+
+    batchSubscribe(
+        batchFilters: Filter[][],
+        id: string,
+        opts: {
+            once?: boolean;
+            alwaysOnce?: boolean;
+            since: number;
+            until?: number;
+            period: number;
+            initialSeens?: Map<string, number>;
+            isLastActiveTimestamp?: boolean;
+        },
+    ) {
+        if (batchFilters.length === 0) {
+            return;
+        }
+
+        const { since, until, period, alwaysOnce = false, isLastActiveTimestamp = false, initialSeens } = opts;
+        let { once = false } = opts;
+
+        if ((alwaysOnce && once === false) || (!isLastActiveTimestamp && !alwaysOnce && once === false)) {
+            once = true;
+        }
+
+        if (isLastActiveTimestamp) {
+            const filters: Filter[] = this.handleFilters(batchFilters, { ...opts }); // 移除执行完的filters
+            this.relay.setLastSince(id, since);
+            this.relay.subscribe({ filters, id, once: alwaysOnce });
+            return;
+        }
+
+        const filters: Filter[] = this.handleFilters(batchFilters, { ...opts });
+        if (filters.length === 0) {
+            return;
+        }
+
+        const callback = async (event: Event) => {
+            if (event !== null) {
+                return;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 30));
+
+            const lastSince = until || since;
+            const lastUntil = lastSince + period;
+
+            const subOpts: any = {
+                since: lastSince,
+                once: true,
+                alwaysOnce,
+                period,
+                isLastActiveTimestamp: false,
+                initialSeens,
+            };
+            if (until && lastUntil >= Math.round(Date.now() / 1000)) {
+                subOpts.once = false;
+                subOpts.isLastActiveTimestamp = true;
+            } else {
+                subOpts.until = lastUntil;
+            }
+
+            batchFilters.unshift(filters);
+            this.batchSubscribe(batchFilters, id, subOpts);
+        };
+
+        const subscribeOpts: any = { filters, id, callback };
+        if (!isLastActiveTimestamp) {
+            subscribeOpts.once = true;
+        }
+        if (isLastActiveTimestamp) {
+            subscribeOpts.once = alwaysOnce;
+        }
+        this.relay.subscribe(subscribeOpts);
+    }
+
+    async initGlobalSubscribe() {
+        const since = utils.now() - utils.timedelta(7, "days");
         const roomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const userIds = this.client.getUsers().map((user) => user.userId) as string[];
 
         const pubkey = this.client.getUserId() as string;
-        const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since, "limit": 5000 }];
+
+        const period = 12 * 60 * 60;
+        const until = since + period;
+
+        const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey] }];
+        this.batchSubscribe([onceFilters], "global-once", {
+            alwaysOnce: true,
+            since: this.relay.getLastSinceById("global-once") || since,
+            until,
+            period,
+        });
+
+        await utils.sleep(2 * 1000);
         const filters: Filter[] = [
-            { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since, limit: 5000 },
-            { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since, "limit": 5000 },
+            { kinds: [0, 40, 42, 4, 7], authors: [pubkey] },
+            { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey] },
         ];
+        this.batchSubscribe([filters], "global", {
+            since: this.relay.getLastSinceById("global") || since,
+            until,
+            period,
+        });
 
-        this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
-
-        this.relay.subscribe({ filters, id: "global" });
-
+        await utils.sleep(2 * 1000);
         if (roomIds?.length) {
             this.subscribeRooms(roomIds);
         }
+
         if (userIds?.length) {
             this.subscribeUsersDeletion(userIds);
         }
@@ -77,9 +198,11 @@ class NostrClient {
 
     subscribePublicRooms() {
         this.readySubscribeRooms = true;
-        const since = utils.now() - utils.timedelta(90, "days");
-        const filters: Filter[] = [{ kinds: [40, 41], since }];
-        this.relay.subscribe({ filters, id: "public-rooms" });
+        const period = 24 * 60 * 60;
+        const since = utils.now() - utils.timedelta(30, "days");
+        const until = since + period;
+        const filters: Filter[] = [{ kinds: [40, 41] }];
+        this.batchSubscribe([filters], "public-rooms", { since, until, period });
     }
 
     unsubscribePublicRooms() {
@@ -87,8 +210,19 @@ class NostrClient {
         this.readySubscribeRooms = false;
     }
 
-    subscribeRooms(roomsIds: string[]) {
-        const since = utils.now() - utils.timedelta(30, "days");
+    getLastActiveTimestamp(room: Room) {
+        const events = room
+            .getLiveTimeline()
+            .getEvents()
+            .sort((a, b) => (a.getTs() > b.getTs() ? 1 : -1));
+        if (events.length) {
+            const lastEvent = events[events.length - 1];
+            return lastEvent.getTs();
+        }
+        return Number.MIN_SAFE_INTEGER;
+    }
+
+    async subscribeRooms(roomsIds: string[]) {
         const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
         const publicGroupMessage = [41, 42, 7];
@@ -96,16 +230,71 @@ class NostrClient {
         // 这里要过滤掉用户
 
         if (roomIds.length) {
-            const roomFilters = [
-                {
-                    "kinds": [...publicGroupMessage, ...privateGroupMessage],
-                    "#e": roomIds as string[],
-                    since,
-                    "limit": 5000,
-                },
-                { kinds: [40, 140], ids: roomIds, since, limit: 5000 },
-            ] as Filter[];
-            this.relay.subscribe({ filters: roomFilters, id: "global-room" });
+            const firstJoinSubscribe = (roomId: string, lastActiveTimestamp: number) =>
+                new Promise((resolve, reject) => {
+                    const id = `room/${roomId}`;
+                    const since = this.relay.getLastSinceById(id) || lastActiveTimestamp;
+                    const filters: Filter[] = [
+                        { "kinds": [...publicGroupMessage, ...privateGroupMessage], "#e": [roomId], since },
+                        { kinds: [40, 140], ids: [roomId], since },
+                    ];
+                    let lastCreatedAt = 0;
+                    const callback = (event: Event) => {
+                        if (event !== null) {
+                            if (event.created_at >= lastCreatedAt) {
+                                lastCreatedAt = event.created_at + 1;
+                            }
+                            return;
+                        }
+
+                        const newFilters: Filter[] = [];
+                        if (lastCreatedAt >= lastActiveTimestamp) {
+                            filters.forEach((filter) => {
+                                if (filter?.since) {
+                                    delete filter.since;
+                                }
+                                if (filter?.until) {
+                                    delete filter.until;
+                                }
+
+                                newFilters.push({
+                                    ...filter,
+                                    since: lastCreatedAt,
+                                });
+                            });
+                        }
+                        resolve(true);
+                    };
+                    this.relay.setLastSince(id, since);
+                    this.relay.subscribe({ once: true, id, callback, filters });
+                });
+
+            const since = utils.now() - utils.timedelta(7, "days");
+            const newRoomIds: string[] = [];
+            const batchRoomIds = splitRequest([...roomIds], 1);
+            for (const roomIds of batchRoomIds) {
+                let lastActiveTimestamp = since;
+                const roomId = roomIds[0];
+                const room = this.client.getRoom(roomId);
+                if (room) {
+                    const newLastActiveTimestamp = Math.round(this.getLastActiveTimestamp(room) / 1000);
+                    if (newLastActiveTimestamp > 0 && newLastActiveTimestamp >= since) {
+                        lastActiveTimestamp = newLastActiveTimestamp;
+                    }
+                }
+
+                await firstJoinSubscribe(roomId, lastActiveTimestamp);
+                newRoomIds.push(roomId);
+            }
+
+            const filters: Filter[] = [
+                { "kinds": [...publicGroupMessage, ...privateGroupMessage], "#e": [...newRoomIds] },
+                { kinds: [40, 140], ids: [...newRoomIds] },
+            ];
+            this.batchSubscribe([filters], "global-room", {
+                since: this.relay.getLastSinceById("global-room") || since,
+                period: 6 * 60 * 60,
+            });
         }
     }
 
@@ -182,6 +371,7 @@ class NostrClient {
 
     leaveRoom(roomId: string) {
         this.leaveRooms.add(roomId);
+        this.relay.removeLastSince(`room/${roomId}`);
         this.saveLeaveRooms();
     }
 

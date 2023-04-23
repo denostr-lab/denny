@@ -678,14 +678,14 @@ class Events {
                         sender: null,
                         created_at: 1,
                     },
-                    {
-                        content: {
-                            name: roomid,
-                        },
-                        type: EventType.RoomName,
-                        sender: null,
-                        created_at: 1,
-                    },
+                    // {
+                    //     content: {
+                    //         name: roomid,
+                    //     },
+                    //     type: EventType.RoomName,
+                    //     sender: null,
+                    //     created_at: 1,
+                    // },
                 ];
             }
         }
