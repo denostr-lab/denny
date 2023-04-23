@@ -254,7 +254,7 @@ function ProfileFooter({ roomId, userId, onRequestClose }) {
       >
         {isCreatingDM ? 'Creating room...' : 'Message'}
       </Button>
-      { isBanned && canIKick && (
+      {isBanned && canIKick && (
         <Button
           variant="positive"
           onClick={() => roomActions.unban(roomId, userId)}
@@ -262,7 +262,7 @@ function ProfileFooter({ roomId, userId, onRequestClose }) {
           Unban
         </Button>
       )}
-      { (isInvited ? canIKick : room.canInvite(mx.getUserId())) && isInvitable && (
+      {(isInvited ? canIKick : room.canInvite(mx.getUserId())) && isInvitable && (
         <Button
           onClick={toggleInvite}
           disabled={isInviting}
@@ -300,10 +300,13 @@ function useToggleDialog() {
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    const loadProfile = (uId, rId) => {
+    const loadProfile = async (uId, rId) => {
+      const mx = initMatrix.matrixClient;
+      await mx.getProfileInfo(uId)
       setIsOpen(true);
       setUserId(uId);
       setRoomId(rId);
+
     };
     navigation.on(cons.events.navigation.PROFILE_VIEWER_OPENED, loadProfile);
     return () => {
@@ -421,7 +424,7 @@ function ProfileViewer() {
         </div>
         <ModerationTools roomId={roomId} userId={userId} />
         <SessionInfo userId={userId} />
-        { userId !== mx.getUserId() && (
+        {userId !== mx.getUserId() && (
           <ProfileFooter roomId={roomId} userId={userId} onRequestClose={closeDialog} />
         )}
       </div>

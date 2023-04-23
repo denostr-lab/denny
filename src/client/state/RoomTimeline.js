@@ -150,12 +150,6 @@ class RoomTimeline extends EventEmitter {
     }
     const id = mEvent.getId()
     const nostrid = mEvent.getNostrId()
-    // if (nostrid) {
-    //   const index = this.timeline.findIndex(i => i.getId() === id)
-    //   if (index > -1) {
-    //     this.timeline.splice(index, 1)
-    //   }
-    // }
     const index = this.timeline.findIndex(i => i.getId() === id || i.getNostrId() === nostrid)
     if (index > -1) {
       this.timeline.splice(index, 1)
