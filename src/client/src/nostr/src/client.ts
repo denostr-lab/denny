@@ -161,6 +161,7 @@ class NostrClient {
         const roomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const userIds = this.client.getUsers().map((user) => user.userId) as string[];
         const pubkey = this.client.getUserId() as string;
+        this.sendSelfInfo();
 
         const since = utils.now() - utils.timedelta(7, "days");
         const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since }];
@@ -170,13 +171,31 @@ class NostrClient {
             { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since },
         ];
         this.relay.subscribe({ filters, id: "global" });
-
         if (roomIds?.length) {
             this.subscribeRooms(roomIds);
         }
 
         if (userIds?.length) {
             this.subscribeUsersDeletion(userIds);
+        }
+    }
+    async sendSelfInfo() {
+        const key = localStorage.getItem("user_meta_create");
+        if (!key) {
+            return;
+        }
+        const data = localStorage.getItem("nostr.profile");
+        if (!data) return;
+        try {
+            const jsonData = JSON.parse(data);
+            if (!jsonData) {
+                return;
+            }
+            this.setUserMetaData({ displayname: jsonData.name });
+        } catch (e) {
+            console.info(e, "erro init user");
+        } finally {
+            localStorage.removeItem("user_meta_create");
         }
     }
 
@@ -673,10 +692,12 @@ class NostrClient {
 
     async setUserMetaData({ avatar_url, displayname }: { avatar_url?: string; displayname?: string }) {
         const userId = this.client.getUserId();
+
         const user = this.client.getUser(userId);
+
         const content = {
-            picture: avatar_url ?? user.avatarUrl,
-            name: displayname ?? user.displayName,
+            picture: avatar_url ?? user?.avatarUrl,
+            name: displayname ?? user?.displayName,
             about: "",
         } as MetaInfo;
         let event = {
