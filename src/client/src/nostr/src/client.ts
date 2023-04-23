@@ -162,7 +162,7 @@ class NostrClient {
         const userIds = this.client.getUsers().map((user) => user.userId) as string[];
         const pubkey = this.client.getUserId() as string;
 
-        const period = 1 * 60 * 60;
+        const period = 8 * 60 * 60;
         const since = utils.now() - utils.timedelta(7, "days");
 
         const globalOnceId = "global-once";
@@ -199,7 +199,7 @@ class NostrClient {
 
     subscribePublicRooms() {
         this.readySubscribeRooms = true;
-        const period = 8 * 60 * 60;
+        const period = 12 * 60 * 60;
         const since = utils.now() - utils.timedelta(30, "days");
         const until = since + period;
         const filters: Filter[] = [{ kinds: [40, 41], limit: 2000 }];
@@ -338,7 +338,7 @@ class NostrClient {
             const since = utils.now() - utils.timedelta(7, "days");
             this.batchSubscribe([filters], "global-room", {
                 since: this.relay.getLastSinceById("global-room") || since,
-                period: 1 * 60 * 60,
+                period: 6 * 60 * 60,
             });
         }
     }
