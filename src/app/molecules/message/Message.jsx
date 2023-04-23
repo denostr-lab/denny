@@ -791,14 +791,14 @@ function Message({
         <MessageAvatar
           roomId={roomId}
           avatarSrc={avatarSrc}
-          userId={senderId}
+            userId={mEvent.getSender()}
           username={username}
         />
       )}
       <div className="message__main-container">
         {!isBodyOnly && (
           <MessageHeader
-            userId={senderId}
+            userId={mEvent.getSender()}
             username={username}
             timestamp={mEvent.getTs()}
             fullTime={fullTime}
