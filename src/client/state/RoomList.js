@@ -226,8 +226,8 @@ class RoomList extends EventEmitter {
     this.inviteRooms.clear();
     this.matrixClient.getRooms().forEach((room) => {
       const { roomId } = room;
-      if (this.matrixClient.hasLeaveRoom(roomId)) return;
 
+      if (this.matrixClient.hasLeaveRoom(roomId)) return;
       const tombstone = room.currentState.events.get('m.room.tombstone');
       if (tombstone?.get('') !== undefined) {
         const repRoomId = tombstone.get('').getContent().replacement_room;

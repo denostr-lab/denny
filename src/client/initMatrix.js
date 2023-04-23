@@ -10,6 +10,7 @@ import RoomsInput from './state/RoomsInput';
 import Notifications from './state/Notifications';
 import { cryptoCallbacks } from './state/secretStorageKeys';
 import navigation from './state/navigation';
+import { resendSharedRoomKey } from './src/nostr/src/Helpers';
 
 global.Olm = Olm;
 
@@ -56,6 +57,9 @@ class InitMatrix extends EventEmitter {
       lazyLoadMembers: true,
     });
     this.matrixClient.setGlobalErrorOnUnknownDevices(false);
+
+    // 重发未发送完成的RoomKey
+    resendSharedRoomKey(this.matrixClient);
   }
 
   setupSync() {
@@ -64,7 +68,7 @@ class InitMatrix extends EventEmitter {
         console.log('NULL state');
       },
       SYNCING: () => {
-        console.log('SYNCING state');
+        // console.log('SYNCING state');
       },
       PREPARED: (prevState) => {
         // TODO: remove global.initMatrix at end

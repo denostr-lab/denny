@@ -310,7 +310,10 @@ function useHandleScroll(
     }
     if (roomTimeline.isServingLiveTimeline()) {
       limit.setFrom(roomTimeline.timeline.length - limit.maxEvents);
-      timelineScroll.scrollToBottom();
+      setTimeout(() => {
+        timelineScroll.scrollToBottom();
+
+      }, 1000);
       forceUpdateLimit();
       return;
     }
@@ -399,7 +402,9 @@ function RoomViewContent({ eventId, roomTimeline }) {
   const eventLimitRef = useRef(null);
   const [editEventId, setEditEventId] = useState(null);
   const cancelEdit = () => setEditEventId(null);
-
+  const roomId = roomTimeline.roomId
+  const mx = initMatrix.matrixClient;
+  const room = mx.getRoom(roomId);
   const readUptoEvtStore = useStore(roomTimeline);
   const [onLimitUpdate, forceUpdateLimit] = useForceUpdate();
 
@@ -428,7 +433,25 @@ function RoomViewContent({ eventId, roomTimeline }) {
       eventLimitRef.current = new EventLimit();
     }
   });
+  useEffect(() => {
+    const mx = initMatrix.matrixClient;
+    const _handle = (event) => {
+      const userId = event?.event?.user_id
+      if (!userId || !room) {
+        return
+      }
+      const member = room.getMember(userId)
+      if (member) {
+        forceUpdateLimit()
 
+      }
+    }
+    mx.on('event', _handle)
+    return () => {
+      mx.off('event', _handle)
+
+    }
+  }, [room])
   // when active timeline changes
   useEffect(() => {
     if (!roomTimeline.initialized) return undefined;
@@ -541,13 +564,13 @@ function RoomViewContent({ eventId, roomTimeline }) {
     //   tl.push(loadingMsgPlaceholders(1, PLACEHOLDER_COUNT));
     //   itemCountIndex += PLACEHOLDER_COUNT;
     // }
-    timeline = timeline.sort((a, b) => {
-      if (a.getTs() > b.getTs()) {
-        return 1
-      } else {
-        return -1
-      }
-    })
+    // timeline = timeline.sort((a, b) => {
+    //   if (a.getTs() > b.getTs()) {
+    //     return 1
+    //   } else {
+    //     return -1
+    //   }
+    // })
     for (let i = limit.from; i < limit.length; i += 1) {
       if (i >= timeline.length) break;
       const mEvent = timeline[i];
@@ -573,7 +596,7 @@ function RoomViewContent({ eventId, roomTimeline }) {
           && prevMEvent?.getTs() <= readUptoEvent.getTs()
           && readUptoEvent.getTs() < mEvent.getTs());
         if (unreadDivider) {
-          isNewEvent = true;
+          // isNewEvent = true;
           // tl.push(<Divider key={`new-${mEvent.getId()}`} variant="positive" text="New messages" />);
           // itemCountIndex += 1;
           // if (jumpToItemIndex === -1) jumpToItemIndex = itemCountIndex;
@@ -606,7 +629,6 @@ function RoomViewContent({ eventId, roomTimeline }) {
 
     return tl;
   };
-
   return (
     <ScrollView onScroll={handleTimelineScroll} ref={timelineSVRef} autoHide>
       <div className="room-view__content" onClick={handleOnClickCapture}>

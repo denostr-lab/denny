@@ -3,6 +3,7 @@ import React, {
 } from 'react';
 import PropTypes from 'prop-types';
 import './PeopleDrawer.scss';
+import { useForceUpdate } from '../../hooks/useForceUpdate';
 
 import initMatrix from '../../../client/initMatrix';
 import { getPowerLabel, getUsernameOfRoomMember } from '../../../util/matrixUtil';
@@ -42,13 +43,14 @@ function PeopleDrawer({ roomId }) {
   const PER_PAGE_MEMBER = 50;
   const mx = initMatrix.matrixClient;
   const room = mx.getRoom(roomId);
-  const canInvite = room?.canInvite(mx.getUserId());
+  let canInvite = room?.canInvite(mx.getUserId());
 
   const [itemCount, setItemCount] = useState(PER_PAGE_MEMBER);
   const [membership, setMembership] = useState('join');
   const [memberList, setMemberList] = useState([]);
   const [searchedMembers, setSearchedMembers] = useState(null);
   const searchRef = useRef(null);
+  const [randDomData, forceUpdateLimit] = useForceUpdate();
 
   const getMembersWithMembership = useCallback(
     (mship) => room.getMembersWithMembership(mship),
@@ -75,7 +77,25 @@ function PeopleDrawer({ roomId }) {
       setItemCount(PER_PAGE_MEMBER);
     } else asyncSearch.search(term);
   }
+  useEffect(() => {
+    const mx = initMatrix.matrixClient;
+    const _handle = (event) => {
+      const userId = event?.event?.user_id
+      if (!userId || !room) {
+        return
+      }
+      const member = room.getMember(userId)
 
+      if (member) {
+        forceUpdateLimit()
+
+      }
+    }
+    mx.on('event', _handle)
+    return () => {
+      mx.off('event', _handle)
+    }
+  }, [room])
   useEffect(() => {
     asyncSearch.setup(memberList, {
       keys: ['name', 'username', 'userId'],
@@ -117,7 +137,7 @@ function PeopleDrawer({ roomId }) {
       mx.removeListener('RoomMember.membership', updateMemberList);
       mx.removeListener('RoomMember.powerLevel', updateMemberList);
     };
-  }, [roomId, membership]);
+  }, [roomId, membership, randDomData]);
 
   useEffect(() => {
     setMembership('join');

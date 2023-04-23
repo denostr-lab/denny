@@ -12,6 +12,7 @@ import {
     getDefaultSyncResponse,
     handMediaContent,
     getQuery,
+    getRoomMetaUpdateTs,
 } from "./Helpers";
 import * as olmlib from "../../crypto/olmlib";
 import * as algorithms from "../../crypto/algorithms";
@@ -36,6 +37,10 @@ type UserProfile = {
     name: string;
     about: string;
 };
+type lastFetchInfo = {
+    fetchTime: number;
+    updateTime: number;
+};
 
 class Events {
     bufferEvent: ISyncResponse | undefined;
@@ -46,9 +51,9 @@ class Events {
     roomJoinMap: Record<string, Set<string>> = {};
 
     NprevAccountData = {};
-
+    userMetaFetchTs: Map<string, lastFetchInfo> = new Map();
+    roomMetaFetchTs: Map<string, lastFetchInfo> = new Map();
     rooms: Map<string, any> = new Map();
-
     initUsersAndRooms = (client: MatrixClient) => {
         const users = client.getUsers();
         users.forEach((user) => {
@@ -90,10 +95,7 @@ class Events {
             return;
         }
         const content = clearContent.body;
-        const roomAttrs = [
-            { key: "name", type: EventType.RoomName, content: { name: content.name }, state_key: "" },
-            { key: "topic", type: EventType.RoomTopic, content: { topic: content.about }, state_key: "" },
-            { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture }, state_key: "" },
+        let roomAttrs = [
             { key: "join-rules", type: EventType.RoomJoinRules, content: { join_rule: "private" }, state_key: "" },
             {
                 key: "member",
@@ -106,7 +108,16 @@ class Events {
         if (!syncResponse.rooms.join?.[roomid]) {
             syncResponse.rooms.join[roomid] = getDefaultRoomData();
         }
+        const currentTs = getRoomMetaUpdateTs(client, roomid, syncResponse);
 
+        if (currentTs < created_at) {
+            const roomStateAttrs = [
+                { key: "name", type: EventType.RoomName, content: { name: content.name }, state_key: "" },
+                { key: "topic", type: EventType.RoomTopic, content: { topic: content.about }, state_key: "" },
+                { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture }, state_key: "" },
+            ];
+            roomAttrs = roomAttrs.concat(roomStateAttrs);
+        }
         for (const roomAttr of roomAttrs) {
             if (roomAttr.key === "member") {
                 const isLeave = client.nostrClient.hasLeaveRoom(roomid) && Key.getPubKey() === userId;
@@ -126,6 +137,37 @@ class Events {
             });
         }
     }
+    handJoinRoom = (client: MatrixClient, roomid: string) => {
+        let syncResponse = this.bufferEvent;
+
+        if (!syncResponse) {
+            syncResponse = getDefaultSyncResponse();
+            this.bufferEvent = syncResponse;
+        }
+        if (!syncResponse.rooms.join?.[roomid]) {
+            syncResponse.rooms.join[roomid] = getDefaultRoomData();
+        }
+        const created_at = Date.now();
+        const userId = client.getUserId();
+        const roomAttr = {
+            key: "member",
+            type: EventType.RoomMember,
+            state_key: userId,
+            sender: userId,
+            content: { displayname: userId, membership: "join" },
+        };
+        syncResponse.rooms.join[roomid].state.events.push({
+            content: roomAttr.content as unknown as IStateEvent,
+            origin_server_ts: created_at,
+            sender: userId as string,
+            state_key: roomAttr.state_key as string,
+            type: roomAttr.type,
+            unsigned: {
+                age: Date.now() - created_at,
+            },
+            event_id: `${roomAttr.key}-${Math.random().toString(16).slice(2, 8)}`,
+        });
+    };
     handleLeaveRoom(client: MatrixClient, event: Event) {
         if (![40, 41, 42, 4].includes(event?.kind)) return false;
         if (!Array.isArray(event?.tags)) return false;
@@ -211,17 +253,10 @@ class Events {
 
     handleCreateRoomEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
         const roomid = event.id;
-        // if (client.getRoom(roomid)) {
-        //   return syncResponse;
-        // }
-
         const created_at = event.created_at * 1000;
         const content = JSON.parse(event.content);
-        const roomAttrs = [
+        let roomAttrs = [
             { key: "create", type: EventType.RoomCreate, content: { creator: event.pubkey } },
-            { key: "name", type: EventType.RoomName, content: { name: content.name } },
-            { key: "topic", type: EventType.RoomTopic, content: { topic: content.about } },
-            { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture } },
             { key: "join-rules", type: EventType.RoomJoinRules, content: { join_rule: "public" } },
             {
                 key: "member",
@@ -233,13 +268,21 @@ class Events {
         if (!syncResponse.rooms.join?.[roomid]) {
             syncResponse.rooms.join[roomid] = getDefaultRoomData();
         }
+        const currentTs = getRoomMetaUpdateTs(client, roomid, syncResponse);
 
+        if (currentTs < created_at) {
+            const roomStateAttrs = [
+                { key: "name", type: EventType.RoomName, content: { name: content.name } },
+                { key: "topic", type: EventType.RoomTopic, content: { topic: content.about } },
+                { key: "avatar", type: EventType.RoomAvatar, content: { url: content.picture } },
+            ];
+            roomAttrs = roomAttrs.concat(roomStateAttrs);
+        }
         for (const roomAttr of roomAttrs) {
             if (roomAttr.key === "member") {
                 const isLeave = client.nostrClient.hasLeaveRoom(roomid) && Key.getPubKey() === event.pubkey;
                 roomAttr.content.membership = isLeave ? "leave" : "join";
             }
-
             syncResponse.rooms.join[roomid].state.events.push({
                 content: roomAttr.content,
                 origin_server_ts: created_at,
@@ -586,7 +629,7 @@ class Events {
             const metadata: RoomMetaInfo = {
                 roomId: roomid,
                 sender: roomState.sender ?? event.pubkey,
-                eventId: `${roomState.type}-${event.id}`,
+                eventId: `private-${roomState.type}-${event.id}`,
                 createdAt: roomState?.created_at || created_at,
                 content: roomState.content,
                 type: roomState.type,
@@ -636,27 +679,14 @@ class Events {
         // 这里构造房间的一些用户信息
         if (!this.roomJoinMap[roomid]) {
             this.roomJoinMap[roomid] = new Set();
-            const room = client.getRoom(roomid);
-            if (!room) {
-                roomStates = [
-                    {
-                        content: {
-                            topic: roomid,
-                        },
-                        type: EventType.RoomTopic,
-                        sender: null,
-                        created_at: 1,
-                    },
-                    {
-                        content: {
-                            name: roomid,
-                        },
-                        type: EventType.RoomName,
-                        sender: null,
-                        created_at: 1,
-                    },
-                ];
-            }
+        }
+        const currentTs = getRoomMetaUpdateTs(client, roomid, syncResponse);
+
+        if (!currentTs) {
+            roomStates = [
+                { key: "name", type: EventType.RoomName, content: { name: roomid }, state_key: "", created_at: 1 },
+                { key: "topic", type: EventType.RoomTopic, content: { topic: roomid }, state_key: "", created_at: 1 },
+            ];
         }
         const memberStates = [
             {
@@ -698,13 +728,12 @@ class Events {
             try {
                 const ciphertext = event.content;
                 const priKey = Key.getPrivKey();
-                const a = await nip04.decrypt(priKey, event.pubkey, ciphertext);
                 const decryptoContent = JSON.parse(
                     await nip04.decrypt(priKey, event.pubkey, ciphertext),
                 ) as unknown as RoomKey;
                 return decryptoContent;
             } catch (e) {
-                console.info(e, "解密错误");
+                console.info(e, "decrypt error");
             }
         };
 
@@ -730,6 +759,7 @@ class Events {
                 type: roomState.type,
                 state_key: roomState.state_key ?? "",
             };
+
             addRoomMeta(syncResponse, metadata);
         };
         const _addTodevice = (decryptoContent: RoomKey) => {
@@ -749,6 +779,12 @@ class Events {
         let decryptoContent = await _decryptoMessage();
         if (!decryptoContent?.room_id || !decryptoContent?.session_key || !decryptoContent?.session_id) {
             return;
+        }
+        syncResponse = this.bufferEvent;
+
+        if (!syncResponse) {
+            syncResponse = getDefaultSyncResponse();
+            this.bufferEvent = syncResponse;
         }
         _createRoom(decryptoContent?.room_id);
         _addTodevice(decryptoContent);
@@ -1015,12 +1051,6 @@ class Events {
             case 142:
                 this.handlePrivateGroupRoomMessageEvent(client, event, syncResponse);
                 break;
-            // case 20001:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
-            // case 20002:
-            //   this.handleEphemeralEvent(event, syncResponse);
-            //   break;
         }
         return syncResponse;
     }

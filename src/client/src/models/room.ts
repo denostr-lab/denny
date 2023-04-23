@@ -65,6 +65,7 @@ import { IStateEventWithRoomId } from "../@types/search";
 import { RelationsContainer } from "./relations-container";
 import { ReadReceipt, synthesizeReceipt } from "./read-receipt";
 import { Poll, PollEvent } from "./poll";
+import * as olmlib from "../crypto/olmlib";
 
 // These constants are used as sane defaults when the homeserver doesn't support
 // the m.room_versions capability. In practice, KNOWN_SAFE_ROOM_VERSION should be
@@ -1478,7 +1479,6 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         allowDefault = true,
     ): string | null {
         const roomAvatarEvent = this.currentState.getStateEvents(EventType.RoomAvatar, "");
-        console.info(roomAvatarEvent, this.roomId, "来爱");
         if (!roomAvatarEvent && !allowDefault) {
             return null;
         }
@@ -1850,7 +1850,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
                 allThreadsFilter,
             );
 
-            if (!events.length) return;
+            if (!events?.length) return;
 
             // Sorted by last_reply origin_server_ts
             const threadRoots = events.map(this.client.getEventMapper()).sort((eventA, eventB) => {
@@ -2335,7 +2335,6 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         if (event.status !== EventStatus.SENDING && event.status !== EventStatus.NOT_SENT) {
             throw new Error("addPendingEvent called on an event with status " + event.status);
         }
-
         if (this.txnToEvent.get(txnId)) {
             throw new Error("addPendingEvent called on an event with known txnId " + txnId);
         }
@@ -2512,7 +2511,8 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
 
         // if the message was sent, we expect an event id
         if (newStatus == EventStatus.SENT && !newEventId) {
-            throw new Error("updatePendingEvent called with status=SENT, but no new event id");
+            return;
+            // throw new Error("updatePendingEvent called with status=SENT, but no new event id");
         }
 
         // SENT races against /sync, so we have to special-case it.
@@ -2557,7 +2557,7 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
         if (newStatus == EventStatus.SENT) {
             // update the event id
             event.replaceLocalEventId(newEventId!);
-
+            event.replaceLocalNostrEventId(undefined);
             const { shouldLiveInRoom, threadId } = this.eventShouldLiveIn(event);
             const thread = threadId ? this.getThread(threadId) : undefined;
             thread?.setEventMetadata(event);
@@ -2984,6 +2984,16 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
      */
     public canInvite(userId: string): boolean {
         let canInvite = this.getMyMembership() === "join";
+        const roomEncryptionprivate = this.currentState.getStateEvents(EventType.RoomEncryption, "");
+        const roomEncryption = this.currentState.getStateEvents(EventType.RoomMetaEncrypted, "");
+
+        if (roomEncryptionprivate) {
+            return false;
+        }
+        if (!roomEncryptionprivate && !roomEncryption) {
+            return false;
+        }
+
         const powerLevelsEvent = this.currentState.getStateEvents(EventType.RoomPowerLevels, "");
         const powerLevels = powerLevelsEvent && powerLevelsEvent.getContent();
         const me = this.getMember(userId);

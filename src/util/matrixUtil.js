@@ -27,17 +27,25 @@ export async function getBaseUrl(servername) {
 export function getUsername(userId) {
   const mx = initMatrix.matrixClient;
   const user = mx.getUser(userId);
-  if (user === null) return userId;
-  let username = user.displayName;
+
+  // if (user === null) return userId;
+  let username = user?.displayName;
   if (typeof username === 'undefined') {
     username = userId;
+  }
+  if (username.match(/^[0-9a-fA-F]{64}$/)) {
+    return mx.getUserPubKey(username);
   }
   return username;
 }
 
 export function getUsernameOfRoomMember(roomMember) {
   const mx = initMatrix.matrixClient;
-  return mx.getUserName(roomMember.userId).slice(0, 20) || roomMember.name.slice(0, 4) || roomMember.userId.slice(0, 4);
+  const name = mx.getUserName(roomMember.userId) || mx.getUserPubKey(roomMember.userId)
+  // if (name.match(/^[0-9a-fA-F]{64}$/)) {
+  //   return mx.getUserPubKey(name);
+  // }
+  return name
 }
 
 export async function isRoomAliasAvailable(alias) {

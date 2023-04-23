@@ -24,7 +24,6 @@ class TimelineScroll {
   scrollToBottom() {
     const scrollInfo = getScrollInfo(this.scroll);
     const maxScrollTop = scrollInfo.height - scrollInfo.viewHeight;
-
     this._scrollTo(scrollInfo, maxScrollTop);
   }
 
@@ -54,6 +53,7 @@ class TimelineScroll {
   }
 
   _scrollTo(scrollInfo, scrollTop) {
+
     this.scroll.scrollTop = scrollTop;
 
     // browser emit 'onscroll' event only if the 'element.scrollTop' value changes.

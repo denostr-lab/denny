@@ -14,7 +14,7 @@ function ConfirmDialog({
     <div className="confirm-dialog">
       <Text>{desc}</Text>
       <div className="confirm-dialog__btn">
-        <Button variant={actionType} onClick={() => onComplete(true)}>{actionTitle}</Button>
+        <Button variant={actionType} onClick={() => onComplete(true)} buttonTestid="confirm">{actionTitle}</Button>
         <Button onClick={() => onComplete(false)}>Cancel</Button>
       </div>
     </div>

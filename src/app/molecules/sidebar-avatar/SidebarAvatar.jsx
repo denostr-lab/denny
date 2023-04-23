@@ -11,6 +11,7 @@ import { blurOnBubbling } from '../../atoms/button/script';
 const SidebarAvatar = React.forwardRef(({
   className, tooltip, active, onClick,
   onContextMenu, avatar, notificationBadge,
+  buttonTestid
 }, ref) => {
   const classes = ['sidebar-avatar'];
   if (active) classes.push('sidebar-avatar--active');
@@ -21,6 +22,7 @@ const SidebarAvatar = React.forwardRef(({
       placement="right"
     >
       <button
+        data-testid={buttonTestid}
         ref={ref}
         className={classes.join(' ')}
         type="button"
@@ -40,9 +42,11 @@ SidebarAvatar.defaultProps = {
   onClick: null,
   onContextMenu: null,
   notificationBadge: null,
+  buttonTestid: '',
 };
 
 SidebarAvatar.propTypes = {
+  buttonTestid: PropTypes.string,
   className: PropTypes.string,
   tooltip: PropTypes.string.isRequired,
   active: PropTypes.bool,

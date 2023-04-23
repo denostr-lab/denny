@@ -1364,7 +1364,6 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         // state, such as highlights when the user's name is mentioned.
         this.on(MatrixEventEvent.Decrypted, (event) => {
             // change by nostr
-
             if (event.getWireType() === EventType.RoomMetaEncrypted) {
                 // 在这里传递给Event
                 this.nostrClient.handleDeCryptedRoomMeta(event);
@@ -4384,10 +4383,10 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
 
         // We always construct a MatrixEvent when sending because the store and scheduler use them.
         // We'll extract the params back out if it turns out the client has no scheduler or store.
+
         const localEvent = new MatrixEvent(
             Object.assign(eventObject, {
                 event_id: "~" + roomId + ":" + txnId,
-
                 user_id: this.credentials.userId,
                 sender: this.credentials.userId,
                 room_id: roomId,
@@ -4422,9 +4421,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
 
         localEvent.setTxnId(txnId);
         localEvent.setStatus(EventStatus.SENDING);
-
-        // add this event immediately to the local store as 'sending'.
         room?.addPendingEvent(localEvent, txnId);
+        // add this event immediately to the local store as 'sending'.
 
         // addPendingEvent can change the state to NOT_SENT if it believes
         // that there's other events that have failed. We won't bother to
@@ -4710,7 +4708,6 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
             content = threadId as IContent;
             threadId = null;
         }
-
         const eventType: string = EventType.RoomMessage;
         const sendContent: IContent = content as IContent;
         return this.sendEvent(roomId, threadId as string | null, eventType, sendContent, txnId);
@@ -5109,6 +5106,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
      * @returns Rejects: with an error response.
      */
     public sendTyping(roomId: string, isTyping: boolean, timeoutMs: number): Promise<{}> {
+        // change by no str
+        return Promise.resolve({});
         if (this.isGuest()) {
             return Promise.resolve({}); // guests cannot send typing notifications so don't bother.
         }
@@ -5882,6 +5881,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
      */
     public async getLatestTimeline(timelineSet: EventTimelineSet): Promise<Optional<EventTimeline>> {
         // don't allow any timeline support unless it's been enabled.
+        // change by nostr
+        return Promise.resolve(null);
         if (!this.timelineSupport) {
             throw new Error(
                 "timeline support is disabled. Set the 'timelineSupport'" +
@@ -5952,6 +5953,12 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         dir: Direction,
         timelineFilter?: Filter,
     ): Promise<IMessagesResponse> {
+        return Promise.resolve({
+            start: "",
+            end: "",
+            chunk: [],
+            state: [],
+        });
         const path = utils.encodeUri("/rooms/$roomId/messages", { $roomId: roomId });
 
         const params: Record<string, string> = {
@@ -7957,6 +7964,8 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
             about: options.topic || "",
         });
 
+        this.nostrClient.joinRoom(event.id);
+
         return { room_id: event.id };
     }
 
@@ -8207,7 +8216,7 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         since,
         ...options
     }: IRoomDirectoryOptions = {}): Promise<IPublicRoomsResponse> {
-        const queryParams: QueryDict = { server, limit, since };
+        // const queryParams: QueryDict = { server, limit, since };
         // if (Object.keys(options).length === 0) {
         //   return this.http.authedRequest(Method.Get, '/publicRooms', queryParams);
         // } else {
@@ -8230,38 +8239,14 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
       next_batch: "abc"
       total_room_count_estimate: 999
      */
-        const search = options.filter.generic_search_term;
-        const start = !!since ? Number(since) : 0;
-        const end = start + limit;
-
-        const batch: any = {
-            next_batch: end + 1,
-        };
-        this.nostrClient.totalRoomCount / end;
-        if (start !== 0) {
-            batch.prev_batch = 0;
-        }
-
-        // this.nostrClient.getPublicRooms()
-        const chunk: IPublicRoomsChunkRoom[] = this.nostrClient.getPublicRooms(search);
-        // const rooms = this.getRooms();
-        // for (const room of rooms) {
-        //   chunk.push({
-        //     room_id: room.roomId,
-        //     name: room.name,
-        //     avatar_url: room.getAvatarUrl(window.location.href, 100, 100, 'scale'),
-        //     topic: '',
-        //     canonical_alias: room.roomId,
-        //     world_readable: true,
-        //     guest_can_join: true,
-        //     num_joined_members: 1,
-        //   });
-        // }
-
-        return {
-            chunk,
-            total_room_count_estimate: chunk.length,
-        };
+        const search = options?.filter?.generic_search_term || "";
+        const chunk: IPublicRoomsChunkRoom[] = this.nostrClient.getPublicRooms(search as string);
+        return Promise.resolve().then(() => {
+            return {
+                chunk,
+                total_room_count_estimate: chunk.length,
+            };
+        });
     }
 
     /**
@@ -8452,7 +8437,7 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         userId: string,
         info?: string,
         // eslint-disable-next-line camelcase
-    ): Promise<{ avatar_url?: string; displayname?: string }> {
+    ): Promise<{ avatar_url?: string; displayname?: string; about?: string }> {
         // change by nostr
         return this.nostrClient.fetchUserMetadata(userId);
         // const path = info
@@ -9858,14 +9843,19 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     }
 
     public async toggleRelay(relay: NostrRelay) {
-        const enabled = relay.status === 1;
+        const enabled = relay.status === 1 && relay.enabled;
         if (enabled) {
             relay.close();
         } else {
-            await relay.connect();
-            this.nostrClient.relay.resubscribe(relay);
+            try {
+                await relay.connect();
+                this.nostrClient.relay.resubscribe(relay);
+            } catch {
+                return;
+            }
         }
         relay.enabled = !enabled;
+        this.saveRelays();
     }
 
     public saveRelays() {
@@ -9918,6 +9908,16 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
 
     public kickUserToEncryptedChannel(room: { id: string; relayUrl?: string }, kickPubkeys: string[]) {
         return this.nostrClient.inviteUserToEncryptedChannel(room, [], kickPubkeys);
+    }
+
+    public getUserPubKey(): string |null {
+        const userId = this.getUserId();
+        return this.nostrClient.getUserPubKey(userId as string);
+    }
+
+    public getUserPrivateKey(): string |null {
+        const token = this.getAccessToken();
+        return this.nostrClient.getUserPrivateKey(token as string);
     }
 }
 

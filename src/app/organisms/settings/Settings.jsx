@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Settings.scss';
 
 import initMatrix from '../../../client/initMatrix';
@@ -104,7 +104,7 @@ function RelaySection() {
                 <div className="toggle-margin">
                   {' '}
                   <Toggle
-                    isActive={relay.enabled}
+                    isActive={relay.status === 1 && relay.enabled}
                     onToggle={async () => {
                       await mx.toggleRelay(relay);
                       refreshState();
@@ -300,37 +300,79 @@ function EmojiSection() {
 }
 
 function SecuritySection() {
+  // change by nostr
+  const mx = initMatrix.matrixClient;
+  const onPrivateClick = () => {
+    const clipboard = navigator.clipboard;
+    clipboard.writeText(mx.getUserPrivateKey())
+  }
+  const onPubClick = () => {
+    const clipboard = navigator.clipboard;
+    clipboard.writeText(mx.getUserPubKey())
+  }
   return (
     <div className="settings-security">
       <div className="settings-security__card">
-        <MenuHeader>Cross signing and backup</MenuHeader>
-        <CrossSigning />
-        <KeyBackup />
-      </div>
-      <DeviceManage />
-      <div className="settings-security__card">
-        <MenuHeader>Export/Import encryption keys</MenuHeader>
+        <MenuHeader>Keys</MenuHeader>
         <SettingTile
-          title="Export E2E room keys"
-          content={(
-            <>
-              <Text variant="b3">Export end-to-end encryption room keys to decrypt old messages in other session. In order to encrypt keys you need to set a password, which will be used while importing.</Text>
-              <ExportE2ERoomKeys />
-            </>
-          )}
+          title='Your public key'
+          content={<div className="keyword-notification__keyword">
+            <div className='key-form'>
+              <Input name="new-relay-url" disabled value={mx.getUserPubKey()} />
+              <Button variant="primary" onClick={onPubClick}>
+                Copy
+              </Button>
+            </div>
+
+          </div>}
         />
         <SettingTile
-          title="Import E2E room keys"
-          content={(
-            <>
-              <Text variant="b3">{'To decrypt older messages, Export E2EE room keys from Element (Settings > Security & Privacy > Encryption > Cryptography) and import them here. Imported keys are encrypted so you\'ll have to enter the password you set in order to decrypt it.'}</Text>
-              <ImportE2ERoomKeys />
-            </>
-          )}
+          title='Your private key'
+          content={<div className="keyword-notification__keyword">
+            <div className='key-form'>
+
+              <Input name="private" disabled value={mx.getUserPrivateKey()} type="password" />
+              <Button variant="primary" onClick={onPrivateClick}>
+                Copy
+              </Button>
+            </div>
+
+          </div>}
         />
       </div>
-    </div>
-  );
+    </div >
+  )
+  // return (
+  //   <div className="settings-security">
+  //     <div className="settings-security__card">
+  //       <MenuHeader>Cross signing and backup</MenuHeader>
+  //       <CrossSigning />
+  //       <KeyBackup />
+  //     </div>
+  //     <DeviceManage />
+  //     <div className="settings-security__card">
+  //       <MenuHeader>Export/Import encryption keys</MenuHeader>
+  //       <SettingTile
+  //         title="Export E2E room keys"
+  //         content={(
+  //           <>
+  //             <Text variant="b3">Export end-to-end encryption room keys to decrypt old messages in other session. In order to encrypt keys you need to set a password, which will be used while importing.</Text>
+  //             <ExportE2ERoomKeys />
+  //           </>
+  //         )}
+  //       />
+  //       <SettingTile
+  //         title="Import E2E room keys"
+  //         content={(
+  //           <>
+  //             <Text variant="b3">{'To decrypt older messages, Export E2EE room keys from Element (Settings > Security & Privacy > Encryption > Cryptography) and import them here. Imported keys are encrypted so you\'ll have to enter the password you set in order to decrypt it.'}</Text>
+  //             <ImportE2ERoomKeys />
+  //           </>
+  //         )}
+  //       />
+  //     </div>
+  //   </div>
+  // );
 }
 
 function AboutSection() {
@@ -345,11 +387,11 @@ function AboutSection() {
               Denny
               <span className="text text-b3" style={{ margin: '0 var(--sp-extra-tight)' }}>{`v${cons.version}`}</span>
             </Text>
-            <Text>Yet another matrix client</Text>
+            <Text>Yet another denny client</Text>
 
             <div className="settings-about__btns">
-              <Button onClick={() => window.open('https://github.com/ajbura/cinny')}>Source code</Button>
-              <Button onClick={() => window.open('https://cinny.in/#sponsor')}>Support</Button>
+              <Button onClick={() => window.open('https://github.com/Guakamoli/denny')}>Source code</Button>
+              {/* <Button onClick={() => window.open('https://cinny.in/#sponsor')}>Support</Button> */}
               <Button onClick={() => initMatrix.clearCacheAndReload()} variant="danger">Clear cache & reload</Button>
             </div>
           </div>
@@ -361,15 +403,7 @@ function AboutSection() {
           <ul>
             <li>
               {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-              <Text>The <a href="https://github.com/matrix-org/matrix-js-sdk" rel="noreferrer noopener" target="_blank">matrix-js-sdk</a> is © <a href="https://matrix.org/foundation" rel="noreferrer noopener" target="_blank">The Matrix.org Foundation C.I.C</a> used under the terms of <a href="http://www.apache.org/licenses/LICENSE-2.0" rel="noreferrer noopener" target="_blank">Apache 2.0</a>.</Text>
-            </li>
-            <li>
-              {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-              <Text>The <a href="https://twemoji.twitter.com" target="_blank" rel="noreferrer noopener">Twemoji</a> emoji art is © <a href="https://twemoji.twitter.com" target="_blank" rel="noreferrer noopener">Twitter, Inc and other contributors</a> used under the terms of <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC-BY 4.0</a>.</Text>
-            </li>
-            <li>
-              {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-              <Text>The <a href="https://material.io/design/sound/sound-resources.html" target="_blank" rel="noreferrer noopener">Material sound resources</a> are © <a href="https://google.com" target="_blank" rel="noreferrer noopener">Google</a> used under the terms of <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC-BY 4.0</a>.</Text>
+              <Text>The <a href="https://github.com/Guakamoli/matrix-nostr-js-sdk" rel="noreferrer noopener" target="_blank">matrix-nostr-js-sdk</a> is © <a rel="noreferrer noopener" target="_blank">Guakamoli Media Technology Corporation</a> used under the terms of <a href="http://www.apache.org/licenses/LICENSE-2.0" rel="noreferrer noopener" target="_blank">Apache 2.0</a>.</Text>
             </li>
           </ul>
         </div>
@@ -450,7 +484,7 @@ function Settings() {
       title={<Text variant="s1" weight="medium" primary>Settings</Text>}
       contentOptions={(
         <>
-          <Button variant="danger" iconSrc={PowerIC} onClick={handleLogout}>
+          <Button variant="danger" iconSrc={PowerIC} onClick={handleLogout} buttonTestid="logout">
             Logout
           </Button>
           <IconButton src={CrossIC} onClick={requestClose} tooltip="Close" />
@@ -460,7 +494,7 @@ function Settings() {
     >
       {isOpen && (
         <div className="settings-window__content">
-          <ProfileEditor userId={initMatrix.matrixClient.getUserId()} />
+          <ProfileEditor userId={initMatrix.matrixClient.getUserPubKey()} />
           <Tabs
             items={tabItems}
             defaultSelected={tabItems.findIndex((tab) => tab.text === selectedTab.text)}

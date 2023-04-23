@@ -33,3 +33,15 @@ export interface RoomKey {
 }
 
 export type Kinds = Kind | KindExtention | CryptoGroupExtention;
+
+export type RoomKeySession = {
+    sessionId: string;
+    sessionKey: string;
+};
+
+export type LocalTask = {
+    roomId: string;
+    created: number;
+    userIds: string[];
+    session: RoomKeySession;
+};

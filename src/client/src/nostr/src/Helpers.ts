@@ -5,7 +5,7 @@ import { IContent } from "matrix-js-sdk/lib/models/event";
 import { IJoinedRoom, ISyncResponse } from "../../sync-accumulator";
 
 import { EventType } from "../../@types/event";
-import { RoomMetaInfo } from "./@types";
+import { RoomMetaInfo, RoomKeySession, LocalTask } from "./@types";
 import { MatrixClient } from "../../matrix";
 import Key from "./Key";
 
@@ -92,6 +92,24 @@ export const ROOM_META_TYPES = {
         type: EventType.RoomAvatar,
         field: "url",
     },
+};
+export const getRoomMetaUpdateTs = (client: MatrixClient, roomid: string, syncResponse: ISyncResponse) => {
+    const events = syncResponse?.rooms?.join?.[roomid]?.state?.events || [];
+    const event = events.find((i) => i.type === EventType.RoomName);
+    let eventTs = 0;
+    let roomStateTs = 0;
+    if (event) {
+        eventTs = event.origin_server_ts;
+    }
+
+    const room = client.getRoom(roomid);
+    if (room?.currentState) {
+        const event = room.currentState.getStateEvents(EventType.RoomName, "");
+        if (event) {
+            roomStateTs = event.getTs();
+        }
+    }
+    return Math.max(roomStateTs, eventTs);
 };
 export const addRoomMeta = (syncResponse, roomMetaInfo: RoomMetaInfo) => {
     if (!syncResponse.rooms.join?.[roomMetaInfo.roomId]) {
@@ -202,8 +220,9 @@ export async function createKind104Event(
         await client.nostrClient.relay.publishAsPromise(event);
         return event;
     } catch (e) {
-        console.info(e, "发送104错误");
+        console.info(e, "send kin 104 error");
     }
+    return null;
 }
 export const communicateMegolmSessionEvent = createKind104Event;
 
@@ -234,3 +253,175 @@ export async function createKind141Event(
     return event;
 }
 export const updateEncryptedChannelMetadataEvent = createKind141Event;
+
+export function splitRequest(tasks: string[], defaultMaxPerRequest = 20) {
+    const maxPerRequestWithFormat = Number(defaultMaxPerRequest);
+    const maxPerRequest = Number.isNaN(maxPerRequestWithFormat) ? 20 : maxPerRequestWithFormat;
+
+    let currentSlice: string[] = [];
+    const mapSlices = [currentSlice];
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const task of tasks) {
+        currentSlice.push(task);
+
+        if (currentSlice.length >= maxPerRequest) {
+            currentSlice = [];
+            mapSlices.push(currentSlice);
+        }
+    }
+
+    if (currentSlice.length === 0) {
+        mapSlices.pop();
+    }
+
+    return mapSlices;
+}
+
+export async function batchRequest(
+    roomId: string,
+    session: {
+        sessionId: string;
+        sessionKey: string;
+    },
+    users: string[],
+    failedUsers: string[],
+    callback: any,
+) {
+    await Promise.all(
+        users.map((userId) => {
+            try {
+                return callback(roomId, userId, session);
+            } catch (err) {
+                failedUsers.push(userId);
+            }
+            return null;
+        }),
+    );
+}
+
+export async function attemptShareRoomKey(client: MatrixClient, task: LocalTask, callback: any) {
+    const failedUserIds: string[] = [];
+    const userIds = [...task.userIds];
+    const megolmSessionSharers = splitRequest(userIds);
+
+    for (let i = 0; i < megolmSessionSharers.length; i++) {
+        const taskFailedUserIds: string[] = [];
+        const taskDetail = `(retry) megolm keys for ${task.session.sessionId} (slice ${i + 1}/${
+            megolmSessionSharers.length
+        })`;
+        console.debug(
+            `(retry) Sharing ${taskDetail}`,
+            megolmSessionSharers[i].map((userId) => `${userId}/${task.session.sessionId}`),
+        );
+        await batchRequest(task.roomId, task.session, megolmSessionSharers[i], taskFailedUserIds, callback);
+        console.debug(
+            `(retry) Shared ${taskDetail} (sent ${megolmSessionSharers[i].length - taskFailedUserIds.length}/${
+                megolmSessionSharers[i].length
+            })`,
+        );
+        failedUserIds.push(...taskFailedUserIds);
+    }
+
+    if (failedUserIds.length > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 60 * 1000));
+        await attemptShareRoomKey(
+            client,
+            {
+                ...task,
+                userIds: [...failedUserIds],
+            },
+            callback,
+        );
+    }
+}
+
+export function initRoomKeyTask(roomId: string, session: RoomKeySession, userIds: string[]): LocalTask {
+    const key = `nostr.task.${session.sessionId}`;
+    const currentTask = localStorage.getItem(key);
+    if (!currentTask) {
+        localStorage.setItem(
+            key,
+            JSON.stringify({
+                roomId,
+                session,
+                userIds,
+                created: Date.now(),
+            }),
+        );
+    }
+
+    return JSON.parse(currentTask as string);
+}
+
+export function replaceLocalTask(sessionId: string, add: string[], remove?: string[]) {
+    const key = `nostr.task.${sessionId}`;
+    const localVal = localStorage.getItem(key);
+    if (!localVal) {
+        return;
+    }
+
+    const currentTasks: LocalTask = JSON.parse(localVal as string);
+
+    let userIds = [...currentTasks.userIds];
+    let newUserIds: string[] = [];
+
+    if (remove && Array.isArray(remove)) {
+        newUserIds = userIds.filter((userId) => !remove.includes(userId));
+    }
+
+    add.forEach((userId) => {
+        if (!newUserIds.includes(userId)) {
+            newUserIds.push(userId);
+        }
+    });
+
+    userIds = [...new Set(userIds)].sort();
+    newUserIds = [...new Set(newUserIds)].sort();
+
+    if (userIds.join("") === newUserIds.join("")) {
+        return;
+    }
+
+    if (newUserIds.length === 0) {
+        localStorage.removeItem(key);
+    } else {
+        currentTasks.userIds = newUserIds;
+        localStorage.setItem(key, JSON.stringify(currentTasks));
+    }
+}
+
+export function addLocalTask(sessionId: string, add: string[]) {
+    return replaceLocalTask(sessionId, add, []);
+}
+
+export function removeLocalTask(sessionId: string, remove: string[]) {
+    return replaceLocalTask(sessionId, [], remove);
+}
+
+export async function resendSharedRoomKey(client: MatrixClient) {
+    const taskKeys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i) || "";
+        if (/^nostr.task./.test(key)) {
+            taskKeys.push(key);
+        }
+    }
+
+    const callback = async (roomId: string, userId: string, session: any) => {
+        let res;
+        try {
+            res = await createKind104Event(client, roomId, userId, session);
+            removeLocalTask(session.sessionId, [userId]);
+        } catch {
+            console.debug(`Failed send to share ${userId}/${session.sessionId}`);
+        }
+        return res;
+    };
+
+    const allTasks: LocalTask[] = taskKeys
+        .map((key) => JSON.parse(localStorage.getItem(key) as string) as LocalTask)
+        .sort((a, b) => a.created > b.created);
+
+    await Promise.all(allTasks.map((task) => attemptShareRoomKey(client, task, callback)));
+}

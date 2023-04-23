@@ -1,9 +1,10 @@
 /* eslint-disable react/prop-types */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import './Auth.scss';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { Formik } from 'formik';
+import { getPublicKey, getEventHash } from "nostr-tools";
 
 import * as auth from '../../../client/action/auth';
 import cons from '../../../client/state/cons';
@@ -14,7 +15,7 @@ import Key from '../../../client/src/nostr/src/Key';
 
 import Text from '../../atoms/text/Text';
 import Button from '../../atoms/button/Button';
-// import IconButton from '../../atoms/button/IconButton';
+import IconButton from '../../atoms/button/IconButton';
 import Input from '../../atoms/input/Input';
 import Spinner from '../../atoms/spinner/Spinner';
 import ScrollView from '../../atoms/scroll/ScrollView';
@@ -23,9 +24,14 @@ import Avatar from '../../atoms/avatar/Avatar';
 // import ContextMenu, { MenuItem, MenuHeader } from '../../atoms/context-menu/ContextMenu';
 
 // import ChevronBottomIC from '../../../../public/res/ic/outlined/chevron-bottom.svg';
-// import EyeIC from '../../../../public/res/ic/outlined/eye.svg';
-// import EyeBlindIC from '../../../../public/res/ic/outlined/eye-blind.svg';
-import CinnySvg from '../../../../public/res/svg/cinny.svg';
+import copyIC from '../../../../public/res/ic/outlined/copy.svg';
+
+import EyeIC from '../../../../public/res/ic/outlined/eye.svg';
+
+import EyeBlindIC from '../../../../public/res/ic/outlined/eye-blind.svg';
+// import CinnySvg from '../../../../public/res/svg/cinny.svg';
+import DennyLogo from '../../../../public/res/web/dennylogo.png';
+
 // import SSOButtons from '../../molecules/sso-buttons/SSOButtons';
 
 // const LOCALPART_SIGNUP_REGEX = /^[a-z0-9_\-.=/]+$/;
@@ -283,17 +289,80 @@ function normalizeUsername(rawUsername) {
 //   baseUrl: PropTypes.string.isRequired,
 // };
 
-function LoginByName() {
+function LoginByName(props) {
+  // const key = Key.getOrCreate({ autologin: true });
+  const { setType, setName } = props
+  const initialValues = {
+    nickname: props.name,
+
+  };
+
+  const validator = (values) => {
+    const errors = {};
+    if (values.nickname.trim() === '') {
+      errors.nickname = 'Nickname must not be empty'
+    }
+    return errors;
+  }
+
+  const submitter = async (values, actions) => {
+    setName(values.nickname)
+    setType('confirm')
+  };
+
+  return (
+    <Formik
+      initialValues={initialValues}
+      onSubmit={submitter}
+      validate={validator}
+    >
+      {({
+        values, errors, handleChange, handleSubmit, isSubmitting,
+      }) => (
+        <>
+          {isSubmitting && <LoadingScreen message="Login in progress..." />}
+          <Text variant="h2" weight="medium">Create Account</Text>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <Input
+              label="Nickname"
+              value={values.nickname}
+              name="nickname"
+              onChange={handleChange}
+              type="nickname"
+              placeholder="What's your name?"
+            />
+            {errors.nickname && <Text className="auth-form__error" variant="b3">{errors.nickname}</Text>}
+
+            <div className="auth-form__btns">
+              <Button variant="primary" type="submit" disabled={isSubmitting}>Go</Button>
+            </div>
+          </form>
+        </>
+      )}
+    </Formik>
+  );
+}
+LoginByName.propTypes = {}
+
+function LoginByNameConfirm(props) {
+
   const key = Key.getOrCreate({ autologin: true });
   const initialValues = {
-    nickname: '',
+    nickname: props.name,
     prikey: key.priv,
     pubkey: key.rpub,
     npub: Key.toNostrBech32Address(key.rpub, 'npub'),
   };
 
   const validator = () => ({});
-
+  const onPrivateClick = () => {
+    const clipboard = navigator.clipboard;
+    clipboard.writeText(initialValues.prikey)
+  }
+  const onPubClick = () => {
+    const clipboard = navigator.clipboard;
+    clipboard.writeText(initialValues.pubkey)
+  }
   const submitter = async (values, actions) => {
     localStorage.setItem(cons.secretKey.USER_ID, values.pubkey);
     localStorage.setItem(cons.secretKey.ACCESS_TOKEN, values.prikey);
@@ -325,19 +394,20 @@ function LoginByName() {
       }) => (
         <>
           {isSubmitting && <LoadingScreen message="Login in progress..." />}
+          <Text variant="h2" weight="medium">Save Key</Text>
           <form className="auth-form" onSubmit={handleSubmit}>
-            <Input
-              value={values.nickname}
-              name="nickname"
-              onChange={handleChange}
-              type="nickname"
-              placeholder="What's your name?"
-            />
-            <Input type="hidden" name='prikey' value={values.prikey} />
-            <Input type="hidden" name='pubkey' value={values.pubkey} />
-            <Input type="hidden" name='npub' value={values.npub} />
-            <div className="auth-form__btns" style={{ justifyContent: "center" }}>
-              <Button variant="primary" type="submit" disabled={isSubmitting}>Go</Button>
+            <Text style={{ marginTop: '12px', color: "rgba(133, 133, 133, 1)" }}>{`Your private key is your password. If you lose this key, you will lose access to your account! Copy it and keep it in a safe place. There is no way to reset your private key.`}</Text>
+            <div className="auth-form__pass-eye-wrapper">
+              <Input name='pubkey' value={Key.toNostrBech32Address(values.pubkey, 'npub')} label="Your public key" disabled />
+              <IconButton onClick={onPubClick} size="extra-small" src={copyIC} tooltip={'copy'} />
+            </div>
+            <div className="auth-form__pass-eye-wrapper">
+              <Input name='private' value={Key.toNostrBech32Address(values.prikey, 'nsec')} label="Your private key" disabled />
+
+              <IconButton onClick={onPrivateClick} size="extra-small" src={copyIC} tooltip={'copy'} />
+            </div>
+            <div className="auth-form__btns">
+              <Button variant="primary" type="submit" disabled={isSubmitting}>Save and continue</Button>
             </div>
           </form>
         </>
@@ -345,21 +415,32 @@ function LoginByName() {
     </Formik>
   );
 }
-LoginByName.propTypes = {}
+LoginByNameConfirm.propTypes = {}
 
 function LoginByPriKey() {
+  const [passVisible, setPassVisible] = useState(false);
   const initialValues = {
     privatekey: '',
   };
 
-  const validator = (values) => {
-    const errors = {};
-    const prikey = String(values.privatekey || '').trim();
+  const validPrivateKey = (errors, value) => {
+    const prikey = String(value || '').trim();
     if (prikey && prikey.length > 0) {
+      if (prikey.startsWith('npub')) {
+        errors.privatekey = 'invalid private key';
+        return false
+      }
       if (!Key.toNostrHexAddress(prikey)) {
         errors.privatekey = 'invalid private key';
+        return true;
       }
     }
+    return false
+  };
+
+  const validator = (values) => {
+    const errors = {};
+    validPrivateKey(errors, values.privatekey);
     return errors;
   };
 
@@ -395,10 +476,32 @@ function LoginByPriKey() {
     window.location.reload();
   };
 
-  const handlePaste = (event, { values, handleSubmit }) => {
+  const handlePaste = (event, { values, errors, handleSubmit }) => {
     const pastedText = event.clipboardData.getData('text/plain').trim();
+    if (validPrivateKey(errors, pastedText)) {
+      return;
+    }
+
     values.privatekey = pastedText;
     handleSubmit();
+  };
+
+  const handleEnter = (event, { values, errors, handleSubmit }) => {
+
+    if (event.keyCode === 13) {
+      const inputText = event.target.value;
+      if (validPrivateKey(errors, inputText)) {
+        return;
+      }
+
+      values.privatekey = inputText;
+      handleSubmit();
+    }
+  };
+
+  const handleChangeValidate = (event, { errors, handleChange }) => {
+    validPrivateKey(errors, event.target.value)
+    // handleChange(event);
   };
 
   return (
@@ -408,21 +511,33 @@ function LoginByPriKey() {
       validate={validator}
     >
       {({
-        values, errors, handleChange, handleSubmit, isSubmitting,
+        values, errors, handleChange, handleSubmit, isSubmitting, actions
       }) => (
         <>
           {isSubmitting && <LoadingScreen message="Login in progress..." />}
-          <form className="auth-form">
-            <Input
-              value={values.privatekey}
-              name="privatekey"
-              onChange={handleChange}
-              type="privatekey"
-              required
-              placeholder="Paste a private key"
-              onPaste={(event) => handlePaste(event, { values, handleSubmit })}
-            />
+          <Text variant="h2" weight="medium">Login</Text>
+
+          <form className="auth-form" onSubmit={(e) => { e.preventDefault(); }}>
+            <div className="auth-form__pass-eye-wrapper">
+              <Input
+                label='Privatekey'
+                value={values.privatekey}
+                name="privatekey"
+                onChange={(event) => handleChangeValidate(event, { errors, handleChange })}
+                type={passVisible ? 'text' : 'password'}
+                required
+                placeholder="Paste a private key"
+                onKeyDown={(event) => handleEnter(event, { values, errors, handleSubmit })}
+                onPaste={(event) => handlePaste(event, { values, errors, handleSubmit })}
+              />
+              <IconButton onClick={() => setPassVisible(!passVisible)} src={passVisible ? EyeIC : EyeBlindIC} size="extra-small" />
+            </div>
             {errors.privatekey && <Text className="auth-form__error" variant="b3">{errors.privatekey}</Text>}
+            <Text style={{ fontSize: '13px', color: "rgba(133, 133, 133, 1)", marginTop: "18px" }}>{`Only the secret key can be used to publish (sign events, everything else logs you in read-only mode.`}</Text>
+
+            <div className="auth-form__btns">
+              <Button variant="primary" type="submit" disabled={isSubmitting}>Login</Button>
+            </div>
           </form>
         </>
       )}
@@ -649,12 +764,12 @@ function AuthCard() {
   // const [hsConfig, setHsConfig] = useState(null);
   const [hsConfig] = useState({ login: { flows: [{ type: 'm.login.password' }] }, baseUrl: 'localhost:8080', register: {} });
   const [type, setType] = useState('login');
+  const [name, setName] = useState('');
 
   // const handleHsChange = (info) => {
   //   console.log(info);
   //   setHsConfig(info);
   // };
-
   return (
     <>
       {/* <Homeserver onChange={handleHsChange} /> */}
@@ -668,9 +783,10 @@ function AuthCard() {
         //       baseUrl={hsConfig.baseUrl}
         //     />
         //   )
-        type === 'login' ? <LoginByName /> : <LoginByPriKey />
+        type === 'confirm' ? <LoginByNameConfirm name={name} setType={setType} /> : (type === 'login' ? <LoginByName setName={setName} name={name} setType={setType} /> : <LoginByPriKey />)
       )}
-      {hsConfig !== null && (
+      {type !== 'confirm' && <Text className="sso__divider">OR</Text>}
+      {hsConfig !== null && type !== 'confirm' && (
         <Text variant="b2" className="auth-card__switch flex--center">
           {/* {`${(type === 'login' ? 'Don\'t have' : 'Already have')} an account?`} */}
           {/* <button
@@ -680,12 +796,13 @@ function AuthCard() {
           >
             { type === 'login' ? ' Register' : ' Login' }
           </button> */}
+
           <button
             type="button"
             style={{ color: 'var(--tc-link)', cursor: 'pointer', margin: '0 var(--sp-ultra-tight)' }}
             onClick={() => setType((type === 'login') ? 'register' : 'login')}
           >
-            {type === 'login' ? 'Private key access' : 'Back'}
+            {type === 'login' ? 'Private key access' : 'Create Account'}
           </button>
         </Text>
       )}
@@ -721,7 +838,7 @@ function Auth() {
           {!loginToken && (
             <div className="auth-card">
               <Header>
-                <Avatar size="extra-small" imageSrc={CinnySvg} />
+                <Avatar size="extra-small" imageSrc={DennyLogo} />
                 <TitleWrapper>
                   <Text variant="h2" weight="medium">Denny</Text>
                 </TitleWrapper>
@@ -735,16 +852,14 @@ function Auth() {
 
         <div className="auth-footer">
           <Text variant="b2">
-            <a href="https://cinny.in" target="_blank" rel="noreferrer">About</a>
+            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">About</a>
           </Text>
           <Text variant="b2">
-            <a href="https://github.com/ajbura/cinny/releases" target="_blank" rel="noreferrer">{`v${cons.version}`}</a>
+            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">{`v${cons.version}`}</a>
           </Text>
+
           <Text variant="b2">
-            <a href="https://twitter.com/cinnyapp" target="_blank" rel="noreferrer">Twitter</a>
-          </Text>
-          <Text variant="b2">
-            <a href="https://matrix.org" target="_blank" rel="noreferrer">Powered by Matrix</a>
+            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">Powered by GuakaMoli</a>
           </Text>
         </div>
       </div>

@@ -81,8 +81,14 @@ const MessageAvatar = React.memo(({ roomId, avatarSrc, userId, username }) => (
 const MessageHeader = React.memo(({ userId, username, timestamp, fullTime }) => (
   <div className="message__header">
     <Text
-      style={{ color: colorMXID(userId) }}
+      style={{
+        color: colorMXID(userId), overflow: "hidden",
+        "text-overflow": "ellipsis",
+        "white-space": "nowrap",
+        "max-width": "300px"
+      }}
       className="message__profile"
+
       variant="b1"
       weight="medium"
       span
@@ -741,7 +747,9 @@ function Message({
   const content = mEvent.getContent();
   const eventId = mEvent.getId();
   const msgType = content?.msgtype;
-  const senderId = mEvent.getSender();
+  const mx = initMatrix.matrixClient;
+
+  const senderId = mx.getUserPubKey(mEvent.getSender());
   let { body } = content;
   const username = mEvent.sender ? getUsernameOfRoomMember(mEvent.sender) : getUsername(senderId);
   const avatarSrc = mEvent?.sender?.userId ? initMatrix.matrixClient.getUserAvatar(mEvent.sender.userId) : '';
@@ -783,14 +791,14 @@ function Message({
         <MessageAvatar
           roomId={roomId}
           avatarSrc={avatarSrc}
-          userId={senderId}
+            userId={mEvent.getSender()}
           username={username}
         />
       )}
       <div className="message__main-container">
         {!isBodyOnly && (
           <MessageHeader
-            userId={senderId}
+            userId={mEvent.getSender()}
             username={username}
             timestamp={mEvent.getTs()}
             fullTime={fullTime}

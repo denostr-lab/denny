@@ -2,7 +2,15 @@ import { Filter, Event } from "nostr-tools";
 import { MatrixClient } from "../../client";
 import Relays from "./Relays";
 import Events from "./Events";
-import { createKind104Event, createKind140Event, createKind141Event, handlePublishEvent } from "./Helpers";
+import {
+    createKind104Event,
+    createKind140Event,
+    createKind141Event,
+    handlePublishEvent,
+    initRoomKeyTask,
+    removeLocalTask,
+    splitRequest,
+} from "./Helpers";
 import * as utils from "../../utils";
 import { MetaInfo } from "./@types/index";
 import { EventType } from "../../@types/event";
@@ -13,8 +21,8 @@ import Key from "./Key";
 import { Room } from "../../models/room";
 
 // export { Filter as NostrFilter };
-let allRooms = [];
-let allUsers = [];
+let allRooms: string[] = [];
+let allUsers: string[] = [];
 export interface UpdateRoomMetadata {
     name: string;
     about: string;
@@ -44,25 +52,129 @@ class NostrClient {
         Events.initUsersAndRooms(this.client);
     }
 
-    initGlobalSubscribe() {
-        const since = utils.now() - utils.timedelta(30, "days");
+    handleFilters(
+        batchFilters: Filter[][],
+        opts: {
+            since?: number;
+            until?: number;
+            isLastActiveTimestamp?: boolean;
+            alwaysOnce?: boolean;
+            initialSeens?: Map<string, number>;
+        },
+    ) {
+        const { since, until, isLastActiveTimestamp = false } = opts;
+
+        const newFilters: Filter[] = [];
+        const filters = batchFilters.shift() as Filter[];
+        filters.forEach((filter) => {
+            if (filter?.since) {
+                delete filter.since;
+            }
+            if (filter?.until) {
+                delete filter.until;
+            }
+
+            newFilters.push({
+                ...filter,
+                since,
+                ...(!isLastActiveTimestamp ? { until } : {}),
+            });
+        });
+        return newFilters;
+    }
+
+    batchSubscribe(
+        batchFilters: Filter[][],
+        id: string,
+        opts: {
+            once?: boolean;
+            alwaysOnce?: boolean;
+            since: number;
+            until?: number;
+            period: number;
+            initialSeens?: Map<string, number>;
+            isLastActiveTimestamp?: boolean;
+        },
+    ) {
+        if (batchFilters.length === 0) {
+            return;
+        }
+
+        const { since, until, period, alwaysOnce = false, isLastActiveTimestamp = false, initialSeens } = opts;
+        let { once = false } = opts;
+
+        if ((alwaysOnce && once === false) || (!isLastActiveTimestamp && !alwaysOnce && once === false)) {
+            once = true;
+        }
+
+        if (isLastActiveTimestamp) {
+            const filters: Filter[] = this.handleFilters(batchFilters, { ...opts }); // 移除执行完的filters
+            this.relay.setLastSince(id, since);
+            this.relay.subscribe({ filters, id, once: alwaysOnce });
+            return;
+        }
+
+        const filters: Filter[] = this.handleFilters(batchFilters, { ...opts });
+        if (filters.length === 0) {
+            return;
+        }
+
+        const callback = async (event: Event) => {
+            if (event !== null) {
+                return;
+            }
+            await utils.sleep(5);
+
+            const lastSince = until || since;
+            const lastUntil = lastSince + period;
+
+            const subOpts: any = {
+                since: lastSince,
+                once: true,
+                alwaysOnce,
+                period,
+                isLastActiveTimestamp: false,
+                initialSeens,
+            };
+            if (until && lastUntil >= Math.round(Date.now() / 1000)) {
+                subOpts.once = false;
+                subOpts.isLastActiveTimestamp = true;
+            } else {
+                subOpts.until = lastUntil;
+            }
+
+            batchFilters.unshift(filters);
+            this.batchSubscribe(batchFilters, id, subOpts);
+        };
+
+        const subscribeOpts: any = { filters, id, callback };
+        if (!isLastActiveTimestamp) {
+            subscribeOpts.once = true;
+        }
+        if (isLastActiveTimestamp) {
+            subscribeOpts.once = alwaysOnce;
+        }
+        this.relay.subscribe(subscribeOpts);
+    }
+
+    async initGlobalSubscribe() {
         const roomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const userIds = this.client.getUsers().map((user) => user.userId) as string[];
-
         const pubkey = this.client.getUserId() as string;
+
+        const since = utils.now() - utils.timedelta(7, "days");
         const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since }];
+        this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
         const filters: Filter[] = [
             { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since },
             { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since },
         ];
-
-        this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
-
         this.relay.subscribe({ filters, id: "global" });
 
         if (roomIds?.length) {
             this.subscribeRooms(roomIds);
         }
+
         if (userIds?.length) {
             this.subscribeUsersDeletion(userIds);
         }
@@ -70,7 +182,7 @@ class NostrClient {
 
     subscribePublicRooms() {
         this.readySubscribeRooms = true;
-        const since = utils.now() - utils.timedelta(90, "days");
+        const since = utils.now() - utils.timedelta(30, "days");
         const filters: Filter[] = [{ kinds: [40, 41], since }];
         this.relay.subscribe({ filters, id: "public-rooms" });
     }
@@ -80,17 +192,123 @@ class NostrClient {
         this.readySubscribeRooms = false;
     }
 
-    subscribeRooms(roomsIds: string[]) {
-        const since = utils.now() - utils.timedelta(30, "days");
+    getLastActiveTimestamp(room: Room) {
+        const events = room
+            .getLiveTimeline()
+            .getEvents()
+            .sort((a, b) => (a.getTs() > b.getTs() ? 1 : -1));
+        if (events.length) {
+            const lastEvent = events[events.length - 1];
+            return lastEvent.getTs();
+        }
+        return Number.MIN_SAFE_INTEGER;
+    }
+
+    async subscribeFirstMetadataOfRooms(
+        roomIds: string[],
+        { createChannelKinds, channelMetadataKinds }: { createChannelKinds: number[]; channelMetadataKinds: number[] },
+    ) {
+        return new Promise((resolve, reject) => {
+            const callback = (event: Event | null) => {
+                if (event === null) {
+                    resolve(true);
+                }
+            };
+            const id = "global-room-metadata";
+            const filters: Filter[] = [
+                { "kinds": channelMetadataKinds, "#e": roomIds, "limit": 1000 },
+                { kinds: createChannelKinds, ids: roomIds, limit: 1000 },
+            ];
+            const since = this.relay.getLastSinceById(id);
+            if (since) {
+                filters.forEach((filter) => {
+                    filter.since = since;
+                });
+            } else {
+                this.relay.setLastSince(id);
+            }
+            this.relay.subscribe({ id, filters, once: true, callback });
+        });
+    }
+
+    async subscribeFirstRooms(
+        roomIds: string[],
+        { createChannelKinds, channalMessageKinds }: { createChannelKinds: number[]; channalMessageKinds: number[] },
+    ) {
+        const firstJoinSubscribe = (roomId: string, lastActiveTimestamp: number) =>
+            new Promise((resolve, reject) => {
+                const id = `room/${roomId}`;
+                const since = this.relay.getLastSinceById(id) || lastActiveTimestamp;
+                const filters: Filter[] = [
+                    { "kinds": channalMessageKinds, "#e": [roomId], since },
+                    { kinds: createChannelKinds, ids: [roomId], since },
+                ];
+                let lastCreatedAt = 0;
+                const callback = (event: Event) => {
+                    if (event !== null) {
+                        if (event.created_at >= lastCreatedAt) {
+                            lastCreatedAt = event.created_at + 1;
+                        }
+                        return;
+                    }
+
+                    const newFilters: Filter[] = [];
+                    if (lastCreatedAt >= lastActiveTimestamp) {
+                        filters.forEach((filter) => {
+                            if (filter?.since) {
+                                delete filter.since;
+                            }
+                            if (filter?.until) {
+                                delete filter.until;
+                            }
+
+                            newFilters.push({
+                                ...filter,
+                                since: lastCreatedAt,
+                            });
+                        });
+                    }
+                    this.relay.setLastSince(id);
+                    resolve(true);
+                };
+                this.relay.subscribe({ once: true, id, callback, filters });
+            });
+
+        const since = utils.now() - utils.timedelta(7, "days");
+        const newRoomIds: string[] = [];
+        const batchRoomIds = splitRequest([...roomIds], 1);
+        for (const roomIds of batchRoomIds) {
+            let lastActiveTimestamp = since;
+            const roomId = roomIds[0];
+            const room = this.client.getRoom(roomId);
+            if (room) {
+                const newLastActiveTimestamp = Math.round(this.getLastActiveTimestamp(room) / 1000);
+                if (newLastActiveTimestamp > 0 && newLastActiveTimestamp >= since) {
+                    lastActiveTimestamp = newLastActiveTimestamp;
+                }
+            }
+
+            await firstJoinSubscribe(roomId, lastActiveTimestamp);
+            newRoomIds.push(roomId);
+        }
+
+        return newRoomIds;
+    }
+
+    async subscribeRooms(roomsIds: string[]) {
+        const since = utils.now() - utils.timedelta(7, "days");
         const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
         const publicGroupMessage = [41, 42, 7];
-        const privateGroupMessage = [142, 141]; // 拿到房间的
-        // 这里要过滤掉用户
+        const privateGroupMessage = [142, 141];
 
         if (roomIds.length) {
             const roomFilters = [
-                { "kinds": [...publicGroupMessage, ...privateGroupMessage], "#e": roomIds as string[], since },
+                {
+                    "kinds": [...publicGroupMessage, ...privateGroupMessage],
+                    "#e": roomIds as string[],
+                    since,
+                },
                 { kinds: [40, 140], ids: roomIds, since },
             ] as Filter[];
             this.relay.subscribe({ filters: roomFilters, id: "global-room" });
@@ -112,7 +330,7 @@ class NostrClient {
             let joinRoomIds = Object.keys(data?.rooms?.join || {}) as string[];
             let rooms = Object.values(data?.rooms?.join || {}) as IJoinedRoom[];
             const userIds = new Set();
-            const roomIds = [];
+            const roomIds: string[] = [];
             rooms.forEach((room, index) => {
                 const roomId = joinRoomIds[index];
                 if (!this.hasLeaveRoom(roomId)) {
@@ -136,7 +354,7 @@ class NostrClient {
                 }
             }
         } catch (e) {
-            console.info(e, "错误");
+            console.info(e, "getBufferEvent error");
         }
         try {
             const ids = (data?.presence?.events || []).map((i) => i.user_id).filter(Boolean);
@@ -151,7 +369,7 @@ class NostrClient {
                 }
             }
         } catch (e) {
-            console.info(e, "错误");
+            console.info(e, "subscribeUsersDeletion error");
         }
         return data;
     }
@@ -170,10 +388,12 @@ class NostrClient {
 
     leaveRoom(roomId: string) {
         this.leaveRooms.add(roomId);
+        // this.relay.removeLastSince(`room/${roomId}`);
         this.saveLeaveRooms();
     }
 
     joinRoom(roomId: string) {
+        Events.handJoinRoom(this.client, roomId);
         this.leaveRooms.delete(roomId);
         this.saveLeaveRooms();
     }
@@ -206,19 +426,35 @@ class NostrClient {
         return this.client.getUser(userId).displayName ?? "";
     }
 
-    fetchUserMetadatas(userIds: string[]) {
+    async fetchUserMetadatas(userIds: string[], count: number = 0) {
         /*
             批量获取房间的MetaData信息,
             如果出现中继提示连接过多的错误，则后续继续获取
         */
+        userIds = userIds.filter((i) => {
+            return !Events.userProfileMap[i];
+        });
         if (!userIds?.length) return;
+
         const filters: Filter[] = [
             {
                 authors: userIds,
                 kinds: [0],
             },
         ];
-        this.relay.subscribe({ filters, id: `fetchUserMetadatas${Math.random()}`, once: true });
+
+        const result = new Promise((resolve) => {
+            const callback = (event: Event | null) => {
+                resolve("ok");
+            };
+            this.relay.subscribe({ filters, id: `fetchUserMetadatas-${Math.random()}`, once: true, callback });
+        });
+        const presult = await Promise.race([utils.sleep(3 * 1000), result]);
+        if (!presult && count < 3) {
+            setTimeout(() => {
+                this.fetchUserMetadatas(userIds, count + 1);
+            }, 1000);
+        }
     }
 
     async createRoom(metadata: UpdateRoomMetadata) {
@@ -352,9 +588,7 @@ class NostrClient {
         };
         const _getTags = () => {
             let tags = isDM ? [["p", roomId]] : [["e", roomId, "", "root"]];
-            if (isDM && citedEventId?.event_id) {
-                tags.push(["e", citedEventId.event_id, "", "reply"]);
-            } else if (emojiRelyEventId) {
+            if (emojiRelyEventId) {
                 const emojiRelyEvent = room.findEventById(emojiRelyEventId);
 
                 if (!body) {
@@ -366,10 +600,21 @@ class NostrClient {
             } else if (isDeleteEvent) {
                 body = content.reason ?? "";
                 tags = [["e", rawEvent.event.redacts]];
-            } else if (relatePersonList?.length) {
+            }
+            if (relatePersonList?.length) {
                 relatePersonList.forEach((pubkey: string) => {
-                    tags.push(["p", pubkey.replace("@", "")]);
+                    const pubkeyReplace = pubkey.replace("@", "");
+                    const hitOne = tags.find((i) => i[0] === "p" && i[1] === pubkeyReplace);
+                    if (!hitOne) {
+                        tags.push(["p", pubkeyReplace]);
+                    }
                 });
+            }
+            if (citedEventId?.event_id) {
+                const hitOne = tags.find((i) => i[0] === "e" && i[3] === "reply" && i[1] === citedEventId.event_id);
+                if (!hitOne) {
+                    tags.push(["e", citedEventId.event_id, "", "reply"]);
+                }
             }
             return tags;
         };
@@ -382,10 +627,11 @@ class NostrClient {
             content: body,
             pubkey: userId,
         } as Event;
-
         try {
             await this.handPublishEvent(event);
+            rawEvent.replaceLocalNostrEventId(event.id);
             await this.relay.publishAsPromise(event);
+
             if (event.kind === 7) {
                 Events.handle(this.client, event);
             }
@@ -395,7 +641,7 @@ class NostrClient {
         return { event_id: event.id };
     }
 
-    async fetchUserMetadata(userId: string): Promise<{ avatar_url?: string; displayname?: string }> {
+    async fetchUserMetadata(userId: string): Promise<{ avatar_url?: string; displayname?: string; about?: string }> {
         // 从中继中获取单个用户的信息
         return new Promise((resolve) => {
             const filters: Filter[] = [
@@ -404,16 +650,23 @@ class NostrClient {
                     kinds: [0],
                 },
             ];
-            const callback = (event: Event) => {
+            const callback = (event: Event | null) => {
+                if (!event) {
+                    return resolve({});
+                }
+
                 const content = JSON.parse(event.content) as MetaInfo;
-                const avatar_url = content.picture || "";
-                const displayname = content.name || "";
-                resolve({ avatar_url, displayname });
+                resolve({
+                    avatar_url: content.picture || "",
+                    displayname: content.name || "",
+                    about: content.about || "",
+                });
             };
             this.relay.subscribe({
                 filters,
-                id: `fetchUserMetadata-${userId}`,
+                id: `fetchUserMetadata-${userId}-${Math.random()}`,
                 callback,
+                once: true,
             });
         });
     }
@@ -548,9 +801,28 @@ class NostrClient {
             newToPubkeys,
             session.sessionId,
         );
-        await Promise.all(newToPubkeys.map((pubkey) => createKind104Event(this.client, room.id, pubkey, session)));
+
+        // 初始化共享RoomKey
+        initRoomKeyTask(room.id, session, newToPubkeys);
+
+        await Promise.all(
+            newToPubkeys.map(async (pubkey) => {
+                const res = await createKind104Event(this.client, room.id, pubkey, session);
+                if (res) {
+                    removeLocalTask(session.sessionId, [pubkey]);
+                }
+            }),
+        );
 
         return event141;
+    }
+
+    getUserPubKey(pubKey: string) {
+        return Key.toNostrBech32Address(pubKey, "npub");
+    }
+
+    getUserPrivateKey(privateKey: string) {
+        return Key.toNostrBech32Address(privateKey, "nsec");
     }
 }
 
