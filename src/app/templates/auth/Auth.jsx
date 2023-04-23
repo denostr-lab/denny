@@ -370,6 +370,7 @@ function LoginByNameConfirm(props) {
     localStorage.setItem(cons.secretKey.ACCESS_TOKEN, values.prikey);
     localStorage.setItem(cons.secretKey.DEVICE_ID, values.npub);
     localStorage.setItem(cons.secretKey.BASE_URL, window.location.href);
+    localStorage.setItem(cons.secretKey.USER_META_CREATE, '1');
 
     // TODO:
     const data = {
@@ -379,6 +380,7 @@ function LoginByNameConfirm(props) {
       profile_img: '',
       npub: values.npub,
     };
+
     localStorage.setItem('nostr.profile', JSON.stringify(data));
 
     actions.setSubmitting(true);

@@ -1,10 +1,11 @@
 const cons = {
-  version: '2.2.4',
+  version: '0.0.3',
   secretKey: {
     ACCESS_TOKEN: 'cinny_access_token',
     DEVICE_ID: 'cinny_device_id',
     USER_ID: 'cinny_user_id',
     BASE_URL: 'cinny_hs_base_url',
+    USER_META_CREATE: 'user_meta_create',
   },
   DEVICE_DISPLAY_NAME: 'Denny Web',
   IN_CINNY_SPACES: 'in.cinny.spaces',
