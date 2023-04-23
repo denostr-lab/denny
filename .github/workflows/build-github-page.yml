@@ -39,7 +39,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Build app
-        run: yarn build
+        run: |
+          export NODE_OPTIONS=--max-old-space-size=8192
+          yarn build
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Upload artifact
