@@ -25,7 +25,9 @@ function Room() {
   useEffect(() => {
     const handleRoomSelected = (rId, pRoomId, eId) => {
       roomInfo.roomTimeline?.removeInternalListeners();
-      if (mx.getRoom(rId)) {
+      const room = mx.getRoom(rId)
+      if (room) {
+        mx.handSetRoomUnReadCount(rId, 0)
         setRoomInfo({
           roomTimeline: new RoomTimeline(rId),
           eventId: eId ?? null,
@@ -41,6 +43,12 @@ function Room() {
 
     navigation.on(cons.events.navigation.ROOM_SELECTED, handleRoomSelected);
     return () => {
+      const roomId = roomInfo?.roomTimeline?.roomId
+      if (roomId) {
+        mx.handSetRoomUnReadCount(roomId, 0)
+
+      }
+
       navigation.removeListener(cons.events.navigation.ROOM_SELECTED, handleRoomSelected);
     };
   }, [roomInfo]);

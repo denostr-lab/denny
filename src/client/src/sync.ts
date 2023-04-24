@@ -1330,7 +1330,7 @@ export class SyncApi {
                  *
                  * @see import("./client").fixNotificationCountOnDecryption
                  */
-                if (!encrypted || joinObj.unread_notifications.notification_count === 0) {
+                if (!encrypted || joinObj.unread_notifications.notification_count === 0 || true) {
                     // In an encrypted room, if the room has notifications enabled then it's typical for
                     // the server to flag all new messages as notifying. However, some push rules calculate
                     // events as ignored based on their event contents (e.g. ignoring msgtype=m.notice messages)
@@ -1341,7 +1341,7 @@ export class SyncApi {
                     );
                 }
 
-                if (!encrypted || room.getUnreadNotificationCount(NotificationCountType.Highlight) <= 0) {
+                if (!encrypted || room.getUnreadNotificationCount(NotificationCountType.Highlight) <= 0 || true) {
                     // If the locally stored highlight count is zero, use the server provided value.
                     room.setUnreadNotificationCount(
                         NotificationCountType.Highlight,

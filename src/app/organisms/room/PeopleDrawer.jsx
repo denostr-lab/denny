@@ -35,6 +35,7 @@ function simplyfiMembers(members) {
     avatarSrc: member.getAvatarUrl(mx.baseUrl, 24, 24, 'crop'),
     peopleRole: getPowerLabel(member.powerLevel),
     powerLevel: members.powerLevel,
+
   }));
 }
 

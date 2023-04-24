@@ -1,5 +1,4 @@
-import { debounce } from "lodash-es";
-import { IStateEvent, IStrippedState, ISyncResponse } from "../../sync-accumulator";
+import { IStateEvent, ISyncResponse } from "../../sync-accumulator";
 import { MatrixClient } from "../../client";
 
 // import IndexedDB from './IndexedDB';
@@ -13,18 +12,12 @@ import {
     handMediaContent,
     getQuery,
     getRoomMetaUpdateTs,
+    judgeEventExisted,
+    setRoomUnreadNotificationCount,
 } from "./Helpers";
 import * as olmlib from "../../crypto/olmlib";
-import * as algorithms from "../../crypto/algorithms";
 
-import {
-    CachedReceiptStructure,
-    MAIN_ROOM_TIMELINE,
-    Receipt,
-    ReceiptContent,
-    ReceiptType,
-} from "../../@types/read_receipts";
-import { Event, Kind, nip04, verifySignature } from "nostr-tools";
+import { Event, nip04, verifySignature } from "nostr-tools";
 import { EventType, RelationType } from "../../@types/event";
 import { MsgType } from "matrix-js-sdk/lib/@types/event";
 import { IContent } from "matrix-js-sdk/lib/models/event";
@@ -136,6 +129,19 @@ class Events {
                 event_id: `${roomAttr.key}-${event.getId()}-${Math.random().toString(16).slice(2, 8)}`,
             });
         }
+    }
+
+    handSetRoomUnReadCount(_: MatrixClient, roomid: string, count: number) {
+        let syncResponse = this.bufferEvent;
+
+        if (!syncResponse) {
+            syncResponse = getDefaultSyncResponse();
+            this.bufferEvent = syncResponse;
+        }
+        if (!syncResponse.rooms.join?.[roomid]) {
+            syncResponse.rooms.join[roomid] = getDefaultRoomData();
+        }
+        syncResponse.rooms.join[roomid].unread_notifications.notification_count = count;
     }
     handJoinRoom = (client: MatrixClient, roomid: string) => {
         let syncResponse = this.bufferEvent;
@@ -544,16 +550,26 @@ class Events {
                 };
             }
             let eventType = EventType.RoomMessageEncrypted;
-            syncResponse.rooms.join[roomid].timeline.events.push({
-                content,
-                origin_server_ts: created_at,
-                sender: event.pubkey,
-                type: eventType,
-                unsigned: {
-                    age: Date.now() - created_at,
-                },
-                event_id: event.id,
-            });
+            const existed = judgeEventExisted(client, roomid, event.id, syncResponse);
+            if (!existed) {
+                if (event.pubkey !== client.getUserId()) {
+                    if (Date.now() - created_at < 7 * 1000) {
+                        setRoomUnreadNotificationCount(client, roomid, syncResponse, 1);
+                    }
+                } else {
+                    this.handSetRoomUnReadCount(client, roomid, 0);
+                }
+                syncResponse.rooms.join[roomid].timeline.events.push({
+                    content,
+                    origin_server_ts: created_at,
+                    sender: event.pubkey,
+                    type: eventType,
+                    unsigned: {
+                        age: Date.now() - created_at,
+                    },
+                    event_id: event.id,
+                });
+            }
         }
         let roomStates = [];
 
@@ -662,17 +678,27 @@ class Events {
                 },
             };
         }
-        let eventType = EventType.RoomMessage;
-        syncResponse.rooms.join[roomid].timeline.events.push({
-            content,
-            origin_server_ts: created_at,
-            sender: event.pubkey,
-            type: eventType,
-            unsigned: {
-                age: Date.now() - created_at,
-            },
-            event_id: event.id,
-        });
+        const eventType = EventType.RoomMessage;
+        const existed = judgeEventExisted(client, roomid, event.id, syncResponse);
+        if (!existed) {
+            if (event.pubkey !== client.getUserId()) {
+                if (Date.now() - created_at < 7 * 1000) {
+                    setRoomUnreadNotificationCount(client, roomid, syncResponse, 1);
+                }
+            } else {
+                this.handSetRoomUnReadCount(client, roomid, 0);
+            }
+            syncResponse.rooms.join[roomid].timeline.events.push({
+                content,
+                origin_server_ts: created_at,
+                sender: event.pubkey,
+                type: eventType,
+                unsigned: {
+                    age: Date.now() - created_at,
+                },
+                event_id: event.id,
+            });
+        }
 
         let roomStates = [];
 
@@ -969,6 +995,7 @@ class Events {
         const eventContent = event.content;
         const ciphertext = eventContent.split("?")[0];
         const query = getQuery(eventContent);
+
         if (!query?.sid) {
             return;
         }
@@ -996,16 +1023,26 @@ class Events {
                 },
             };
         }
-        syncResponse.rooms.join[roomid].timeline.events.push({
-            content,
-            origin_server_ts: created_at,
-            sender: event.pubkey,
-            type: EventType.RoomMessageEncrypted,
-            unsigned: {
-                age: Date.now() - created_at,
-            },
-            event_id: event.id,
-        });
+        const existed = judgeEventExisted(client, roomid, event.id, syncResponse);
+        if (!existed) {
+            if (event.pubkey !== client.getUserId()) {
+                if (Date.now() - created_at < 7 * 1000) {
+                    setRoomUnreadNotificationCount(client, roomid, syncResponse, 1);
+                }
+            } else {
+                this.handSetRoomUnReadCount(client, roomid, 0);
+            }
+            syncResponse.rooms.join[roomid].timeline.events.push({
+                content,
+                origin_server_ts: created_at,
+                sender: event.pubkey,
+                type: EventType.RoomMessageEncrypted,
+                unsigned: {
+                    age: Date.now() - created_at,
+                },
+                event_id: event.id,
+            });
+        }
     };
     convertEventToSyncResponse(client: MatrixClient, event: Event, syncResponse?: ISyncResponse): ISyncResponse {
         /*

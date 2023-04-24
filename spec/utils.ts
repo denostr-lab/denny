@@ -565,9 +565,9 @@ export const leaveRoom = async (page: Page) => {
 };
 
 export const searchLocalUserAndEnterRoom = async (page: Page, pubkey: string) => {
-    await page.waitForSelector(".sidebar__sticky .sticky-container button");
+    await page.waitForSelector("button[data-testid=local-search]");
 
-    await page.$eval(".sidebar__sticky .sticky-container button", (el) => {
+    await page.$eval("button[data-testid=local-search]", (el) => {
         el.click();
     });
     await page.waitForTimeout(1 * 1000);

@@ -9910,14 +9910,17 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
         return this.nostrClient.inviteUserToEncryptedChannel(room, [], kickPubkeys);
     }
 
-    public getUserPubKey(): string |null {
+    public getUserPubKey(): string | null {
         const userId = this.getUserId();
         return this.nostrClient.getUserPubKey(userId as string);
     }
 
-    public getUserPrivateKey(): string |null {
+    public getUserPrivateKey(): string | null {
         const token = this.getAccessToken();
         return this.nostrClient.getUserPrivateKey(token as string);
+    }
+    public handSetRoomUnReadCount(roomid: string, count: number) {
+        return this.nostrClient.handSetRoomUnReadCount(roomid, count);
     }
 }
 
@@ -9927,6 +9930,11 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
  * accurate notification_count
  */
 export function fixNotificationCountOnDecryption(cli: MatrixClient, event: MatrixEvent): void {
+    // change by no str
+    return;
+    if (!cli.isInitialSyncComplete()) {
+        return;
+    }
     const ourUserId = cli.getUserId();
     const eventId = event.getId();
 
@@ -9938,8 +9946,9 @@ export function fixNotificationCountOnDecryption(cli: MatrixClient, event: Matri
 
     const isThreadEvent = !!event.threadRootId && !event.isThreadRoot;
 
-    const currentHighlightCount = room.getUnreadCountForEventContext(NotificationCountType.Highlight, event);
-
+    // const currentHighlightCount = room.getUnreadCountForEventContext(NotificationCountType.Total, event);
+    // console.info(currentHighlightCount, "currentHighlightCount", room.roomId);
+    // room.setUnreadNotificationCount(NotificationCountType.Total, currentHighlightCount + 1);
     // Ensure the unread counts are kept up to date if the event is encrypted
     // We also want to make sure that the notification count goes up if we already
     // have encrypted events to avoid other code from resetting 'highlight' to zero.

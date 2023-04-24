@@ -167,7 +167,7 @@ class NostrClient {
         const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since }];
         this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
         const filters: Filter[] = [
-            { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since },
+            { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since, limit: 5000 },
             { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since },
         ];
         this.relay.subscribe({ filters, id: "global" });
@@ -332,18 +332,19 @@ class NostrClient {
         const since = utils.now() - utils.timedelta(7, "days");
         const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
-        const publicGroupMessage = [41, 42, 7];
-        const privateGroupMessage = [142, 141];
-
         if (roomIds.length) {
             const roomFilters = [
                 {
-                    "kinds": [...publicGroupMessage, ...privateGroupMessage],
+                    "kinds": [42, 7, 142],
                     "#e": roomIds as string[],
                     since,
                 },
-                { kinds: [40, 140], ids: roomIds, since },
             ] as Filter[];
+            const roomMetaFilters = [
+                { kinds: [40, 140], ids: roomIds },
+                { "kinds": [41, 141], "#e": roomIds },
+            ] as Filter[];
+            this.relay.subscribe({ filters: roomMetaFilters, id: "global-room-meta" });
             this.relay.subscribe({ filters: roomFilters, id: "global-room" });
         }
     }
@@ -352,7 +353,8 @@ class NostrClient {
         const exitedIds = this.client.getUsers().map((user) => user.userId) as string[];
         const ids = [...new Set([...userIds, ...exitedIds])];
         if (ids?.length) {
-            const roomFilters = [{ kinds: [0, 5], authors: ids }];
+            const since = utils.now() - utils.timedelta(7, "seconds");
+            const roomFilters = [{ kinds: [0, 5], authors: ids, since }] as Filter[];
             this.relay.subscribe({ filters: roomFilters, id: "global-user-deletion" });
         }
     }
@@ -451,8 +453,7 @@ class NostrClient {
                 "kinds": [41],
             },
         ];
-
-        this.relay.subscribe({ filters, id: `fetchRoomMetadatas${Math.random()}`, once: true });
+        this.relay.subscribe({ filters, id: `fetchRoomMetadatas`, once: true });
     }
 
     getUserName(userId: string) {
@@ -706,7 +707,7 @@ class NostrClient {
 
     async setUserMetaData({ avatar_url, displayname }: { avatar_url?: string; displayname?: string }) {
         const userId = this.client.getUserId();
-
+        localStorage.removeItem("user_meta_create");
         const user = this.client.getUser(userId);
         const content = {
             picture: avatar_url ?? user?.avatarUrl,
@@ -858,6 +859,9 @@ class NostrClient {
 
     getUserPrivateKey(privateKey: string) {
         return Key.toNostrBech32Address(privateKey, "nsec");
+    }
+    handSetRoomUnReadCount(roomid: string, count: number) {
+        Events.handSetRoomUnReadCount(this.client, roomid, count);
     }
 }
 
