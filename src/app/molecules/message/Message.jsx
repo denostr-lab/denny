@@ -749,10 +749,10 @@ function Message({
   const msgType = content?.msgtype;
   const mx = initMatrix.matrixClient;
 
-  const senderId = mx.getUserPubKey(mEvent.getSender());
+  const senderId = mEvent.getSender();
   let { body } = content;
   const username = mEvent.sender ? getUsernameOfRoomMember(mEvent.sender) : getUsername(senderId);
-  const avatarSrc = mEvent?.sender?.userId ? initMatrix.matrixClient.getUserAvatar(mEvent.sender.userId) : '';
+  const avatarSrc = (mEvent?.sender?.userId ? initMatrix.matrixClient.getUserAvatar(mEvent.sender.userId) : null) || null;
   let isCustomHTML = content.format === 'org.matrix.custom.html';
   let customHTML = isCustomHTML ? content.formatted_body : null;
 
@@ -791,7 +791,7 @@ function Message({
         <MessageAvatar
           roomId={roomId}
           avatarSrc={avatarSrc}
-            userId={mEvent.getSender()}
+          userId={mEvent.getSender()}
           username={username}
         />
       )}
