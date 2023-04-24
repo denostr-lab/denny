@@ -735,13 +735,13 @@ function Message({
   roomTimeline,
   focus,
   fullTime,
-  isEdit,
+  // isEdit,
   setEdit,
   cancelEdit,
 }) {
   const roomId = mEvent.getRoomId();
   const { editedTimeline, reactionTimeline } = roomTimeline ?? {};
-
+  const isEdit = false
   const className = ['message', isBodyOnly ? 'message--body-only' : 'message--full'];
   if (focus) className.push('message--focus');
   const content = mEvent.getContent();
@@ -757,7 +757,7 @@ function Message({
   let customHTML = isCustomHTML ? content.formatted_body : null;
 
   const edit = useCallback(() => {
-    setEdit(eventId);
+    // setEdit(eventId);
   }, []);
   const reply = useCallback(() => {
     replyTo(senderId, mEvent.getId(), body, customHTML);
@@ -813,7 +813,7 @@ function Message({
             isCustomHTML={isCustomHTML}
             body={isMedia(mEvent) ? genMediaContent(mEvent) : customHTML ?? body}
             msgType={msgType}
-            isEdited={isEdited}
+            isEdited={false}
           />
         )}
         {isEdit && (
