@@ -159,6 +159,12 @@ class RoomTimeline extends EventEmitter {
       if (a.getTs() > b.getTs()) {
         return 1
       } else {
+        if (a.getTs() === b.getTs()) {
+          if (a.getAge() > b.getAge()) {
+            return 1
+          }
+        }
+
         return -1
       }
     })

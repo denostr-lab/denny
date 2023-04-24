@@ -360,12 +360,19 @@ function SideBar() {
             </div>
             <div className="sidebar-divider" />
             <div className="space-container">
-              <SpaceShortcut />
               <SidebarAvatar
+                tooltip="Search"
+                onClick={() => openSearch()}
+                avatar={<Avatar iconSrc={SearchIC} size="normal" />}
+                buttonTestid="local-search"
+              />
+              {/* <SpaceShortcut /> */}
+              {/* <SidebarAvatar
                 tooltip="Pin spaces"
                 onClick={() => openShortcutSpaces()}
                 avatar={<Avatar iconSrc={AddPinIC} size="normal" />}
-              />
+              /> */}
+
             </div>
           </div>
         </ScrollView>
@@ -373,11 +380,7 @@ function SideBar() {
       <div className="sidebar__sticky">
         <div className="sidebar-divider" />
         <div className="sticky-container">
-          <SidebarAvatar
-            tooltip="Search"
-            onClick={() => openSearch()}
-            avatar={<Avatar iconSrc={SearchIC} size="normal" />}
-          />
+
           {totalInvites !== 0 && (
             <SidebarAvatar
               tooltip="Invites"

@@ -5,6 +5,7 @@ export async function markAsRead(roomId) {
   const mx = initMatrix.matrixClient;
   const room = mx.getRoom(roomId);
   if (!room) return;
+  mx.handSetRoomUnReadCount(roomId, 0)
   initMatrix.notifications.deleteNoti(roomId);
 
   const timeline = room.getLiveTimeline().getEvents();

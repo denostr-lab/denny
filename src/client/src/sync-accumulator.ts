@@ -220,7 +220,7 @@ export class SyncAccumulator {
     private nextBatch: string | null = null;
 
     public constructor(private readonly opts: IOpts = {}) {
-        this.opts.maxTimelineEntries = this.opts.maxTimelineEntries || 50;
+        this.opts.maxTimelineEntries = this.opts.maxTimelineEntries || 500;
     }
 
     public accumulate(syncResponse: ISyncResponse, fromDatabase = false): void {

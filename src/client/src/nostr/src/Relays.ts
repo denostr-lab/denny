@@ -24,7 +24,13 @@ interface SubscriptionOption {
     sinceLastSeen?: boolean;
 }
 const DEFAULT_RELAYS = [
-    "wss://nostr.paiyaapp.com",
+    "wss://eden.nostr.land",
+    "wss://relay.damus.io",
+    "wss://relay.snort.social",
+    "wss://offchain.pub",
+    "wss://nos.lol",
+    "wss://denostr.paiya.app",
+    // "wss://nostr.paiyaapp.com",
     // "ws://localhost:8008",
     // "wss://denostr.chickenkiller.com",
     // "wss://qwqb4l.paiya.app",
@@ -179,7 +185,6 @@ class Relays {
     }
 
     getPopularRelays() {
-        console.log("getPopularRelays");
         const relays = new Map<string, number>();
         Events.db.find({ kind: 3 }).forEach((event) => {
             if (event.content) {

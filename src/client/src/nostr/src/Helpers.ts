@@ -31,6 +31,7 @@ const mediaList = [
     { reg: videoRegex, key: "video", msgtype: MsgType.Video },
     { reg: audioRegex, key: "audio", msgtype: MsgType.Audio },
 ];
+
 export const getDefaultRoomData = (): IJoinedRoom => {
     return {
         summary: {
@@ -44,7 +45,7 @@ export const getDefaultRoomData = (): IJoinedRoom => {
         timeline: {
             events: [],
             limited: false,
-            prev_batch: `${Date.now()}`,
+            prev_batch: "0",
         },
         ephemeral: {
             events: [],
@@ -52,10 +53,7 @@ export const getDefaultRoomData = (): IJoinedRoom => {
         account_data: {
             events: [],
         },
-        unread_notifications: {
-            highlight_count: 0,
-            notification_count: 0,
-        },
+        unread_notifications: {},
     };
 };
 
@@ -398,7 +396,57 @@ export function addLocalTask(sessionId: string, add: string[]) {
 export function removeLocalTask(sessionId: string, remove: string[]) {
     return replaceLocalTask(sessionId, [], remove);
 }
+export const judgeEventExisted = (
+    client: MatrixClient,
+    roomid: string,
+    eventId: string,
+    syncResponse: ISyncResponse,
+): boolean => {
+    const events = syncResponse?.rooms?.join?.[roomid]?.state?.events || [];
+    const event = events.find((i) => i.event_id === eventId);
+    if (event) {
+        return true;
+    }
+    const room = client.getRoom(roomid);
 
+    if (room) {
+        let event = room.findEventById(eventId);
+
+        if (event) {
+            return true;
+        }
+        const events = room.getLiveTimeline().getEvents();
+        event = events.find((i) => {
+            return i.getId() === eventId;
+        });
+
+        if (event) {
+            return true;
+        }
+    }
+    return false;
+};
+export const getRoomUnreadNotificationCount = (client: MatrixClient, roomid: string) => {
+    const room = client.getRoom(roomid);
+    return room?.getUnreadNotificationCount() || 0;
+};
+export const setRoomUnreadNotificationCount = (
+    client: MatrixClient,
+    roomid: string,
+    syncResponse: ISyncResponse,
+    addNum: number = 1,
+) => {
+    if (!syncResponse.rooms.join?.[roomid]) {
+        syncResponse.rooms.join[roomid] = getDefaultRoomData();
+    }
+    if (syncResponse.rooms.join[roomid].unread_notifications!.notification_count) {
+        syncResponse.rooms.join[roomid].unread_notifications.notification_count += addNum;
+    } else {
+        const count = getRoomUnreadNotificationCount(client, roomid);
+        syncResponse.rooms.join[roomid].unread_notifications.notification_count = 0;
+        syncResponse.rooms.join[roomid].unread_notifications!.notification_count = count + addNum;
+    }
+};
 export async function resendSharedRoomKey(client: MatrixClient) {
     const taskKeys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {

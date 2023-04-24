@@ -2672,7 +2672,6 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
             fromCache,
             timelineWasEmpty,
         };
-
         for (const event of events) {
             // TODO: We should have a filter to say "only add state event types X Y Z to the timeline".
             this.processLiveEvent(event);
@@ -2701,7 +2700,6 @@ export class Room extends ReadReceipt<RoomEmittedEvents, RoomEventHandlerMap> {
                 this.addLiveEvent(event, options);
             }
         }
-
         Object.entries(eventsByThread).forEach(([threadId, threadEvents]) => {
             this.addThreadedEvents(threadId, threadEvents, false);
         });

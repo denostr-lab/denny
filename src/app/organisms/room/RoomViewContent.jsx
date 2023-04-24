@@ -255,6 +255,9 @@ function usePaginate(
       if (limit.length < tLength) {
         // paginate from memory
         limit.paginate(false, PAG_LIMIT, tLength);
+        if (roomTimeline?.roomId) {
+          mx.handSetRoomUnReadCount(roomTimeline?.roomId, 0)
+        }
         forceUpdateLimit();
       } else if (roomTimeline.canPaginateForward()) {
         // paginate from server.

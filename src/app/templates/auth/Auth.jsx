@@ -856,14 +856,14 @@ function Auth() {
 
         <div className="auth-footer">
           <Text variant="b2">
-            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">About</a>
+            <a href="https://www.bytetradelab.io/" target="_blank" rel="noreferrer">About</a>
           </Text>
           <Text variant="b2">
             <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">{`v${cons.version}`}</a>
           </Text>
 
           <Text variant="b2">
-            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">Powered by Bytetrade</a>
+            <a href="https://www.bytetradelab.io/" target="_blank" rel="noreferrer">Powered by Bytetrade</a>
           </Text>
         </div>
       </div>
