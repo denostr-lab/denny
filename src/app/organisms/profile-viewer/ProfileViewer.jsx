@@ -360,7 +360,21 @@ function ProfileViewer() {
 
     const powerLevel = roomMember?.powerLevel || 0;
     const myPowerLevel = room.getMember(mx.getUserId())?.powerLevel || 0;
+    useEffect(() => {
+      const mx = initMatrix.matrixClient;
+      const _handle = (event) => {
+        const eUserId = event?.event?.user_id
+        if (eUserId !== userId) {
+          return
+        }
+        forceUpdateLimit()
+      }
+      mx.on('event', _handle)
+      return () => {
+        mx.off('event', _handle)
 
+      }
+    }, [])
     const canChangeRole = (
       room.currentState.maySendEvent('m.room.power_levels', mx.getUserId())
       && (powerLevel < myPowerLevel || userId === mx.getUserId())

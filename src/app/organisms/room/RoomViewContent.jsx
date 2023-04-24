@@ -441,6 +441,7 @@ function RoomViewContent({ eventId, roomTimeline }) {
         return
       }
       const member = room.getMember(userId)
+
       if (member) {
         forceUpdateLimit()
 
