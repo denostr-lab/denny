@@ -91,9 +91,14 @@ export const ROOM_META_TYPES = {
         field: "url",
     },
 };
-export const getRoomMetaUpdateTs = (client: MatrixClient, roomid: string, syncResponse: ISyncResponse) => {
+export const getRoomMetaUpdateTs = (
+    client: MatrixClient,
+    roomid: string,
+    syncResponse: ISyncResponse,
+    type: string = EventType.RoomName,
+) => {
     const events = syncResponse?.rooms?.join?.[roomid]?.state?.events || [];
-    const event = events.find((i) => i.type === EventType.RoomName);
+    const event = events.find((i) => i.type === type);
     let eventTs = 0;
     let roomStateTs = 0;
     if (event) {
@@ -102,7 +107,7 @@ export const getRoomMetaUpdateTs = (client: MatrixClient, roomid: string, syncRe
 
     const room = client.getRoom(roomid);
     if (room?.currentState) {
-        const event = room.currentState.getStateEvents(EventType.RoomName, "");
+        const event = room.currentState.getStateEvents(type, "");
         if (event) {
             roomStateTs = event.getTs();
         }
