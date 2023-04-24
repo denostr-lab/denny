@@ -335,7 +335,7 @@ class NostrClient {
     }
 
     subscribeUsersDeletion(userIds: string[]) {
-        const exitedIds = this.client.getRooms().map((room) => room.roomId) as string[];
+        const exitedIds = this.client.getUsers().map((user) => user.userId) as string[];
         const ids = [...new Set([...userIds, ...exitedIds])];
         if (ids?.length) {
             const roomFilters = [{ kinds: [0, 5], authors: ids }];
