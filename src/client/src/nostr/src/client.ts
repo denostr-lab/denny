@@ -186,11 +186,25 @@ class NostrClient {
         }
         const data = localStorage.getItem("nostr.profile");
         if (!data) return;
+
         try {
             const jsonData = JSON.parse(data);
             if (!jsonData) {
                 return;
             }
+            let t: number;
+            await new Promise((res) => {
+                t = setInterval(() => {
+                    const relays = this.relay.getRelays();
+                    for (const relay of relays) {
+                        if (this.relay.getStatus(relay) === 1) {
+                            clearInterval(t);
+                            res(null);
+                            break;
+                        }
+                    }
+                }, 500);
+            });
             this.setUserMetaData({ displayname: jsonData.name, avatar_url: "" });
         } catch (e) {
             console.info(e, "erro init user");

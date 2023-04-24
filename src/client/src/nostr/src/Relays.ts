@@ -476,6 +476,9 @@ class Relays {
             }, unsubscribeTimeout);
         }
     }
+    getRelays = () => {
+        return this.relays.values();
+    };
 }
 
 export default Relays;
