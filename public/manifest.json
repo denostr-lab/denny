@@ -1,7 +1,7 @@
 {
     "name": "Denny",
     "short_name": "Denny",
-    "description": "Yet another denny client",
+    "description": "Yet another nostr client",
     "dir": "auto",
     "lang": "en-US",
     "display": "standalone",

@@ -1,7 +1,7 @@
 {
   "name": "denny",
-  "version": "2.2.4",
-  "description": "Yet another denny client",
+  "version": "0.0.3",
+  "description": "Yet another nostr client",
   "main": "index.js",
   "engines": {
     "node": ">=16.0.0"

@@ -387,7 +387,7 @@ function AboutSection() {
               Denny
               <span className="text text-b3" style={{ margin: '0 var(--sp-extra-tight)' }}>{`v${cons.version}`}</span>
             </Text>
-            <Text>Yet another denny client</Text>
+            <Text>Yet another nostr client</Text>
 
             <div className="settings-about__btns">
               <Button onClick={() => window.open('https://github.com/Guakamoli/denny')}>Source code</Button>
