@@ -831,7 +831,11 @@ class Events {
         if (!roomid) {
             return;
         }
+        const currentTs = getRoomMetaUpdateTs(client, roomid, syncResponse, EventType.RoomCreate);
 
+        if (currentTs >= created_at) {
+            return;
+        }
         const room = client.getRoom(roomid);
         if (kind === 141) {
             // 判断自己是否在房间, 不在房间则立即标记自己退出了

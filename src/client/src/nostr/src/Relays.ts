@@ -24,11 +24,11 @@ interface SubscriptionOption {
     sinceLastSeen?: boolean;
 }
 const DEFAULT_RELAYS = [
-    "wss://eden.nostr.land",
-    "wss://relay.damus.io",
-    "wss://relay.snort.social",
-    "wss://offchain.pub",
-    "wss://nos.lol",
+    // "wss://eden.nostr.land",
+    // "wss://relay.damus.io",
+    // "wss://relay.snort.social",
+    // "wss://offchain.pub",
+    // "wss://nos.lol",
     "wss://denostr.paiya.app",
     // "wss://nostr.paiyaapp.com",
     // "ws://localhost:8008",
@@ -242,6 +242,19 @@ class Relays {
             (relay: NostrRelay) => relay.enabled !== false,
         ) as NostrRelay[];
         for (const relay of relays) {
+            // if ([140, 141, 142].includes(event.kind)) {
+            //     if (
+            //         [
+            //             "wss://eden.nostr.land",
+            //             "wss://relay.damus.io",
+            //             "wss://relay.snort.social",
+            //             "wss://offchain.pub",
+            //             "wss://nos.lol",
+            //         ].includes(relay.url)
+            //     ) {
+            //         continue;
+            //     }
+            // }
             const pub = relay.publish(event);
             if (cb) {
                 pub.on("ok", () => cb("ok"));
