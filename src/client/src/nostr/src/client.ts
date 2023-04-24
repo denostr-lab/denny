@@ -731,9 +731,9 @@ class NostrClient {
 
     getPublicRooms(search: string, start = 0, end = 0) {
         let rooms = [...Events.getRooms().values()].filter((room) => {
-            const nameMatch = new RegExp(`.*${search}.*`).test(room.name);
-            const aboutMatch = new RegExp(`.*${search}.*`).test(room.about);
-            const idMatch = new RegExp(`.*${search}.*`).test(room.roomId);
+            const nameMatch = new RegExp(`.*${search}.*`, "i").test(room.name);
+            const aboutMatch = new RegExp(`.*${search}.*`, "i").test(room.about);
+            const idMatch = new RegExp(`.*${search}.*`, "i").test(room.roomId);
             return nameMatch || aboutMatch || idMatch;
         });
         if (start !== 0 && end !== 0) {
