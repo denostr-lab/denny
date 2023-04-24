@@ -347,6 +347,8 @@ function useRerenderOnProfileChange(roomId, userId) {
 
 function ProfileViewer() {
   const [isOpen, roomId, userId, closeDialog, handleAfterClose] = useToggleDialog();
+  const [, forceUpdateLimit] = useForceUpdate();
+
   useRerenderOnProfileChange(roomId, userId);
 
   const mx = initMatrix.matrixClient;
@@ -365,7 +367,7 @@ function ProfileViewer() {
       mx.off('event', _handle)
 
     }
-  }, [])
+  }, [userId])
   const renderProfile = () => {
     const roomMember = room.getMember(userId);
     const username = roomMember ? getUsernameOfRoomMember(roomMember) : getUsername(userId);
