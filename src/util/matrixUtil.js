@@ -33,15 +33,12 @@ export function getUsername(userId) {
   if (typeof username === 'undefined') {
     username = userId;
   }
-  if (username.match(/^[0-9a-fA-F]{64}$/)) {
-    return mx.getUserPubKey(username);
-  }
   return username;
 }
 
 export function getUsernameOfRoomMember(roomMember) {
   const mx = initMatrix.matrixClient;
-  const name = mx.getUserName(roomMember.userId) || mx.getUserPubKey(roomMember.userId)
+  const name = mx.getUserName(roomMember.userId) || roomMember.userId || mx.getUserPubKey(roomMember.userId)
   // if (name.match(/^[0-9a-fA-F]{64}$/)) {
   //   return mx.getUserPubKey(name);
   // }
