@@ -749,10 +749,10 @@ function Message({
   const msgType = content?.msgtype;
   const mx = initMatrix.matrixClient;
 
-  const senderId = mEvent.getSender();
+  const senderId = mEvent.getSender() || mEvent?.event?.sender;
   let { body } = content;
   const username = mEvent.sender ? getUsernameOfRoomMember(mEvent.sender) : getUsername(senderId);
-  const avatarSrc = (mEvent?.sender?.userId ? initMatrix.matrixClient.getUserAvatar(mEvent.sender.userId) : null) || null;
+  const avatarSrc = (senderId ? initMatrix.matrixClient.getUserAvatar(senderId) : null) || null;
   let isCustomHTML = content.format === 'org.matrix.custom.html';
   let customHTML = isCustomHTML ? content.formatted_body : null;
 
