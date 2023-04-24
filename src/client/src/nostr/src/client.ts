@@ -19,6 +19,7 @@ import { MatrixEvent } from "../../models/event";
 import * as olmlib from "../../crypto/olmlib";
 import Key from "./Key";
 import { Room } from "../../models/room";
+import { MetadataPool } from "./Metadata";
 
 // export { Filter as NostrFilter };
 let allRooms: string[] = [];
@@ -35,10 +36,13 @@ class NostrClient {
 
     public readySubscribeRooms: boolean;
 
+    private metadataPool: MetadataPool;
+
     constructor(private readonly client: MatrixClient) {
         this.relay = new Relays(this.client);
         this.leaveRooms = new Set();
         this.readySubscribeRooms = false;
+        this.metadataPool = new MetadataPool(this.relay);
     }
 
     init() {
@@ -349,13 +353,13 @@ class NostrClient {
         }
     }
 
-    subscribeUsersDeletion(userIds: string[]) {
+    async subscribeUsersDeletion(userIds: string[]) {
         const exitedIds = this.client.getUsers().map((user) => user.userId) as string[];
         const ids = [...new Set([...userIds, ...exitedIds])];
         if (ids?.length) {
+            await Promise.all(ids.map((id) => this.metadataPool.fetchUser(id)));
             const since = utils.now() - utils.timedelta(7, "seconds");
-            const roomFilters = [{ kinds: [0, 5], authors: ids, since }] as Filter[];
-            this.relay.subscribe({ filters: roomFilters, id: "global-user-deletion" });
+            this.relay.subscribe({ filters: [{ kinds: [5], authors: ids, since }], id: "global-user-deletion" });
         }
     }
 
@@ -453,42 +457,22 @@ class NostrClient {
                 "kinds": [41],
             },
         ];
-        this.relay.subscribe({ filters, id: `fetchRoomMetadatas`, once: true });
+
+        this.relay.subscribe({ filters, id: "fetchRoomMetadatas", once: true });
     }
 
     getUserName(userId: string) {
         return this.client.getUser(userId).displayName ?? "";
     }
 
-    async fetchUserMetadatas(userIds: string[], count: number = 0) {
+    async fetchUserMetadatas(userIds: string[]) {
         /*
             批量获取房间的MetaData信息,
             如果出现中继提示连接过多的错误，则后续继续获取
         */
-        userIds = userIds.filter((i) => {
-            return !Events.userProfileMap[i];
-        });
         if (!userIds?.length) return;
 
-        const filters: Filter[] = [
-            {
-                authors: userIds,
-                kinds: [0],
-            },
-        ];
-
-        const result = new Promise((resolve) => {
-            const callback = (event: Event | null) => {
-                resolve("ok");
-            };
-            this.relay.subscribe({ filters, id: `fetchUserMetadatas-${Math.random()}`, once: true, callback });
-        });
-        // const presult = await Promise.race([utils.sleep(3 * 1000), result]);
-        // if (!presult && count < 3) {
-        //     setTimeout(() => {
-        //         this.fetchUserMetadatas(userIds, count + 1);
-        //     }, 1000);
-        // }
+        await Promise.all(userIds.map((userId) => this.fetchUserMetadata(userId)));
     }
 
     async createRoom(metadata: UpdateRoomMetadata) {
@@ -677,32 +661,15 @@ class NostrClient {
 
     async fetchUserMetadata(userId: string): Promise<{ avatar_url?: string; displayname?: string; about?: string }> {
         // 从中继中获取单个用户的信息
-        return new Promise((resolve) => {
-            const filters: Filter[] = [
-                {
-                    authors: [userId],
-                    kinds: [0],
-                },
-            ];
-            const callback = (event: Event | null) => {
-                if (!event) {
-                    return resolve({});
-                }
-
-                const content = JSON.parse(event.content) as MetaInfo;
-                resolve({
-                    avatar_url: content.picture || "",
-                    displayname: content.name || "",
-                    about: content.about || "",
-                });
-            };
-            this.relay.subscribe({
-                filters,
-                id: `fetchUserMetadata-${userId}-${Math.random()}`,
-                callback,
-                once: true,
-            });
-        });
+        const user = await this.metadataPool.fetchUser(userId);
+        if (!user) {
+            return {};
+        }
+        return {
+            avatar_url: user.picture || "",
+            displayname: user.name || "",
+            about: user.about || "",
+        };
     }
 
     async setUserMetaData({ avatar_url, displayname }: { avatar_url?: string; displayname?: string }) {
