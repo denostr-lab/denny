@@ -483,12 +483,12 @@ class NostrClient {
             };
             this.relay.subscribe({ filters, id: `fetchUserMetadatas-${Math.random()}`, once: true, callback });
         });
-        const presult = await Promise.race([utils.sleep(3 * 1000), result]);
-        if (!presult && count < 3) {
-            setTimeout(() => {
-                this.fetchUserMetadatas(userIds, count + 1);
-            }, 1000);
-        }
+        // const presult = await Promise.race([utils.sleep(3 * 1000), result]);
+        // if (!presult && count < 3) {
+        //     setTimeout(() => {
+        //         this.fetchUserMetadatas(userIds, count + 1);
+        //     }, 1000);
+        // }
     }
 
     async createRoom(metadata: UpdateRoomMetadata) {

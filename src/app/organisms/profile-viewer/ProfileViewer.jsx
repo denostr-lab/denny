@@ -302,7 +302,7 @@ function useToggleDialog() {
   useEffect(() => {
     const loadProfile = async (uId, rId) => {
       const mx = initMatrix.matrixClient;
-      await mx.getProfileInfo(uId)
+      mx.getProfileInfo(uId)
       setIsOpen(true);
       setUserId(uId);
       setRoomId(rId);
