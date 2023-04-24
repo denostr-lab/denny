@@ -863,7 +863,7 @@ function Auth() {
           </Text>
 
           <Text variant="b2">
-            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">Powered by GuakaMoli</a>
+            <a href="https://github.com/Guakamoli/denny" target="_blank" rel="noreferrer">Powered by Bytetrade</a>
           </Text>
         </div>
       </div>

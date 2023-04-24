@@ -347,6 +347,8 @@ function useRerenderOnProfileChange(roomId, userId) {
 
 function ProfileViewer() {
   const [isOpen, roomId, userId, closeDialog, handleAfterClose] = useToggleDialog();
+  const [, forceUpdateLimit] = useForceUpdate();
+
   useRerenderOnProfileChange(roomId, userId);
 
   const mx = initMatrix.matrixClient;
@@ -365,7 +367,7 @@ function ProfileViewer() {
       mx.off('event', _handle)
 
     }
-  }, [])
+  }, [userId])
   const renderProfile = () => {
     const roomMember = room.getMember(userId);
     const username = roomMember ? getUsernameOfRoomMember(roomMember) : getUsername(userId);
@@ -374,21 +376,7 @@ function ProfileViewer() {
 
     const powerLevel = roomMember?.powerLevel || 0;
     const myPowerLevel = room.getMember(mx.getUserId())?.powerLevel || 0;
-    useEffect(() => {
-      const mx = initMatrix.matrixClient;
-      const _handle = (event) => {
-        const eUserId = event?.event?.user_id
-        if (eUserId !== userId) {
-          return
-        }
-        forceUpdateLimit()
-      }
-      mx.on('event', _handle)
-      return () => {
-        mx.off('event', _handle)
 
-      }
-    }, [])
     const canChangeRole = (
       room.currentState.maySendEvent('m.room.power_levels', mx.getUserId())
       && (powerLevel < myPowerLevel || userId === mx.getUserId())
