@@ -351,7 +351,21 @@ function ProfileViewer() {
 
   const mx = initMatrix.matrixClient;
   const room = mx.getRoom(roomId);
+  useEffect(() => {
+    const mx = initMatrix.matrixClient;
+    const _handle = (event) => {
+      const eUserId = event?.event?.user_id
+      if (eUserId !== userId) {
+        return
+      }
+      forceUpdateLimit()
+    }
+    mx.on('event', _handle)
+    return () => {
+      mx.off('event', _handle)
 
+    }
+  }, [])
   const renderProfile = () => {
     const roomMember = room.getMember(userId);
     const username = roomMember ? getUsernameOfRoomMember(roomMember) : getUsername(userId);

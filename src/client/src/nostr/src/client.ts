@@ -186,11 +186,25 @@ class NostrClient {
         }
         const data = localStorage.getItem("nostr.profile");
         if (!data) return;
+
         try {
             const jsonData = JSON.parse(data);
             if (!jsonData) {
                 return;
             }
+            let t: number;
+            await new Promise((res) => {
+                t = setInterval(() => {
+                    const relays = this.relay.getRelays();
+                    for (const relay of relays) {
+                        if (this.relay.getStatus(relay) === 1) {
+                            clearInterval(t);
+                            res(null);
+                            break;
+                        }
+                    }
+                }, 500);
+            });
             this.setUserMetaData({ displayname: jsonData.name, avatar_url: "" });
         } catch (e) {
             console.info(e, "erro init user");
@@ -335,7 +349,7 @@ class NostrClient {
     }
 
     subscribeUsersDeletion(userIds: string[]) {
-        const exitedIds = this.client.getRooms().map((room) => room.roomId) as string[];
+        const exitedIds = this.client.getUsers().map((user) => user.userId) as string[];
         const ids = [...new Set([...userIds, ...exitedIds])];
         if (ids?.length) {
             const roomFilters = [{ kinds: [0, 5], authors: ids }];

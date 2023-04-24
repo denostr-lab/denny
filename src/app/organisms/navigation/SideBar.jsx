@@ -71,9 +71,10 @@ function ProfileAvatarMenu() {
     // mx.getProfileInfo(mx.getUserId()).then((info) => {
     //   setNewProfile(info.avatar_url, info.displayname);
     // });
-    user.on('User.avatarUrl', onAvatarChange);
+
+    user.on('User.lastPresenceTs', onAvatarChange);
     return () => {
-      user.removeListener('User.avatarUrl', onAvatarChange);
+      user.removeListener('User.lastPresenceTs', onAvatarChange);
     };
   }, []);
 
