@@ -1527,10 +1527,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@khanacademy/simple-markdown@0.8.6":
-  version "0.8.6"
-  resolved "https://registry.npmjs.org/@khanacademy/simple-markdown/-/simple-markdown-0.8.6.tgz#9c9aef1f5ce2ce60292d13849165965a57c26f25"
-  integrity sha512-mAUlR9lchzfqunR89pFvNI51jQKsMpJeWYsYWw0DQcUXczn/T/V6510utgvm7X0N3zN87j1SvuKk8cMbl9IAFw==
+"@khanacademy/simple-markdown@0.9.2":
+  version "0.9.2"
+  resolved "https://registry.yarnpkg.com/@khanacademy/simple-markdown/-/simple-markdown-0.9.2.tgz#9ffdf66d2b68ba8047825f93b5d1b571596b96df"
+  integrity sha512-iRkSaVuUT+ho8B0aY0uLGgfS1YU84l/mSwjJTh0N0k0WzjdJUJY4+Eh56kn8whwD8QX6uNblAT0lT5ICATLtZg==
   dependencies:
     "@types/react" ">=16.0.0"
 
