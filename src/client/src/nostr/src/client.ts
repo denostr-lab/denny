@@ -159,7 +159,7 @@ class NostrClient {
 
     async initGlobalSubscribe() {
         const roomIds = this.client.getRooms().map((room) => room.roomId) as string[];
-        const userIds = this.client.getUsers().map((user) => user.userId) as string[];
+        // const userIds = this.client.getUsers().map((user) => user.userId) as string[];
         const pubkey = this.client.getUserId() as string;
         this.sendSelfInfo();
 
@@ -175,9 +175,9 @@ class NostrClient {
             this.subscribeRooms(roomIds);
         }
 
-        if (userIds?.length) {
-            this.subscribeUsersDeletion(userIds);
-        }
+        // if (userIds?.length) {
+        //     this.subscribeUsersDeletion(userIds);
+        // }
     }
     async sendSelfInfo() {
         const key = localStorage.getItem("user_meta_create");
@@ -410,21 +410,21 @@ class NostrClient {
         } catch (e) {
             console.info(e, "getBufferEvent error");
         }
-        try {
-            const ids = (data?.presence?.events || []).map((i) => i.user_id).filter(Boolean);
-            if (ids?.length) {
-                const prevAllUsers = allUsers;
-                let currentAllUsers = [...allUsers, ...ids];
-                currentAllUsers = [...new Set(currentAllUsers)];
-                const notSmae = currentAllUsers.some((i) => !prevAllUsers.find((j) => i === j));
-                if (notSmae || currentAllUsers.length !== prevAllUsers.length) {
-                    allUsers = currentAllUsers;
-                    this.subscribeUsersDeletion(allUsers);
-                }
-            }
-        } catch (e) {
-            console.info(e, "subscribeUsersDeletion error");
-        }
+        // try {
+        //     const ids = (data?.presence?.events || []).map((i) => i.user_id).filter(Boolean);
+        //     if (ids?.length) {
+        //         const prevAllUsers = allUsers;
+        //         let currentAllUsers = [...allUsers, ...ids];
+        //         currentAllUsers = [...new Set(currentAllUsers)];
+        //         const notSmae = currentAllUsers.some((i) => !prevAllUsers.find((j) => i === j));
+        //         if (notSmae || currentAllUsers.length !== prevAllUsers.length) {
+        //             allUsers = currentAllUsers;
+        //             this.subscribeUsersDeletion(allUsers);
+        //         }
+        //     }
+        // } catch (e) {
+        //     console.info(e, "subscribeUsersDeletion error");
+        // }
         return data;
     }
 
