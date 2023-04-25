@@ -22,16 +22,17 @@ interface SubscriptionOption {
     unsubscribeTimeout?: number;
     callback?: (event: Event) => any;
     sinceLastSeen?: boolean;
+    disableEventHandle?: boolean;
 }
 const DEFAULT_RELAYS = [
-    // "wss://eden.nostr.land",
-    // "wss://relay.damus.io",
-    // "wss://relay.snort.social",
-    // "wss://offchain.pub",
-    // "wss://nos.lol",
+    "wss://eden.nostr.land",
+    "wss://relay.damus.io",
+    "wss://relay.snort.social",
+    "wss://offchain.pub",
+    "wss://nos.lol",
     "wss://denostr.paiya.app",
-    // "wss://nostr.paiyaapp.com",
-    // "ws://localhost:8008",
+    "wss://nostr.paiyaapp.com",
+    "ws://localhost:8008",
     // "wss://denostr.chickenkiller.com",
     // "wss://qwqb4l.paiya.app",
     // 'wss://offchain.pub',
@@ -242,19 +243,18 @@ class Relays {
             (relay: NostrRelay) => relay.enabled !== false,
         ) as NostrRelay[];
         for (const relay of relays) {
-            // if ([140, 141, 142].includes(event.kind)) {
-            //     if (
-            //         [
-            //             "wss://eden.nostr.land",
-            //             "wss://relay.damus.io",
-            //             "wss://relay.snort.social",
-            //             "wss://offchain.pub",
-            //             "wss://nos.lol",
-            //         ].includes(relay.url)
-            //     ) {
-            //         continue;
-            //     }
-            // }
+            if (
+                !(
+                    relay.url.includes("paiya") ||
+                    relay.url.includes("snowinning") ||
+                    relay.url.includes("localhost") ||
+                    relay.url.includes("192.168.0")
+                )
+            ) {
+                if ([140, 141, 142, 104].includes(event.kind)) {
+                    continue;
+                }
+            }
             const pub = relay.publish(event);
             if (cb) {
                 pub.on("ok", () => cb("ok"));
@@ -394,7 +394,7 @@ class Relays {
     }
 
     subscribe(options: SubscriptionOption) {
-        const { filters, id, once = false, unsubscribeTimeout = 0, callback, sinceLastSeen = false } = options;
+        const { filters, id, once = false, unsubscribeTimeout = 0, callback, disableEventHandle = false } = options;
         if (id) {
             const subs = PubSub.subscriptionsByName.get(id);
             if (subs) {
@@ -410,16 +410,34 @@ class Relays {
         const subId = PubSub.getSubscriptionIdForName(id);
         const relays = this.relays.values();
         for (const relay of relays) {
+            let oldFilter = [...filters];
+            if (
+                !(
+                    relay.url.includes("paiya") ||
+                    relay.url.includes("snowinning") ||
+                    relay.url.includes("localhost") ||
+                    relay.url.includes("192.168.0")
+                )
+            ) {
+                if (id === "global") {
+                    const oldFilterFirst = oldFilter[0];
+                    oldFilter = [{ kinds: [0, 4], authors: oldFilterFirst.authors, since: oldFilterFirst.since }];
+                } else {
+                    continue;
+                }
+            }
             // if (sinceLastSeen && savedRelays[relay.url] && savedRelays[relay.url].lastSeen) {
             //     filters.forEach((filter) => {
             //         filter.since = savedRelays[relay.url].lastSeen;
             //     });
             // }
-            const sub = relay.sub(filters, { id: subId });
+            const sub = relay.sub(oldFilter, { id: subId });
             sub.on("event", (event) => {
                 // this.up
                 callback?.(event);
-                Events.handle(this.client, event);
+                if (!disableEventHandle) {
+                    Events.handle(this.client, event);
+                }
             });
             if (once) {
                 sub.on("eose", () => {

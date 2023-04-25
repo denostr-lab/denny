@@ -4,6 +4,7 @@ import React, {
 import PropTypes from 'prop-types';
 import './PeopleDrawer.scss';
 import { useForceUpdate } from '../../hooks/useForceUpdate';
+import { throttle } from "lodash-es";
 
 import initMatrix from '../../../client/initMatrix';
 import { getPowerLabel, getUsernameOfRoomMember } from '../../../util/matrixUtil';
@@ -91,12 +92,14 @@ function PeopleDrawer({ roomId }) {
 
       if (member) {
         forceUpdateLimit()
-
       }
     }
-    mx.on('event', _handle)
+    const throttled = throttle(_handle, 5000, { 'trailing': false });
+
+    mx.on('event', throttled)
     return () => {
-      mx.off('event', _handle)
+      throttled.cancel()
+      mx.off('event', throttled)
     }
   }, [room])
   useEffect(() => {

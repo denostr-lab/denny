@@ -109,9 +109,9 @@ function PublicRooms({ isOpen, searchTerm, onRequestClose }) {
     if (typeof inputRoomName !== 'string') inputRoomName = '';
 
     if (isSearching) return;
-    if (viewMore !== true
-      && inputRoomName === searchQuery.name
-    ) return;
+    // if (viewMore !== true
+    //   && inputRoomName === searchQuery.name
+    // ) return;
 
     updateSearchQuery({
       name: inputRoomName,
@@ -208,7 +208,7 @@ function PublicRooms({ isOpen, searchTerm, onRequestClose }) {
       return (
         <RoomTile
           key={room.room_id}
-          avatarSrc={typeof room.avatar_url === 'string' ? initMatrix.matrixClient.mxcUrlToHttp(room.avatar_url, 42, 42, 'crop') : null}
+          avatarSrc={typeof room.avatar_url === 'string' && room.avatar_url ? initMatrix.matrixClient.mxcUrlToHttp(room.avatar_url, 42, 42, 'crop') : null}
           name={name}
           id={alias}
           memberCount={room.num_joined_members}

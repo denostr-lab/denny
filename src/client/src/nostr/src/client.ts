@@ -214,10 +214,28 @@ class NostrClient {
     }
 
     subscribePublicRooms() {
-        this.readySubscribeRooms = true;
-        const since = utils.now() - utils.timedelta(30, "days");
-        const filters: Filter[] = [{ kinds: [40, 41], since }];
-        this.relay.subscribe({ filters, id: "public-rooms" });
+        try {
+            this.readySubscribeRooms = true;
+            const since = utils.now() - utils.timedelta(30, "days");
+            const filters: Filter[] = [{ kinds: [40, 41], since }];
+            const callback = (event) => {
+                if (!event) {
+                    return;
+                }
+                let roomid = "";
+                if (event.kind === 40) {
+                    roomid = event.id;
+                } else {
+                    roomid = event.tags.find((tags) => tags[0] === "e")?.[1] as string;
+                }
+                try {
+                    const created_at = event.created_at * 1000;
+                    const content = JSON.parse(event.content);
+                    Events.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
+                } catch (e) {}
+            };
+            this.relay.subscribe({ filters, id: "public-rooms", disableEventHandle: true, callback });
+        } catch (e) {}
     }
 
     unsubscribePublicRooms() {
@@ -338,6 +356,7 @@ class NostrClient {
                     "kinds": [42, 7, 142],
                     "#e": roomIds as string[],
                     since,
+                    "limit": 1000,
                 },
             ] as Filter[];
             const roomMetaFilters = [
@@ -354,7 +373,7 @@ class NostrClient {
         const ids = [...new Set([...userIds, ...exitedIds])];
         if (ids?.length) {
             const since = utils.now() - utils.timedelta(7, "seconds");
-            const roomFilters = [{ kinds: [0, 5], authors: ids, since }] as Filter[];
+            const roomFilters = [{ kinds: [5], authors: ids, since }] as Filter[];
             this.relay.subscribe({ filters: roomFilters, id: "global-user-deletion" });
         }
     }

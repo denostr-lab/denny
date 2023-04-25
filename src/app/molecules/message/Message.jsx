@@ -590,9 +590,11 @@ const MessageOptions = React.memo(({ roomTimeline, mEvent, edit, reply }) => {
               <>
                 <MenuBorder />
                 <MenuItem
+                  disabled
                   variant="danger"
                   iconSrc={BinIC}
                   onClick={async () => {
+                    return
                     const isConfirmed = await confirmDialog(
                       'Delete message',
                       'Are you sure that you want to delete this message?',
