@@ -6,6 +6,7 @@ import React, {
 } from 'react';
 import PropTypes from 'prop-types';
 import './RoomViewContent.scss';
+import { throttle as lodashthrottle } from "lodash-es";
 
 import dateFormat from 'dateformat';
 import { twemojify } from '../../../util/twemojify';
@@ -447,12 +448,14 @@ function RoomViewContent({ eventId, roomTimeline }) {
 
       if (member) {
         forceUpdateLimit()
-
       }
     }
-    mx.on('event', _handle)
+    const throttled = lodashthrottle(_handle, 3000, { 'trailing': false });
+
+    mx.on('event', throttled)
     return () => {
-      mx.off('event', _handle)
+      throttled.cancel()
+      mx.off('event', throttled)
 
     }
   }, [room])

@@ -27,6 +27,7 @@ function Room() {
       roomInfo.roomTimeline?.removeInternalListeners();
       const room = mx.getRoom(rId)
       if (room) {
+        mx.subscribeUsersDeletionRoom(rId)
         mx.handSetRoomUnReadCount(rId, 0)
         setRoomInfo({
           roomTimeline: new RoomTimeline(rId),

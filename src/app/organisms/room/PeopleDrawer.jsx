@@ -4,6 +4,7 @@ import React, {
 import PropTypes from 'prop-types';
 import './PeopleDrawer.scss';
 import { useForceUpdate } from '../../hooks/useForceUpdate';
+import { throttle } from "lodash-es";
 
 import initMatrix from '../../../client/initMatrix';
 import { getPowerLabel, getUsernameOfRoomMember } from '../../../util/matrixUtil';
@@ -44,7 +45,6 @@ function PeopleDrawer({ roomId }) {
   const PER_PAGE_MEMBER = 50;
   const mx = initMatrix.matrixClient;
   const room = mx.getRoom(roomId);
-
   // const canInvite = room?.canInvite(mx.getUserId());
   const canInvite = room?.getJoinRule() === 'private' && room?.getCreator() === mx.getUserId();
 
@@ -91,12 +91,14 @@ function PeopleDrawer({ roomId }) {
 
       if (member) {
         forceUpdateLimit()
-
       }
     }
-    mx.on('event', _handle)
+    const throttled = throttle(_handle, 3000, { 'trailing': false });
+
+    mx.on('event', throttled)
     return () => {
-      mx.off('event', _handle)
+      throttled.cancel()
+      mx.off('event', throttled)
     }
   }, [room])
   useEffect(() => {
@@ -122,11 +124,11 @@ function PeopleDrawer({ roomId }) {
     searchRef.current.value = '';
     updateMemberList();
     isLoadingMembers = true;
-    room.loadMembersIfNeeded().then(() => {
-      isLoadingMembers = false;
-      if (isRoomChanged) return;
-      updateMemberList();
-    });
+    // room.loadMembersIfNeeded().then(() => {
+    //   isLoadingMembers = false;
+    //   if (isRoomChanged) return;
+    //   updateMemberList();
+    // });
 
     asyncSearch.on(asyncSearch.RESULT_SENT, handleSearchData);
     mx.on('RoomMember.membership', updateMemberList);

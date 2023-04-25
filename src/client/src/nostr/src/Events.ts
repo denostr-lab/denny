@@ -47,6 +47,9 @@ class Events {
     userMetaFetchTs: Map<string, lastFetchInfo> = new Map();
     roomMetaFetchTs: Map<string, lastFetchInfo> = new Map();
     rooms: Map<string, any> = new Map();
+    allRooms: Set<string> = new Set();
+    fetchedUsers: Set<string> = new Set();
+    roomMemberList: Set<string> = new Set();
     initUsersAndRooms = (client: MatrixClient) => {
         const users = client.getUsers();
         users.forEach((user) => {
@@ -65,6 +68,7 @@ class Events {
                 .map((member) => member.userId)
                 .filter(Boolean);
             this.roomJoinMap[room.roomId] = new Set(userIds);
+            this.allRooms.add(room.roomId);
         });
     };
 
@@ -153,26 +157,42 @@ class Events {
         if (!syncResponse.rooms.join?.[roomid]) {
             syncResponse.rooms.join[roomid] = getDefaultRoomData();
         }
-        const created_at = Date.now();
+        let created_at = 1;
         const userId = client.getUserId();
-        const roomAttr = {
-            key: "member",
-            type: EventType.RoomMember,
-            state_key: userId,
-            sender: userId,
-            content: { displayname: userId, membership: "join" },
-        };
-        syncResponse.rooms.join[roomid].state.events.push({
-            content: roomAttr.content as unknown as IStateEvent,
-            origin_server_ts: created_at,
-            sender: userId as string,
-            state_key: roomAttr.state_key as string,
-            type: roomAttr.type,
-            unsigned: {
-                age: Date.now() - created_at,
+        // const roomAttr =
+        const roomAttrs = [
+            {
+                key: "member",
+                type: EventType.RoomMember,
+                state_key: userId,
+                sender: userId,
+                content: { displayname: userId, membership: "join" },
             },
-            event_id: `${roomAttr.key}-${Math.random().toString(16).slice(2, 8)}`,
-        });
+        ];
+        const publicRoom = this.getRoom(roomid);
+        if (publicRoom) {
+            created_at = publicRoom?.create_at ?? created_at;
+            roomAttrs.push(
+                ...[
+                    { key: "name", type: EventType.RoomName, content: { name: publicRoom.name ?? "" } },
+                    { key: "topic", type: EventType.RoomTopic, content: { topic: publicRoom.about ?? "" } },
+                    { key: "avatar", type: EventType.RoomAvatar, content: { url: publicRoom.picture ?? "" } },
+                ],
+            );
+        }
+        for (const roomAttr of roomAttrs) {
+            syncResponse.rooms.join[roomid].state.events.push({
+                content: roomAttr.content as unknown as IStateEvent,
+                origin_server_ts: created_at,
+                sender: userId as string,
+                state_key: roomAttr.state_key as string,
+                type: roomAttr.type,
+                unsigned: {
+                    age: Date.now() - created_at,
+                },
+                event_id: `${roomAttr.key}-${Math.random().toString(16).slice(2, 8)}`,
+            });
+        }
     };
     handleLeaveRoom(client: MatrixClient, event: Event) {
         if (![40, 41, 42, 4].includes(event?.kind)) return false;
@@ -198,7 +218,7 @@ class Events {
     handle(client: MatrixClient, event: Event) {
         // 处理一些特殊事件是否入库
         if (!event) return;
-
+        // return;
         if (this.operatedEvent[event.id]) {
             if (client.nostrClient.readySubscribeRooms) {
                 if (!this.handleLeaveRoom(client, event)) {
@@ -302,7 +322,7 @@ class Events {
             });
         }
 
-        this.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
+        // this.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
     };
 
     handleUserMetaEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
@@ -429,6 +449,7 @@ class Events {
         const rooms = client.getRooms();
         for (const room of rooms) {
             const matrixEvent = room.findEventById(eventId);
+
             if (matrixEvent) {
                 const roomid = room.roomId;
                 const created_at = event.created_at * 1000;
@@ -503,7 +524,7 @@ class Events {
             });
         }
 
-        this.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
+        // this.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
     };
 
     handlePrivateEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
@@ -814,7 +835,6 @@ class Events {
         }
         _createRoom(decryptoContent?.room_id);
         _addTodevice(decryptoContent);
-        this.addRoom(decryptoContent?.room_id, { ...decryptoContent, pubkey: event.pubkey, created_at: 1 });
     };
 
     handlePrivateGroupRoomMetaEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
@@ -837,12 +857,22 @@ class Events {
             return;
         }
         const room = client.getRoom(roomid);
+
         if (kind === 141) {
             // 判断自己是否在房间, 不在房间则立即标记自己退出了
             const mySelf = event.tags.find((tags) => tags[0] === "p" && tags[1] === userId)?.[1] as string;
             if (!mySelf) {
                 if (!syncResponse.rooms.join?.[roomid]) {
                     syncResponse.rooms.join[roomid] = getDefaultRoomData();
+                }
+                if (room) {
+                    const joinRule = room.currentState.getStateEvents(EventType.RoomJoinRules, "");
+                    if (joinRule) {
+                        const content = joinRule.getContent();
+                        if (content?.join_rule === "public") {
+                            return;
+                        }
+                    }
                 }
                 syncResponse.rooms.join[roomid].state.events.push({
                     content: {

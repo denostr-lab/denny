@@ -270,7 +270,7 @@ function RoomViewCmdBar({ roomId, roomTimeline, viewEvent }) {
   if (cmd === null || isError) {
     return (
       <div className="cmd-bar">
-        <FollowingMembers roomTimeline={roomTimeline} />
+        {/* <FollowingMembers roomTimeline={roomTimeline} /> */}
       </div>
     );
   }

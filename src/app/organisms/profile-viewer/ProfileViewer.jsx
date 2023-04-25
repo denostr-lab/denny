@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import './ProfileViewer.scss';
+import { throttle } from "lodash-es";
 
 import { twemojify } from '../../../util/twemojify';
 
@@ -362,9 +363,12 @@ function ProfileViewer() {
       }
       forceUpdateLimit()
     }
-    mx.on('event', _handle)
+    const throttled = throttle(_handle, 3000, { 'trailing': false });
+
+    mx.on('event', throttled)
     return () => {
-      mx.off('event', _handle)
+      throttled.cancel()
+      mx.off('event', throttled)
 
     }
   }, [userId])
