@@ -167,7 +167,7 @@ class Events {
         ];
         const publicRoom = this.getRoom(roomid);
         if (publicRoom) {
-            created_at = publicRoom.create_at;
+            created_at = publicRoom?.create_at ?? created_at;
             roomAttrs.push(
                 ...[
                     { key: "name", type: EventType.RoomName, content: { name: publicRoom.name ?? "" } },
@@ -852,12 +852,22 @@ class Events {
             return;
         }
         const room = client.getRoom(roomid);
+
         if (kind === 141) {
             // 判断自己是否在房间, 不在房间则立即标记自己退出了
             const mySelf = event.tags.find((tags) => tags[0] === "p" && tags[1] === userId)?.[1] as string;
             if (!mySelf) {
                 if (!syncResponse.rooms.join?.[roomid]) {
                     syncResponse.rooms.join[roomid] = getDefaultRoomData();
+                }
+                if (room) {
+                    const joinRule = room.currentState.getStateEvents(EventType.RoomJoinRules, "");
+                    if (joinRule) {
+                        const content = joinRule.getContent();
+                        if (content?.join_rule === "public") {
+                            return;
+                        }
+                    }
                 }
                 syncResponse.rooms.join[roomid].state.events.push({
                     content: {

@@ -6,7 +6,7 @@ import './index.scss';
 import settings from './client/state/settings';
 
 import App from './app/pages/App';
-console.info = () => { }
+// console.info = () => { }
 console.log = () => { }
 settings.applyTheme();
 
