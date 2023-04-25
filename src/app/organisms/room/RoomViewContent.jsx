@@ -450,7 +450,7 @@ function RoomViewContent({ eventId, roomTimeline }) {
         forceUpdateLimit()
       }
     }
-    const throttled = lodashthrottle(_handle, 5000, { 'trailing': false });
+    const throttled = lodashthrottle(_handle, 3000, { 'trailing': false });
 
     mx.on('event', throttled)
     return () => {

@@ -47,6 +47,9 @@ class Events {
     userMetaFetchTs: Map<string, lastFetchInfo> = new Map();
     roomMetaFetchTs: Map<string, lastFetchInfo> = new Map();
     rooms: Map<string, any> = new Map();
+    allRooms: Set<string> = new Set();
+    fetchedUsers: Set<string> = new Set();
+    roomMemberList: Set<string> = new Set();
     initUsersAndRooms = (client: MatrixClient) => {
         const users = client.getUsers();
         users.forEach((user) => {
@@ -65,6 +68,7 @@ class Events {
                 .map((member) => member.userId)
                 .filter(Boolean);
             this.roomJoinMap[room.roomId] = new Set(userIds);
+            this.allRooms.add(room.roomId);
         });
     };
 
@@ -445,6 +449,7 @@ class Events {
         const rooms = client.getRooms();
         for (const room of rooms) {
             const matrixEvent = room.findEventById(eventId);
+
             if (matrixEvent) {
                 const roomid = room.roomId;
                 const created_at = event.created_at * 1000;

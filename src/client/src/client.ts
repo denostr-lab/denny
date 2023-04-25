@@ -9922,6 +9922,9 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     public handSetRoomUnReadCount(roomid: string, count: number) {
         return this.nostrClient.handSetRoomUnReadCount(roomid, count);
     }
+    public subscribeUsersDeletionRoom(roomid: string) {
+        return this.nostrClient.subscribeUsersDeletionRoom(roomid);
+    }
 }
 
 /**

@@ -45,7 +45,6 @@ function PeopleDrawer({ roomId }) {
   const PER_PAGE_MEMBER = 50;
   const mx = initMatrix.matrixClient;
   const room = mx.getRoom(roomId);
-
   // const canInvite = room?.canInvite(mx.getUserId());
   const canInvite = room?.getJoinRule() === 'private' && room?.getCreator() === mx.getUserId();
 
@@ -94,7 +93,7 @@ function PeopleDrawer({ roomId }) {
         forceUpdateLimit()
       }
     }
-    const throttled = throttle(_handle, 5000, { 'trailing': false });
+    const throttled = throttle(_handle, 3000, { 'trailing': false });
 
     mx.on('event', throttled)
     return () => {
@@ -125,11 +124,11 @@ function PeopleDrawer({ roomId }) {
     searchRef.current.value = '';
     updateMemberList();
     isLoadingMembers = true;
-    room.loadMembersIfNeeded().then(() => {
-      isLoadingMembers = false;
-      if (isRoomChanged) return;
-      updateMemberList();
-    });
+    // room.loadMembersIfNeeded().then(() => {
+    //   isLoadingMembers = false;
+    //   if (isRoomChanged) return;
+    //   updateMemberList();
+    // });
 
     asyncSearch.on(asyncSearch.RESULT_SENT, handleSearchData);
     mx.on('RoomMember.membership', updateMemberList);

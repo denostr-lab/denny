@@ -21,7 +21,6 @@ import Key from "./Key";
 import { Room } from "../../models/room";
 
 // export { Filter as NostrFilter };
-let allRooms: string[] = [];
 let allUsers: string[] = [];
 export interface UpdateRoomMetadata {
     name: string;
@@ -34,11 +33,12 @@ class NostrClient {
     private leaveRooms: Set<string>;
 
     public readySubscribeRooms: boolean;
-
+    public memberListenRoomid: string | null;
     constructor(private readonly client: MatrixClient) {
         this.relay = new Relays(this.client);
         this.leaveRooms = new Set();
         this.readySubscribeRooms = false;
+        this.memberListenRoomid = null;
     }
 
     init() {
@@ -49,7 +49,8 @@ class NostrClient {
             [...JSON.parse(leaveRooms)].forEach((roomId) => this.leaveRooms.add(roomId));
         }
         // 把当前所有的用户加载进来
-        Events.initUsersAndRooms(this.client);
+        // Events.initUsersAndRooms(this.client);
+        this.initRoomberListen();
     }
 
     handleFilters(
@@ -158,6 +159,7 @@ class NostrClient {
     }
 
     async initGlobalSubscribe() {
+        Events.initUsersAndRooms(this.client);
         const roomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         // const userIds = this.client.getUsers().map((user) => user.userId) as string[];
         const pubkey = this.client.getUserId() as string;
@@ -172,7 +174,7 @@ class NostrClient {
         ];
         this.relay.subscribe({ filters, id: "global" });
         if (roomIds?.length) {
-            this.subscribeRooms(roomIds);
+            this.subscribeRooms([...new Set(roomIds)]);
         }
 
         // if (userIds?.length) {
@@ -346,33 +348,65 @@ class NostrClient {
         return newRoomIds;
     }
 
-    async subscribeRooms(roomsIds: string[]) {
+    async subscribeRooms(roomIds: string[]) {
+        // const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
+        // const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
+        if (!roomIds.length) {
+            return;
+        }
         const since = utils.now() - utils.timedelta(7, "days");
-        const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
-        const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
-        if (roomIds.length) {
-            const roomFilters = [
-                {
-                    "kinds": [42, 7, 142],
-                    "#e": roomIds as string[],
-                    since,
-                    "limit": 1000,
-                },
-            ] as Filter[];
-            const roomMetaFilters = [
-                { kinds: [40, 140], ids: roomIds },
-                { "kinds": [41, 141], "#e": roomIds },
-            ] as Filter[];
-            this.relay.subscribe({ filters: roomMetaFilters, id: "global-room-meta" });
-            this.relay.subscribe({ filters: roomFilters, id: "global-room" });
+
+        const roomFilters = [
+            {
+                "kinds": [42, 7, 142],
+                "#e": roomIds as string[],
+                since,
+                "limit": 1000,
+            },
+        ] as Filter[];
+        const roomMetaFilters = [
+            { kinds: [40, 140], ids: roomIds },
+            { "kinds": [41, 141], "#e": roomIds },
+        ] as Filter[];
+        this.relay.subscribe({ filters: roomMetaFilters, id: "global-room-meta" });
+        this.relay.subscribe({ filters: roomFilters, id: "global-room" });
+    }
+    async initRoomberListen() {
+        while (true) {
+            if (!this.memberListenRoomid) {
+                await utils.sleep(3000);
+                continue;
+            }
+            const room = this.client.getRoom(this.memberListenRoomid);
+            if (!room) {
+                await utils.sleep(3000);
+                continue;
+            }
+            const userIds = room.getMembers().map((member) => member.userId);
+            let change = false;
+            for (const id of userIds) {
+                if (!Events.roomMemberList.has(id)) {
+                    Events.roomMemberList.add(id);
+                    change = true;
+                }
+            }
+            if (!change) {
+                await utils.sleep(3000);
+                continue;
+            }
+            this.subscribeUsersDeletion(userIds);
+            await utils.sleep(3000);
         }
     }
-
+    subscribeUsersDeletionRoom(roomid: string) {
+        Events.roomMemberList.clear();
+        this.memberListenRoomid = roomid;
+    }
     subscribeUsersDeletion(userIds: string[]) {
-        const exitedIds = this.client.getUsers().map((user) => user.userId) as string[];
-        const ids = [...new Set([...userIds, ...exitedIds])];
+        // const exitedIds = this.client.getUsers().map((user) => user.userId) as string[];
+        const ids = [...new Set(userIds)];
         if (ids?.length) {
-            const since = utils.now() - utils.timedelta(7, "seconds");
+            const since = utils.now() - utils.timedelta(2, "days");
             const roomFilters = [{ kinds: [5], authors: ids, since }] as Filter[];
             this.relay.subscribe({ filters: roomFilters, id: "global-user-deletion" });
         }
@@ -398,33 +432,21 @@ class NostrClient {
             this.fetchUserMetadatas([...userIds] as string[]);
 
             if (roomIds?.length) {
-                const prevAllids = allRooms;
-                let currentAllIds = [...allRooms, ...roomIds];
-                currentAllIds = [...new Set(currentAllIds)];
-                const notSmae = currentAllIds.some((i) => !prevAllids.find((j) => i === j));
-                if (notSmae || currentAllIds.length !== prevAllids.length) {
-                    allRooms = currentAllIds;
-                    this.subscribeRooms(allRooms);
+                let roomChange = false;
+                roomIds.forEach((i) => {
+                    if (!Events.allRooms.has(i)) {
+                        Events.allRooms.add(i);
+                        roomChange = true;
+                    }
+                });
+                if (roomChange) {
+                    this.subscribeRooms([...Events.allRooms]);
                 }
             }
         } catch (e) {
             console.info(e, "getBufferEvent error");
         }
-        // try {
-        //     const ids = (data?.presence?.events || []).map((i) => i.user_id).filter(Boolean);
-        //     if (ids?.length) {
-        //         const prevAllUsers = allUsers;
-        //         let currentAllUsers = [...allUsers, ...ids];
-        //         currentAllUsers = [...new Set(currentAllUsers)];
-        //         const notSmae = currentAllUsers.some((i) => !prevAllUsers.find((j) => i === j));
-        //         if (notSmae || currentAllUsers.length !== prevAllUsers.length) {
-        //             allUsers = currentAllUsers;
-        //             this.subscribeUsersDeletion(allUsers);
-        //         }
-        //     }
-        // } catch (e) {
-        //     console.info(e, "subscribeUsersDeletion error");
-        // }
+
         return data;
     }
 
@@ -486,6 +508,13 @@ class NostrClient {
         */
         userIds = userIds.filter((i) => {
             return !Events.userProfileMap[i];
+        });
+        userIds = userIds.filter((i) => {
+            if (!Events.fetchedUsers.has(i)) {
+                Events.fetchedUsers.add(i);
+                return true;
+            }
+            return false;
         });
         if (!userIds?.length) return;
 

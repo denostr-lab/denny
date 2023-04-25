@@ -363,7 +363,7 @@ function ProfileViewer() {
       }
       forceUpdateLimit()
     }
-    const throttled = throttle(_handle, 5000, { 'trailing': false });
+    const throttled = throttle(_handle, 3000, { 'trailing': false });
 
     mx.on('event', throttled)
     return () => {
