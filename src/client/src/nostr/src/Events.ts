@@ -325,7 +325,7 @@ class Events {
         // this.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
     };
     handleContactsEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
-        // 获取
+        // 获取联系人列表
         const created_at = event.created_at * 1000;
         const content = JSON.parse(event.content) as MetaInfo;
         const currentUser = client.getContact(event.pubkey);
@@ -351,33 +351,6 @@ class Events {
                     age: Date.now() - created_at,
                 },
             });
-            // 要更新所有的m.direct的房间
-            const accountData = client.getAccountData(EventType.Direct)?.getContent() || {};
-            const hasDirect = accountData[event.pubkey];
-            if (!hasDirect) {
-                return;
-            }
-            // 直接设置房间的 name abcout, picture
-            // const room = client.getRoom(event.pubkey);
-            // if (!room) {
-            //     return;
-            // }
-            for (const roomType in ROOM_META_TYPES) {
-                // 直接加入
-                const roomValue = ROOM_META_TYPES[roomType];
-                if (content[roomType] === undefined || content[roomType] === null) {
-                    continue;
-                }
-                const metadata: RoomMetaInfo = {
-                    roomId: event.pubkey,
-                    sender: event.pubkey,
-                    eventId: event.id,
-                    createdAt: created_at,
-                    content: { [roomValue.field]: content[roomType] },
-                    type: roomValue.type,
-                };
-                addRoomMeta(syncResponse, metadata);
-            }
         }
     };
     handleUserMetaEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {

@@ -25,14 +25,14 @@ interface SubscriptionOption {
     disableEventHandle?: boolean;
 }
 const DEFAULT_RELAYS = [
-    "wss://denostr.sixwings.snowinning.com",
-    "wss://eden.nostr.land",
-    "wss://relay.damus.io",
-    "wss://relay.snort.social",
-    "wss://offchain.pub",
-    "wss://nos.lol",
-    "wss://denostr.paiya.app",
-    "wss://nostr.paiyaapp.com",
+    // "wss://denostr.sixwings.snowinning.com",
+    // "wss://eden.nostr.land",
+    // "wss://relay.damus.io",
+    // "wss://relay.snort.social",
+    // "wss://offchain.pub",
+    // "wss://nos.lol",
+    // "wss://denostr.paiya.app",
+    // "wss://nostr.paiyaapp.com",
     "ws://localhost:8008",
     // "wss://denostr.chickenkiller.com",
     // "wss://qwqb4l.paiya.app",

@@ -148,14 +148,14 @@ export class IndexedDBStore extends MemoryStore {
                     this.userModifiedMap[u.userId] = u.getLastModifiedTime();
                     this.storeUser(u);
                 });
-                for (const senderId in userContacts) {
-                    const contactEvent: IContactRecord = userContacts[senderId];
+                userContacts.forEach((contactEvent: IContactRecord) => {
+                    const senderId = contactEvent.event.sender;
                     for (const key in contactEvent.people) {
                         const peopleInfo: IPeople = contactEvent.people[key];
                         const c = new Contact({ ...peopleInfo, senderId });
                         this.storeContact(senderId, c);
                     }
-                }
+                });
             });
     }
 
