@@ -25,6 +25,7 @@ interface SubscriptionOption {
     disableEventHandle?: boolean;
 }
 const DEFAULT_RELAYS = [
+    "wss://denostr.sixwings.snowinning.com",
     "wss://eden.nostr.land",
     "wss://relay.damus.io",
     "wss://relay.snort.social",

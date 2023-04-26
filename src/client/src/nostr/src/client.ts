@@ -399,7 +399,9 @@ class NostrClient {
         }
     }
     subscribeUsersDeletionRoom(roomid: string) {
-        Events.roomMemberList.clear();
+        if (this.memberListenRoomid !== roomid) {
+            Events.roomMemberList.clear();
+        }
         this.memberListenRoomid = roomid;
     }
     subscribeUsersDeletion(userIds: string[]) {
@@ -407,7 +409,7 @@ class NostrClient {
         const ids = [...new Set(userIds)];
         if (ids?.length) {
             const since = utils.now() - utils.timedelta(2, "days");
-            const roomFilters = [{ kinds: [5], authors: ids, since }] as Filter[];
+            const roomFilters = [{ kinds: [5], authors: ids, since, limit: 200 }] as Filter[];
             this.relay.subscribe({ filters: roomFilters, id: "global-user-deletion" });
         }
     }

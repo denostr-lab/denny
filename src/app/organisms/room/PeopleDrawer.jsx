@@ -81,6 +81,14 @@ function PeopleDrawer({ roomId }) {
     } else asyncSearch.search(term);
   }
   useEffect(() => {
+    const t = setInterval(() => {
+      forceUpdateLimit()
+    }, 3000);
+    return () => {
+      clearInterval(t)
+    }
+  }, [])
+  useEffect(() => {
     const mx = initMatrix.matrixClient;
     const _handle = (event) => {
       const userId = event?.event?.user_id

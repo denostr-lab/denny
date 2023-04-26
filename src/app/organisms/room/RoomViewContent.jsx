@@ -251,7 +251,6 @@ function usePaginate(
     const limit = eventLimitRef.current;
     if (roomTimeline.isOngoingPagination) return;
     const tLength = roomTimeline.timeline.length;
-
     if (timelineScroll.bottom < SCROLL_TRIGGER_POS) {
       if (limit.length < tLength) {
         // paginate from memory
