@@ -7,7 +7,7 @@ import settings from '../../../client/state/settings';
 import RoomTimeline from '../../../client/state/RoomTimeline';
 import navigation from '../../../client/state/navigation';
 import { openNavigation } from '../../../client/action/navigation';
-
+import ContactPeopleDrawer from "../contact/ContactPeopleDrawer"
 import Welcome from '../welcome/Welcome';
 import RoomView from './RoomView';
 import RoomSettings from './RoomSettings';
@@ -17,6 +17,7 @@ function Room() {
   const [roomInfo, setRoomInfo] = useState({
     roomTimeline: null,
     eventId: null,
+    roomId: null,
   });
   const [isDrawer, setIsDrawer] = useState(settings.isPeopleDrawer);
 
@@ -25,6 +26,15 @@ function Room() {
   useEffect(() => {
     const handleRoomSelected = (rId, pRoomId, eId) => {
       roomInfo.roomTimeline?.removeInternalListeners();
+      console.info(rId, 'asd')
+      if (rId === cons.sepcialRoomType.Contacts) {
+        setRoomInfo({
+          roomTimeline: null,
+          eventId: null,
+          roomId: rId
+        });
+        return
+      }
       const room = mx.getRoom(rId)
       if (room) {
         mx.subscribeUsersDeletionRoom(rId)
@@ -32,12 +42,14 @@ function Room() {
         setRoomInfo({
           roomTimeline: new RoomTimeline(rId),
           eventId: eId ?? null,
+          roomId: rId
         });
       } else {
         // TODO: add ability to join room if roomId is invalid
         setRoomInfo({
           roomTimeline: null,
           eventId: null,
+          roomId: null
         });
       }
     };
@@ -62,7 +74,12 @@ function Room() {
     };
   }, []);
 
-  const { roomTimeline, eventId } = roomInfo;
+  const { roomTimeline, eventId, roomId } = roomInfo;
+  console.info(roomId, 'asd', cons.sepcialRoomType.Contacts)
+
+  if (roomId === cons.sepcialRoomType.Contacts) {
+    return <ContactPeopleDrawer roomId={roomId} />;
+  }
   if (roomTimeline === null) {
     setTimeout(() => openNavigation());
     return <Welcome />;

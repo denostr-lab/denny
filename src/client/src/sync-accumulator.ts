@@ -119,7 +119,9 @@ export interface IRooms {
 interface IPresence {
     events: IMinimalEvent[];
 }
-
+interface IContacts {
+    events: IMinimalEvent[];
+}
 interface IAccountData {
     events: IMinimalEvent[];
 }
@@ -143,6 +145,7 @@ export interface ISyncResponse {
     "next_batch": string;
     "rooms": IRooms;
     "presence"?: IPresence;
+    "contacts"?: IContacts;
     "account_data": IAccountData;
     "to_device"?: IToDevice;
     "device_lists"?: IDeviceLists;

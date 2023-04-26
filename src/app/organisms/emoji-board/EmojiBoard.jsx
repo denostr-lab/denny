@@ -221,7 +221,7 @@ function EmojiBoard({ onSelect, searchRef }) {
       }
 
       const room = mx.getRoom(selectedRoomId);
-      const parentIds = initMatrix.roomList.getAllParentSpaces(room.roomId);
+      const parentIds = initMatrix.roomList.getAllParentSpaces(room?.roomId);
       const parentRooms = [...parentIds].map((id) => mx.getRoom(id));
       if (room) {
         const packs = getRelevantPacks(room.client, [room, ...parentRooms]).filter(

@@ -169,7 +169,7 @@ class NostrClient {
         const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since }];
         this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
         const filters: Filter[] = [
-            { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since },
+            { kinds: [0, 40, 42, 4, 7, 3], authors: [pubkey], since },
             { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since },
         ];
         this.relay.subscribe({ filters, id: "global" });

@@ -11,6 +11,7 @@ import Notifications from './state/Notifications';
 import { cryptoCallbacks } from './state/secretStorageKeys';
 import navigation from './state/navigation';
 import { resendSharedRoomKey } from './src/nostr/src/Helpers';
+import cons from './state/cons';
 
 global.Olm = Olm;
 
@@ -108,7 +109,14 @@ class InitMatrix extends EventEmitter {
       window.location.reload();
     });
   }
-
+  getRoom(roomId) {
+    if (roomId === cons.sepcialRoomType.Contacts) {
+      return {
+        name: roomId
+      }
+    }
+    return this.matrixClient.getRoom(roomId)
+  }
   async logout() {
     this.matrixClient.stopClient();
     try {

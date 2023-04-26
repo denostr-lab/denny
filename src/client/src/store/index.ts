@@ -89,6 +89,25 @@ export interface IStore {
      * Store a User.
      * @param user - The user to store.
      */
+    storeContact(user: User): void;
+
+    /**
+     * Retrieve a User by its' user ID.
+     * @param userId - The user ID.
+     * @returns The user or null.
+     */
+    getContact(userId: string): User | null;
+
+    /**
+     * Retrieve all known users.
+     * @returns A list of users, which may be empty.
+     */
+    getContacts(): User[];
+
+    /**
+     * Store a User.
+     * @param user - The user to store.
+     */
     storeUser(user: User): void;
 
     /**

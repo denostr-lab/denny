@@ -9925,6 +9925,18 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     public subscribeUsersDeletionRoom(roomid: string) {
         return this.nostrClient.subscribeUsersDeletionRoom(roomid);
     }
+    public getContacts() {
+        return this.store.getContacts();
+    }
+    /**
+     * Retrieve a user.
+     * @param userId - The user ID to retrieve.
+     * @returns A user or null if there is no data store or the user does
+     * not exist.
+     */
+    public getContact(userId: string): User | null {
+        return this.store.getContact(userId);
+    }
 }
 
 /**

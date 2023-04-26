@@ -89,6 +89,7 @@ class Navigation extends EventEmitter {
       this.isRoomSettings = !this.isRoomSettings;
       this.emit(cons.events.navigation.ROOM_SETTINGS_TOGGLED, this.isRoomSettings);
     }
+    console.info(cons.events.navigation.ROOM_SELECTED, this.selectedRoomId, '')
     this.emit(
       cons.events.navigation.ROOM_SELECTED,
       this.selectedRoomId,
@@ -99,6 +100,11 @@ class Navigation extends EventEmitter {
 
   _selectTabWithRoom(roomId) {
     const { roomList, accountData } = this.initMatrix;
+    if (roomId === cons.sepcialRoomType.Contacts) {
+      this._selectSpace(null, true, false);
+      this._selectTab(cons.tabs.DIRECTS, false);
+      return
+    }
     const { categorizedSpaces } = accountData;
 
     if (roomList.isOrphan(roomId)) {

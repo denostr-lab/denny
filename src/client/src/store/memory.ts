@@ -51,6 +51,7 @@ export interface IOpts {
 export class MemoryStore implements IStore {
     private rooms: Record<string, Room> = {}; // roomId: Room
     private users: Record<string, User> = {}; // userId: User
+    private contacts: Record<string, User> = {}; // userId: Contact
     private syncToken: string | null = null;
     // userId: {
     //    filterId: Filter
@@ -171,11 +172,31 @@ export class MemoryStore implements IStore {
         });
     }
 
+    public storeContact(contact): void {
+        this.contacts[contact.userId] = contact;
+    }
+    /**
+     * Retrieve a User by its' user ID.
+     * @param userId - The user ID.
+     * @returns The user or null.
+     */
+    public getContact(userId: string): User | null {
+        return this.contacts[userId] || null;
+    }
+    /**
+     * Retrieve all known users.
+     * @returns A list of users, which may be empty.
+     */
+    public getContacts(): User[] {
+        return Object.values(this.contacts);
+    }
+
     /**
      * Store a User.
      * @param user - The user to store.
      */
     public storeUser(user: User): void {
+        console.info("usususususu", user);
         this.users[user.userId] = user;
     }
 

@@ -62,7 +62,10 @@ function Directs({ size }) {
     };
   }, []);
 
-  return <RoomsCategory name="People" hideHeader roomIds={directIds} drawerPostie={drawerPostie} />;
+  return <>
+    <RoomsCategory name="Others" hideHeader roomIds={[cons.sepcialRoomType.Contacts]} drawerPostie={drawerPostie} />
+    <RoomsCategory name="DM" roomIds={directIds} drawerPostie={drawerPostie} />
+  </>
 }
 Directs.propTypes = {
   size: PropTypes.number.isRequired,

@@ -38,7 +38,7 @@ function useSystemState() {
 
 function Drawer() {
   const [systemState] = useSystemState();
-  const [selectedTab] = useSelectedTab();
+  const [selectedTab, subSelectedTab] = useSelectedTab();
   const [spaceId] = useSelectedSpace();
   const [, forceUpdate] = useForceUpdate();
   const scrollRef = useRef(null);
@@ -64,7 +64,7 @@ function Drawer() {
 
   return (
     <div className="drawer">
-      <DrawerHeader selectedTab={selectedTab} spaceId={spaceId} />
+      <DrawerHeader selectedTab={selectedTab} spaceId={spaceId} subSelectedTab={subSelectedTab} />
       <div className="drawer__content-wrapper">
         {navigation.selectedSpacePath.length > 1 && selectedTab !== cons.tabs.DIRECTS && (
           <DrawerBreadcrumb spaceId={spaceId} />
@@ -81,7 +81,7 @@ function Drawer() {
           </ScrollView>
         </div>
       </div>
-      { systemState !== null && (
+      {systemState !== null && (
         <div className="drawer__state">
           <Text>{systemState.status}</Text>
         </div>

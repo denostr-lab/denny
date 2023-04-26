@@ -149,10 +149,12 @@ function RelayStatus() {
   );
 }
 
-function DrawerHeader({ selectedTab, spaceId }) {
+function DrawerHeader({ selectedTab, subSelectedTab, spaceId }) {
   const mx = initMatrix.matrixClient;
-  const tabName = selectedTab !== cons.tabs.DIRECTS ? 'Home' : 'Direct messages';
-
+  let tabName = selectedTab !== cons.tabs.DIRECTS ? 'Home' : 'Direct messages';
+  if (subSelectedTab === cons.sepcialRoomType.Contacts) {
+    tabName = 'Contacts'
+  }
   const isDMTab = selectedTab === cons.tabs.DIRECTS;
   const room = mx.getRoom(spaceId);
   const spaceName = isDMTab ? null : (room?.name || null);

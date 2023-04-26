@@ -324,12 +324,67 @@ class Events {
 
         // this.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
     };
+    handleContactsEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
+        // 获取
+        const created_at = event.created_at * 1000;
+        const content = JSON.parse(event.content) as MetaInfo;
+        const currentUser = client.getContact(event.pubkey);
+        let currentTs = currentUser?.events?.presence?.getTs?.() || 0;
+        if (!currentUser || currentTs < created_at) {
+            const userProfile: UserProfile = {
+                ...content,
+                created_at,
+            };
+            this.userProfileMap[event.pubkey] = userProfile;
+            syncResponse.presence!.events.push({
+                content: {
+                    avatar_url: content.picture,
+                    displayname: content.name,
+                },
+                origin_server_ts: created_at,
+                presence: true,
+                user_id: event.pubkey,
+                sender: event.pubkey,
 
+                type: EventType.Presence,
+                unsigned: {
+                    age: Date.now() - created_at,
+                },
+            });
+            // 要更新所有的m.direct的房间
+            const accountData = client.getAccountData(EventType.Direct)?.getContent() || {};
+            const hasDirect = accountData[event.pubkey];
+            if (!hasDirect) {
+                return;
+            }
+            // 直接设置房间的 name abcout, picture
+            // const room = client.getRoom(event.pubkey);
+            // if (!room) {
+            //     return;
+            // }
+            for (const roomType in ROOM_META_TYPES) {
+                // 直接加入
+                const roomValue = ROOM_META_TYPES[roomType];
+                if (content[roomType] === undefined || content[roomType] === null) {
+                    continue;
+                }
+                const metadata: RoomMetaInfo = {
+                    roomId: event.pubkey,
+                    sender: event.pubkey,
+                    eventId: event.id,
+                    createdAt: created_at,
+                    content: { [roomValue.field]: content[roomType] },
+                    type: roomValue.type,
+                };
+                addRoomMeta(syncResponse, metadata);
+            }
+        }
+    };
     handleUserMetaEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
         // 这个除了更新个人信息 还要更新房间的头像信息
         const created_at = event.created_at * 1000;
         const content = JSON.parse(event.content) as MetaInfo;
-        const currentUser = client.getUser(event.pubkey);
+        const currentUser = client.getContact(event.pubkey);
         let currentTs = currentUser?.events?.presence?.getTs?.() || 0;
         if (!currentUser || currentTs < created_at) {
             const userProfile: UserProfile = {
@@ -1091,6 +1146,9 @@ class Events {
         switch (event.kind as Kinds) {
             case 0:
                 this.handleUserMetaEvent(client, event, syncResponse);
+                break;
+            case 3:
+                this.handleContactsEvent(client, event, syncResponse);
                 break;
             case 4:
                 this.handlePrivateEvent(client, event, syncResponse);
