@@ -16,6 +16,7 @@ limitations under the License.
 
 import { EventType } from "../@types/event";
 import { Room } from "../models/room";
+import { Contact } from "../models/contact";
 import { User } from "../models/user";
 import { IEvent, MatrixEvent } from "../models/event";
 import { Filter } from "../filter";
@@ -26,6 +27,21 @@ import { IStateEventWithRoomId } from "../@types/search";
 import { IndexedToDeviceBatch, ToDeviceBatchWithTxnId } from "../models/ToDeviceMessage";
 import { EventEmitterEvents } from "../models/typed-event-emitter";
 
+export interface IContactEvent {
+    content: any;
+    origin_server_ts: number;
+    sender: string;
+    type: string;
+}
+export interface IPeople {
+    id: string;
+    relay: string;
+    petname: string;
+}
+export interface IContactRecord {
+    event: IContactEvent;
+    people: Record<string, IPeople>;
+}
 export interface ISavedSync {
     nextBatch: string;
     roomsData: IRooms;
@@ -86,23 +102,17 @@ export interface IStore {
     getRoomSummaries(): RoomSummary[];
 
     /**
-     * Store a User.
-     * @param user - The user to store.
+     * Store a Contact.
+     * @param user - The contact to store.
      */
-    storeContact(user: User): void;
+    storeContacts(sendId: string, contact: Contact): void;
 
     /**
      * Retrieve a User by its' user ID.
      * @param userId - The user ID.
      * @returns The user or null.
      */
-    getContact(userId: string): User | null;
-
-    /**
-     * Retrieve all known users.
-     * @returns A list of users, which may be empty.
-     */
-    getContacts(): User[];
+    getContact(userId: string): Contact[];
 
     /**
      * Store a User.

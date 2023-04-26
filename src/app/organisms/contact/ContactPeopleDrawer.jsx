@@ -140,9 +140,6 @@ function ContactPeopleDrawer({ roomId }) {
               <form onSubmit={(e) => e.preventDefault()} className="people-search">
                 <Input forwardRef={searchRef} type="text" onChange={handleSearch} placeholder="Search" required />
                 <IconButton onClick={handleSearch} size="small" src={searchedMembers !== null ? CrossIC : SearchIC} />
-
-
-
               </form>
             </div>
             <div className="room-view__scrollable">

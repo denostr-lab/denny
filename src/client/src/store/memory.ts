@@ -24,6 +24,7 @@ import { User } from "../models/user";
 import { IEvent, MatrixEvent } from "../models/event";
 import { RoomState, RoomStateEvent } from "../models/room-state";
 import { RoomMember } from "../models/room-member";
+import { Contact } from "../models/contact";
 import { Filter } from "../filter";
 import { ISavedSync, IStore } from "./index";
 import { RoomSummary } from "../models/room-summary";
@@ -51,7 +52,7 @@ export interface IOpts {
 export class MemoryStore implements IStore {
     private rooms: Record<string, Room> = {}; // roomId: Room
     private users: Record<string, User> = {}; // userId: User
-    private contacts: Record<string, User> = {}; // userId: Contact
+    private contacts: Map<string, Map<string, Contact>> = new Map(); // userId: Contact
     private syncToken: string | null = null;
     // userId: {
     //    filterId: Filter
@@ -172,23 +173,22 @@ export class MemoryStore implements IStore {
         });
     }
 
-    public storeContact(contact): void {
-        this.contacts[contact.userId] = contact;
+    public storeContact(sendId: string, contact: Contact): void {
+        let contactMap = this.contacts.get(sendId);
+        if (!contactMap) {
+            contactMap = new Map();
+            this.contacts.set(sendId, contactMap);
+        }
+        contactMap.set(contact.userId, contact);
     }
     /**
      * Retrieve a User by its' user ID.
      * @param userId - The user ID.
      * @returns The user or null.
      */
-    public getContact(userId: string): User | null {
-        return this.contacts[userId] || null;
-    }
-    /**
-     * Retrieve all known users.
-     * @returns A list of users, which may be empty.
-     */
-    public getContacts(): User[] {
-        return Object.values(this.contacts);
+    public getContacts(userId: string): Contact[] {
+        const res = this.contacts.get(userId)?.values() as unknown as Contact[];
+        return res || [];
     }
 
     /**
@@ -196,7 +196,6 @@ export class MemoryStore implements IStore {
      * @param user - The user to store.
      */
     public storeUser(user: User): void {
-        console.info("usususususu", user);
         this.users[user.userId] = user;
     }
 

@@ -20,7 +20,7 @@ import * as IndexedDBHelpers from "../indexeddb-helpers";
 import { logger } from "../logger";
 import { IStateEventWithRoomId, IStoredClientOpts } from "../matrix";
 import { ISavedSync } from "./index";
-import { IIndexedDBBackend, UserTuple } from "./indexeddb-backend";
+import { IIndexedDBBackend, UserTuple, UserContactTuple } from "./indexeddb-backend";
 import { IndexedToDeviceBatch, ToDeviceBatchWithTxnId } from "../models/ToDeviceMessage";
 
 type DbMigration = (db: IDBDatabase) => void;
@@ -484,6 +484,22 @@ export class LocalIndexedDBStoreBackend implements IIndexedDBBackend {
             const store = txn.objectStore("users");
             return selectQuery(store, undefined, (cursor) => {
                 return [cursor.value.userId, cursor.value.event];
+            });
+        });
+    }
+
+    /**
+     * Load all user presence events from the database. This is not cached.
+     * FIXME: It would probably be more sensible to store the events in the
+     * sync.
+     * @returns A list of presence events in their raw form.
+     */
+    public getUserContactsEvents(): Promise<UserContactTuple[]> {
+        return utils.promiseTry<UserContactTuple[]>(() => {
+            const txn = this.db!.transaction(["contacts"], "readonly");
+            const store = txn.objectStore("contacts");
+            return selectQuery(store, undefined, (cursor) => {
+                return cursor.value;
             });
         });
     }

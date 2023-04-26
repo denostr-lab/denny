@@ -25,10 +25,11 @@ import { EventType } from "../@types/event";
 export enum ContactEvent {
     Change = "Contact.change",
 }
-interface IContact {
+interface IContactInfo {
     id: string;
     petname: string;
     relay: string;
+    senderId: string;
 }
 export type ContactEventHandlerMap = {
     /**
@@ -57,7 +58,7 @@ export class Contact extends TypedEventEmitter<ContactEvent, ContactEventHandler
     public user?: User;
 
     public relay: string;
-
+    public senderId: string;
     public userId: string;
 
     /**
@@ -66,12 +67,13 @@ export class Contact extends TypedEventEmitter<ContactEvent, ContactEventHandler
      * @param roomId - The room ID of the member.
      * @param userId - The user ID of the member.
      */
-    public constructor(contact: IContact) {
+    public constructor(contact: IContactInfo) {
         super();
 
         this.name = contact.petname ?? "";
         this.relay = contact.relay ?? "";
         this.userId = contact.id;
+        this.senderId = contact.senderId;
     }
 
     public getRelay() {
