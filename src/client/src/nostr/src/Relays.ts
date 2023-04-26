@@ -424,7 +424,9 @@ class Relays {
                     const oldFilterFirst = oldFilter[0];
                     oldFilter = [{ kinds: [0, 4], authors: oldFilterFirst.authors, since: oldFilterFirst.since }];
                 } else {
-                    continue;
+                    if (!id.includes("fetchUserMetadata")) {
+                        continue;
+                    }
                 }
             }
             // if (sinceLastSeen && savedRelays[relay.url] && savedRelays[relay.url].lastSeen) {
