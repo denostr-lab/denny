@@ -29,11 +29,19 @@ import SearchIC from '../../../../public/res/ic/outlined/search.svg';
 import CrossIC from '../../../../public/res/ic/outlined/cross.svg';
 
 function simplyfiMembers(members) {
-  return members.map((member) => ({
-    userId: member.userId,
-    name: getUsernameOfRoomMember(member),
-    username: member.userId,
-  }));
+
+  return members.map((member) => {
+    let name = getUsernameOfRoomMember(member)
+    if (name.match(/^[0-9a-fA-F]{64}$/)) {
+      name = member.name
+    }
+    return {
+      userId: member.userId,
+      name,
+      username: member.userId,
+    }
+
+  });
 }
 
 const asyncSearch = new AsyncSearch();
@@ -150,7 +158,7 @@ function ContactPeopleDrawer({ roomId }) {
                         avatarSrc={initMatrix.matrixClient.getUserAvatar(member.userId)}
                         name={member.name}
                         color={colorMXID(member.userId)}
-                        peopleRole={0}
+                        peopleRole={''}
                       />
                     ))
                   }
