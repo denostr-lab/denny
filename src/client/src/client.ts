@@ -213,6 +213,7 @@ import { DeviceInfoMap } from "./crypto/DeviceList";
 import Relays, { NostrRelay } from "./nostr/src/Relays";
 import NostrClient from "./nostr/src/client";
 import Key from "./nostr/src/Key";
+import { Contact, ContactEvent } from "./models/contact";
 
 export type Store = IStore;
 
@@ -925,6 +926,7 @@ type RoomMemberEvents =
     | RoomMemberEvent.PowerLevel
     | RoomMemberEvent.Membership;
 
+
 type UserEvents =
     | UserEvent.AvatarUrl
     | UserEvent.DisplayName
@@ -932,6 +934,8 @@ type UserEvents =
     | UserEvent.CurrentlyActive
     | UserEvent.LastPresenceTs;
 
+type ContactEvents = 
+    ContactEvent.Change;
 export type EmittedEvents =
     | ClientEvent
     | RoomEvents
@@ -948,7 +952,8 @@ export type EmittedEvents =
     | GroupCallEventHandlerEvent.Participants
     | HttpApiEvent.SessionLoggedOut
     | HttpApiEvent.NoConsent
-    | BeaconEvent;
+    | BeaconEvent
+    | ContactEvents;
 
 export type ClientEventHandlerMap = {
     /**
@@ -9925,16 +9930,14 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     public subscribeUsersDeletionRoom(roomid: string) {
         return this.nostrClient.subscribeUsersDeletionRoom(roomid);
     }
-    public getContacts() {
-        return this.store.getContacts();
-    }
+
     /**
-     * Retrieve a user.
+     * Retrieve user's contacts.
      * @param userId - The user ID to retrieve.
-     * @returns A user or null if there is no data store or the user does
+     * @returns Contact list
      * not exist.
      */
-    public getContact(userId: string): User | null {
+    public getContact(userId: string): Contact[] {
         return this.store.getContact(userId);
     }
 }

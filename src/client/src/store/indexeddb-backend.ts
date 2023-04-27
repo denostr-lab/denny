@@ -36,6 +36,7 @@ export interface IIndexedDBBackend {
     saveToDeviceBatches(batches: ToDeviceBatchWithTxnId[]): Promise<void>;
     getOldestToDeviceBatch(): Promise<IndexedToDeviceBatch | null>;
     removeToDeviceBatch(id: number): Promise<void>;
+    persistUserContactsEvents(contacts: IContactRecord[]): Promise<void>;
 }
 
 export type UserTuple = [userId: string, presenceEvent: Partial<IEvent>];

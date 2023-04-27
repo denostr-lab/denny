@@ -42,6 +42,7 @@ export interface IMinimalEvent {
     type: EventType | string;
     unsigned?: IUnsigned;
     origin_server_ts?: number;
+    sender?: string;
     presence?: boolean;
 }
 

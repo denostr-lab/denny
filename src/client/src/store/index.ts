@@ -40,7 +40,8 @@ export interface IPeople {
 }
 export interface IContactRecord {
     event: IContactEvent;
-    people: Record<string, IPeople>;
+    people: IPeople[];
+    userId: string;
 }
 export interface ISavedSync {
     nextBatch: string;
@@ -105,7 +106,7 @@ export interface IStore {
      * Store a Contact.
      * @param user - The contact to store.
      */
-    storeContacts(sendId: string, contact: Contact): void;
+    storeContact(sendId: string, contact: Contact): void;
 
     /**
      * Retrieve a User by its' user ID.
@@ -114,6 +115,7 @@ export interface IStore {
      */
     getContact(userId: string): Contact[];
 
+    clearContact(userId: string): void;
     /**
      * Store a User.
      * @param user - The user to store.
@@ -273,4 +275,9 @@ export interface IStore {
      * Removes a specific batch of to-device messages from the queue
      */
     removeToDeviceBatch(id: number): Promise<void>;
+
+    /**
+     * persistUserContactsEvents
+     */
+    persistUserContactsEvents(contacts: IContactRecord[]): Promise<void>;
 }

@@ -30,6 +30,7 @@ interface IContactInfo {
     petname: string;
     relay: string;
     senderId: string;
+    origin_server_ts: number;
 }
 export type ContactEventHandlerMap = {
     /**
@@ -41,7 +42,7 @@ export type ContactEventHandlerMap = {
      * });
      * ```
      */
-    [ContactEvent.Change]: () => void;
+    [ContactEvent.Change]: (event: MatrixEvent) => void;
 };
 
 export class Contact extends TypedEventEmitter<ContactEvent, ContactEventHandlerMap> {
@@ -60,6 +61,7 @@ export class Contact extends TypedEventEmitter<ContactEvent, ContactEventHandler
     public relay: string;
     public senderId: string;
     public userId: string;
+    public origin_server_ts: number;
 
     /**
      * Construct a new room member.
@@ -74,9 +76,13 @@ export class Contact extends TypedEventEmitter<ContactEvent, ContactEventHandler
         this.relay = contact.relay ?? "";
         this.userId = contact.id;
         this.senderId = contact.senderId;
+        this.origin_server_ts = contact.origin_server_ts ?? 0;
     }
 
     public getRelay() {
         return this.relay ?? "";
+    }
+    public getTs() {
+        return this.origin_server_ts;
     }
 }

@@ -327,26 +327,29 @@ class Events {
     handleContactsEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
         // 获取联系人列表
         const created_at = event.created_at * 1000;
-        const content = JSON.parse(event.content) as MetaInfo;
-        const currentUser = client.getContact(event.pubkey);
-        let currentTs = currentUser?.events?.presence?.getTs?.() || 0;
-        if (!currentUser || currentTs < created_at) {
-            const userProfile: UserProfile = {
-                ...content,
-                created_at,
-            };
-            this.userProfileMap[event.pubkey] = userProfile;
-            syncResponse.presence!.events.push({
+
+        const contacts = client.getContact(event.pubkey);
+        const firstContact = contacts[0];
+        let currentTs = firstContact?.getTs?.() || 0;
+        if (!firstContact || currentTs < created_at) {
+            const people = event.tags
+                .filter((i) => i[0] === "p")
+                .map((i) => {
+                    if (!i[0] || i[0].length !== 64) return null;
+                    return {
+                        id: i[1] ?? "",
+                        relay: i[2] ?? "",
+                        petname: i[3] ?? "",
+                    };
+                })
+                .filter(Boolean);
+            syncResponse.contacts!.events.push({
                 content: {
-                    avatar_url: content.picture,
-                    displayname: content.name,
+                    people,
                 },
                 origin_server_ts: created_at,
-                presence: true,
-                user_id: event.pubkey,
                 sender: event.pubkey,
-
-                type: EventType.Presence,
+                type: EventType.Contact,
                 unsigned: {
                     age: Date.now() - created_at,
                 },

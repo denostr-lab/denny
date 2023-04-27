@@ -150,9 +150,10 @@ export class IndexedDBStore extends MemoryStore {
                 });
                 userContacts.forEach((contactEvent: IContactRecord) => {
                     const senderId = contactEvent.event.sender;
+                    const origin_server_ts = contactEvent.event.origin_server_ts;
                     for (const key in contactEvent.people) {
                         const peopleInfo: IPeople = contactEvent.people[key];
-                        const c = new Contact({ ...peopleInfo, senderId });
+                        const c = new Contact({ ...peopleInfo, senderId, origin_server_ts });
                         this.storeContact(senderId, c);
                     }
                 });
@@ -241,7 +242,6 @@ export class IndexedDBStore extends MemoryStore {
             // note that we've saved this version of the user
             this.userModifiedMap[u.userId] = u.getLastModifiedTime();
         }
-
         return this.backend.syncToDatabase(userTuples);
     });
 
@@ -373,6 +373,10 @@ export class IndexedDBStore extends MemoryStore {
 
     public removeToDeviceBatch(id: number): Promise<void> {
         return this.backend.removeToDeviceBatch(id);
+    }
+
+    public persistUserContactsEvents(contacts: IContactRecord[]) {
+        return this.backend.persistUserContactsEvents(contacts);
     }
 }
 

@@ -109,7 +109,7 @@ function ContactPeopleDrawer({ roomId }) {
       if (isLoadingMembers) return;
       setMemberList(
         simplyfiMembers(
-          mx.getContacts()
+          mx.getContact(mx.getUserId())
             .sort(memberByAtoZ),
         ),
       );

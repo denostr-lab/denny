@@ -49,7 +49,7 @@ const DB_MIGRATIONS: DbMigration[] = [
         db.createObjectStore("to_device_queue", { autoIncrement: true });
     },
     (db): void => {
-        db.createObjectStore("contacts", { keyPath: "userId" });
+        db.createObjectStore("contacts", { keyPath: ["userId"] });
     },
     // Expand as needed.
 ];
@@ -499,11 +499,11 @@ export class LocalIndexedDBStoreBackend implements IIndexedDBBackend {
      * @param tuples - An array of [userid, event] tuples
      * @returns Promise which resolves if the users were persisted.
      */
-    private persistUserContactsEvents(tuples: IContactRecord[]): Promise<void> {
+    public persistUserContactsEvents(contacts: IContactRecord[]): Promise<void> {
         return utils.promiseTry<void>(() => {
             const txn = this.db!.transaction(["contacts"], "readwrite");
             const store = txn.objectStore("contacts");
-            for (const tuple of tuples) {
+            for (const tuple of contacts) {
                 store.put(tuple); // put == UPSERT
             }
             return txnAsPromise(txn).then();

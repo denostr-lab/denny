@@ -26,7 +26,7 @@ import { RoomState, RoomStateEvent } from "../models/room-state";
 import { RoomMember } from "../models/room-member";
 import { Contact } from "../models/contact";
 import { Filter } from "../filter";
-import { ISavedSync, IStore } from "./index";
+import { ISavedSync, IStore, IContactRecord } from "./index";
 import { RoomSummary } from "../models/room-summary";
 import { ISyncResponse } from "../sync-accumulator";
 import { IStateEventWithRoomId } from "../@types/search";
@@ -173,22 +173,45 @@ export class MemoryStore implements IStore {
         });
     }
 
-    public storeContact(sendId: string, contact: Contact): void {
-        let contactMap = this.contacts.get(sendId);
+    /**
+     * Store a User's contact
+     * @param userId - The user ID.
+
+     */
+    public storeContact(userId: string, contact: Contact): void {
+        let contactMap = this.contacts.get(userId);
         if (!contactMap) {
             contactMap = new Map();
-            this.contacts.set(sendId, contactMap);
+            this.contacts.set(userId, contactMap);
         }
         contactMap.set(contact.userId, contact);
     }
     /**
-     * Retrieve a User by its' user ID.
+     * Retrieve Contact by userId
      * @param userId - The user ID.
-     * @returns The user or null.
+     * @returns Contact list
      */
-    public getContacts(userId: string): Contact[] {
+    public getContact(userId: string): Contact[] {
         const res = this.contacts.get(userId)?.values() as unknown as Contact[];
         return res || [];
+    }
+
+    public persistUserContactsEvents(_contacts: IContactRecord[]) {
+        return Promise.resolve();
+    }
+
+    /**
+     * Clear User's contacts
+     * @param userId - The user ID.
+
+     */
+    public clearContact(userId: string): void {
+        //
+        let contactMap = this.contacts.get(userId);
+        if (!contactMap) {
+            return;
+        }
+        contactMap.clear();
     }
 
     /**
