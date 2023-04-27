@@ -744,7 +744,6 @@ export class SyncApi {
             .then((savedSync) => {
                 debuglog(`Got reply from saved sync, exists? ${!!savedSync}`);
                 if (savedSync) {
-                    console.info(savedSync, "savedSync");
                     return this.syncFromCache(savedSync);
                 }
             })

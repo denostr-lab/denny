@@ -192,7 +192,10 @@ export class MemoryStore implements IStore {
      * @returns Contact list
      */
     public getContact(userId: string): Contact[] {
-        const res = this.contacts.get(userId)?.values() as unknown as Contact[];
+        let res = this.contacts.get(userId)?.values() as unknown as Contact[];
+        if (res) {
+            res = [...res];
+        }
         return res || [];
     }
 

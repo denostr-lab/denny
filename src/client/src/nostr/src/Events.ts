@@ -335,7 +335,7 @@ class Events {
             const people = event.tags
                 .filter((i) => i[0] === "p")
                 .map((i) => {
-                    if (!i[0] || i[0].length !== 64) return null;
+                    if (!i[0] || i[1].length !== 64) return null;
                     return {
                         id: i[1] ?? "",
                         relay: i[2] ?? "",

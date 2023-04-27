@@ -213,6 +213,8 @@ import { DeviceInfoMap } from "./crypto/DeviceList";
 import Relays, { NostrRelay } from "./nostr/src/Relays";
 import NostrClient from "./nostr/src/client";
 import Key from "./nostr/src/Key";
+import { TFollow } from "./nostr/src/@types/index";
+
 import { Contact, ContactEvent } from "./models/contact";
 
 export type Store = IStore;
@@ -926,7 +928,6 @@ type RoomMemberEvents =
     | RoomMemberEvent.PowerLevel
     | RoomMemberEvent.Membership;
 
-
 type UserEvents =
     | UserEvent.AvatarUrl
     | UserEvent.DisplayName
@@ -934,8 +935,7 @@ type UserEvents =
     | UserEvent.CurrentlyActive
     | UserEvent.LastPresenceTs;
 
-type ContactEvents = 
-    ContactEvent.Change;
+type ContactEvents = ContactEvent.Change;
 export type EmittedEvents =
     | ClientEvent
     | RoomEvents
@@ -9940,6 +9940,10 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     public getContact(userId: string): Contact[] {
         return this.store.getContact(userId);
     }
+
+    public followUser(info: TFollow, type: boolean) {
+        return this.nostrClient.followUser(info, type);
+    }
 }
 
 /**
@@ -9965,7 +9969,6 @@ export function fixNotificationCountOnDecryption(cli: MatrixClient, event: Matri
     const isThreadEvent = !!event.threadRootId && !event.isThreadRoot;
 
     // const currentHighlightCount = room.getUnreadCountForEventContext(NotificationCountType.Total, event);
-    // console.info(currentHighlightCount, "currentHighlightCount", room.roomId);
     // room.setUnreadNotificationCount(NotificationCountType.Total, currentHighlightCount + 1);
     // Ensure the unread counts are kept up to date if the event is encrypted
     // We also want to make sure that the notification count goes up if we already

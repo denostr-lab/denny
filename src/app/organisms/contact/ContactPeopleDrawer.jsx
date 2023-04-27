@@ -31,10 +31,8 @@ import CrossIC from '../../../../public/res/ic/outlined/cross.svg';
 function simplyfiMembers(members) {
   return members.map((member) => ({
     userId: member.userId,
-    name: member.getDisplayName(),
+    name: getUsernameOfRoomMember(member),
     username: member.userId,
-    avatarSrc: member.getAvatarUrl(),
-
   }));
 }
 
@@ -47,7 +45,7 @@ function ContactPeopleDrawer({ roomId }) {
   const [searchedMembers, setSearchedMembers] = useState(null);
   const searchRef = useRef(null);
   const [randDomData, forceUpdateLimit] = useForceUpdate();
-  const roomViewRef = useRef(null);
+  const termViewRef = useRef("");
 
 
   function loadMorePeople() {
@@ -63,6 +61,7 @@ function ContactPeopleDrawer({ roomId }) {
 
   function handleSearch(e) {
     const term = e.target.value;
+    termViewRef.current = term
     if (term === '' || term === undefined) {
       searchRef.current.value = '';
       searchRef.current.focus();
@@ -104,9 +103,7 @@ function ContactPeopleDrawer({ roomId }) {
   }, [memberList]);
 
   useEffect(() => {
-    let isLoadingMembers = false;
     const updateMemberList = () => {
-      if (isLoadingMembers) return;
       setMemberList(
         simplyfiMembers(
           mx.getContact(mx.getUserId())
@@ -116,7 +113,6 @@ function ContactPeopleDrawer({ roomId }) {
     };
     searchRef.current.value = '';
     updateMemberList();
-    isLoadingMembers = true;
     asyncSearch.on(asyncSearch.RESULT_SENT, handleSearchData);
     mx.on('Contact.change', updateMemberList);
     return () => {
@@ -126,25 +122,25 @@ function ContactPeopleDrawer({ roomId }) {
       asyncSearch.removeListener(asyncSearch.RESULT_SENT, handleSearchData);
       mx.removeListener('Contact.change', updateMemberList);
     };
-  }, [randDomData]);
+  }, []);
 
 
   const mList = searchedMembers !== null ? searchedMembers.data : memberList.slice(0, itemCount);
   return (
     <div className="room">
       <div className="room__content">
-        <div className="room-view">
+        <div className="room-view contact-room-view">
           <RoomViewHeader roomId={roomId} />
           <div className="room-view__content-wrapper">
-            <div className="people-drawer__contacts">
+            <div className="contact-people-drawer__contacts">
               <form onSubmit={(e) => e.preventDefault()} className="people-search">
-                <Input forwardRef={searchRef} type="text" onChange={handleSearch} placeholder="Search" required />
+                <Input forwardRef={searchRef} type="text" onChange={handleSearch} placeholder="Search" required value={termViewRef.current} />
                 <IconButton onClick={handleSearch} size="small" src={searchedMembers !== null ? CrossIC : SearchIC} />
               </form>
             </div>
             <div className="room-view__scrollable">
               <ScrollView autoHide>
-                <div className="people-drawer__content">
+                <div className="contact-people-drawer__content">
 
                   {
                     mList.map((member) => (
@@ -154,19 +150,19 @@ function ContactPeopleDrawer({ roomId }) {
                         avatarSrc={initMatrix.matrixClient.getUserAvatar(member.userId)}
                         name={member.name}
                         color={colorMXID(member.userId)}
-                        peopleRole={member.peopleRole}
+                        peopleRole={0}
                       />
                     ))
                   }
                   {
                     (searchedMembers?.data.length === 0 || memberList.length === 0)
                     && (
-                      <div className="people-drawer__noresult">
+                      <div className="contact-people-drawer__noresult">
                         <Text variant="b2">No results found!</Text>
                       </div>
                     )
                   }
-                  <div className="people-drawer__load-more">
+                  <div className="contact-people-drawer__load-more">
                     {
                       mList.length !== 0
                       && memberList.length > itemCount

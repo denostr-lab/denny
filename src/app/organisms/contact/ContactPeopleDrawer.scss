@@ -1,7 +1,8 @@
 @use "../../partials/flex";
 @use "../../partials/dir";
+@use "../../partials/screen";
 
-.people-drawer {
+.contact-people-drawer {
     @extend .cp-fx__column;
     width: var(--people-drawer-width);
     background-color: var(--bg-surface-low);
@@ -39,7 +40,7 @@
             position: relative;
             display: flex;
             align-items: center;
-            width: calc((1267 / 1920) * 100%);
+            width: calc((1267 / 1574) * 100%);
             & > .ic-raw,
             & > .ic-btn {
                 position: absolute;
@@ -57,14 +58,25 @@
                 flex: 1;
             }
             & .input {
-                padding: 0 44px;
+                padding: 0 29px;
                 height: var(--search-input-height);
+                @media screen and (max-width: 750px) {
+                    padding-left: 16px;
+                    &::placeholder {
+                        opacity: 0;
+                    }
+                }
+            }
+            margin-top: 10px;
+            @media screen and (max-width: 750px) {
+                width: 100%;
+                margin-left: 10px;
             }
         }
     }
 }
 
-.people-drawer__content {
+.contact-people-drawer__content {
     padding-top: var(--sp-extra-tight);
     padding-bottom: calc(2 * var(--sp-normal));
 
@@ -72,7 +84,10 @@
         padding: var(--sp-extra-tight);
         border-radius: var(--bo-radius);
         &__container {
-            @include dir.side(margin, var(--sp-extra-tight), 0);
+            @include dir.side(margin, 21px, 21px);
+            @media screen and (max-width: 750px) {
+                @include dir.side(margin, 10px, 10px);
+            }
         }
     }
 
@@ -86,11 +101,22 @@
         padding: var(--sp-ultra-tight) 0;
     }
 }
-.people-drawer__load-more {
+.contact-people-drawer__load-more {
     padding: var(--sp-normal) 0 0;
     @include dir.side(padding, var(--sp-normal), var(--sp-extra-tight));
 
     & .btn-surface {
         width: 100%;
+    }
+}
+
+.contact-room-view {
+    @include screen.smallerThan(mobileBreakpoint) {
+        background-color: var(--bg-surface-low) !important;
+        .people-search {
+            input {
+                background-color: rgba(255, 255, 255, 1) !important;
+            }
+        }
     }
 }

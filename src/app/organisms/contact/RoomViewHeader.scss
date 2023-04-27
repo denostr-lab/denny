@@ -1,47 +1,73 @@
-@use '../../partials/flex';
-@use '../../partials/dir';
-@use '../../partials/screen';
+@use "../../partials/flex";
+@use "../../partials/dir";
+@use "../../partials/screen";
 
 .room-header__btn {
-  min-width: 0;
-  @extend .cp-fx__row--s-c;
-  @include dir.side(margin, 0, auto);
-  border-radius: var(--bo-radius);
-  cursor: pointer;
-  
-  & .ic-raw {
-    @include dir.side(margin, 0, var(--sp-extra-tight));
-    transition: transform 200ms ease-in-out;
-  }
-  @media (hover:hover) {
-    &:hover {
-      background-color: var(--bg-surface-hover);
-      box-shadow: var(--bs-surface-outline);
+    min-width: 0;
+    @extend .cp-fx__row--s-c;
+    @include dir.side(margin, 0, auto);
+    border-radius: var(--bo-radius);
+    cursor: pointer;
+
+    & .ic-raw {
+        @include dir.side(margin, 0, var(--sp-extra-tight));
+        transition: transform 200ms ease-in-out;
     }
-  }
-  &:focus,
-  &:active {
-    background-color: var(--bg-surface-active);
-    box-shadow: var(--bs-surface-outline);
-    outline: none;
-  }
+    @media (hover: hover) {
+        &:hover {
+            background-color: var(--bg-surface-hover);
+            box-shadow: var(--bs-surface-outline);
+        }
+    }
+    &:focus,
+    &:active {
+        background-color: var(--bg-surface-active);
+        box-shadow: var(--bs-surface-outline);
+        outline: none;
+    }
+    .avatar-container {
+        .avatar__border--active {
+            box-shadow: none !important;
+        }
+    }
+    @include screen.smallerThan(mobileBreakpoint) {
+        .avatar-container {
+            display: none;
+        }
+    }
 }
 
 .room-header__drawer-btn {
-  @include screen.smallerThan(tabletBreakpoint) {
-    display: none;
-  }
+    @include screen.smallerThan(mobileBreakpoint) {
+        display: none;
+    }
 }
 .room-header__members-btn {
-  @include screen.biggerThan(tabletBreakpoint) {
-    display: none;
-  }
+    @include screen.biggerThan(mobileBreakpoint) {
+        display: none;
+    }
 }
 
 .room-header__back-btn {
-  @include dir.side(margin, 0, var(--sp-tight));
+    @include dir.side(margin, 0, var(--sp-tight));
 
-  @include screen.biggerThan(mobileBreakpoint) {
-    display: none;
-  }
+    @include screen.biggerThan(mobileBreakpoint) {
+        display: none;
+    }
+}
+.contact-room-header {
+    .contact-room-header__back-btn {
+        @include screen.smallerThan(mobileBreakpoint) {
+            margin-right: 0px !important;
+            padding: 0px !important;
+        }
+    }
+    .header__title-wrapper {
+        @include screen.smallerThan(mobileBreakpoint) {
+            margin: 0px !important;
+            h2 {
+                font-size: 17px !important;
+            }
+        }
+    }
 }

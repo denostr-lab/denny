@@ -43,14 +43,31 @@ function Drawer() {
   const [, forceUpdate] = useForceUpdate();
   const scrollRef = useRef(null);
   const { roomList } = initMatrix;
+  const classNameHidden = 'client__item-hidden';
+  const navWrapperRef = useRef(null);
 
+  function onRoomSelected(roomId) {
+    if (roomId === cons.sepcialRoomType.Contacts) {
+      navWrapperRef.current?.classList.add(classNameHidden);
+    }
+  }
+  function onNavigationSelected() {
+    navWrapperRef.current?.classList.remove(classNameHidden);
+  }
   useEffect(() => {
     const handleUpdate = () => {
       forceUpdate();
     };
+    navigation.on(cons.events.navigation.ROOM_SELECTED, onRoomSelected);
+    navigation.on(cons.events.navigation.NAVIGATION_OPENED, onNavigationSelected);
+
     roomList.on(cons.events.roomList.ROOMLIST_UPDATED, handleUpdate);
     return () => {
       roomList.removeListener(cons.events.roomList.ROOMLIST_UPDATED, handleUpdate);
+      navigation.off(cons.events.navigation.ROOM_SELECTED, onRoomSelected);
+      navigation.off(cons.events.navigation.NAVIGATION_OPENED, onNavigationSelected);
+
+
     };
   }, []);
 
@@ -63,7 +80,7 @@ function Drawer() {
   }, [selectedTab]);
 
   return (
-    <div className="drawer">
+    <div className="drawer" ref={navWrapperRef}>
       <DrawerHeader selectedTab={selectedTab} spaceId={spaceId} subSelectedTab={subSelectedTab} />
       <div className="drawer__content-wrapper">
         {navigation.selectedSpacePath.length > 1 && selectedTab !== cons.tabs.DIRECTS && (

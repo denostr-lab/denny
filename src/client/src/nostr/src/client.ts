@@ -753,7 +753,7 @@ class NostrClient {
             });
         });
     }
-    async sendContactInfo(followInfo: TFollow, follow: boolean) {
+    async followUser(followInfo: TFollow, follow: boolean) {
         const userId = this.client.getUserId() as string;
         const currentPeople = this.client.getContact(userId);
         const tags = currentPeople.map((i) => {

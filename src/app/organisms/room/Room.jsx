@@ -26,7 +26,6 @@ function Room() {
   useEffect(() => {
     const handleRoomSelected = (rId, pRoomId, eId) => {
       roomInfo.roomTimeline?.removeInternalListeners();
-      console.info(rId, 'asd')
       if (rId === cons.sepcialRoomType.Contacts) {
         setRoomInfo({
           roomTimeline: null,
@@ -75,7 +74,6 @@ function Room() {
   }, []);
 
   const { roomTimeline, eventId, roomId } = roomInfo;
-  console.info(roomId, 'asd', cons.sepcialRoomType.Contacts)
 
   if (roomId === cons.sepcialRoomType.Contacts) {
     return <ContactPeopleDrawer roomId={roomId} />;

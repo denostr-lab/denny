@@ -2,9 +2,9 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import './Header.scss';
 
-function Header({ children }) {
+function Header({ children, className = "" }) {
   return (
-    <div className="header">
+    <div className={`header ${className}`}>
       {children}
     </div>
   );

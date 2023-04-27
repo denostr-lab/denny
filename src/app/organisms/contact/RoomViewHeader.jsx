@@ -76,10 +76,10 @@ function RoomViewHeader({ roomId }) {
   };
 
   return (
-    <Header>
+    <Header className={"contact-room-header"}>
       <IconButton
         src={BackArrowIC}
-        className="room-header__back-btn"
+        className="room-header__back-btn contact-room-header__back-btn"
         tooltip="Return to navigation"
         onClick={() => openNavigation()}
       />
