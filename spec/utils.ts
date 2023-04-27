@@ -4,7 +4,7 @@ export const sleep = (ms = 1000) => new Promise((resolve) => setTimeout(resolve,
 
 export const createBrowserAndPage = async (): Promise<PageAndBrowser> => {
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
@@ -36,7 +36,7 @@ export const logout = async (page: Page) => {
         el.click();
     });
 };
-export const searchRoomMember = async (page: Page, text: string) => {
+export const searchRoomMember = async (page: Page, text: string, toMessage: boolean = true) => {
     await page.$eval(".people-drawer__sticky .people-search input", (el) => {
         el.value = "";
         el.focus();
@@ -44,17 +44,21 @@ export const searchRoomMember = async (page: Page, text: string) => {
     await page.waitForTimeout(0.5 * 1000);
 
     await page.keyboard.sendCharacter(text);
-    await page.waitForSelector(".people-drawer__sticky .people-search");
+    await page.waitForTimeout(1 * 1000);
+
+    await page.waitForSelector(".people-selector__container button");
     await page.$eval(".people-selector__container button", (el) => {
         return el.click();
     });
     await page.waitForTimeout(1 * 1000);
 
     await page.waitForSelector(".profile-viewer__buttons button");
-    await page.$eval(".profile-viewer__buttons button", (el) => {
-        el.click();
-    });
-    await page.waitForTimeout(4 * 1000);
+    if (toMessage) {
+        await page.$eval(".profile-viewer__buttons button", (el) => {
+            el.click();
+        });
+        await page.waitForTimeout(4 * 1000);
+    }
 };
 
 export const findTimeLineLastMessage = (page: Page, text: string, type: string = "image"): Promise<string> => {
@@ -602,9 +606,9 @@ export const enterRoomFromRoomList = async (page: Page, name: string) => {
 };
 
 export const findRoomFromRoomList = async (page: Page, name: string = "public room global"): Promise<string> => {
-    await page.waitForTimeout(5 * 1000);
+    await page.waitForTimeout(10 * 1000);
 
-    await page.waitForSelector(".room-selector__content p");
+    // await page.waitForSelector(".room-selector__content p");
     const result = await page.$$eval(
         ".room-selector__content p",
         (el, name) => {
@@ -667,4 +671,68 @@ export const getReplayConnectCount = async (page: Page): Promise<number> => {
         }),
     );
     return relayConnectCount;
+};
+
+export const clickFollow = async (page: Page) => {
+    await page.$eval("button[data-testid=follow-btn]", async (el) => {
+        el.click();
+    });
+};
+export const toContactPage = async (page: Page) => {
+    await page.waitForSelector("button[data-testid=people-tab]");
+    await page.$eval("button[data-testid=people-tab]", (el) => {
+        el.click();
+    });
+    await page.waitForSelector(".room-category__content.Others button");
+
+    await page.$eval(".room-category__content.Others button", (el) => {
+        el.click();
+    });
+    await page.waitForSelector(".contact-people-drawer__content");
+};
+export const hasFollow = async (page: Page): Promise<boolean> => {
+    await page.waitForSelector(".profile-viewer__buttons button");
+    await page.waitForTimeout(2 * 1000);
+    const text = await page.$eval("button[data-testid=follow-btn] p", async (el) => {
+        return el.innerText;
+    });
+
+    return text === "Unfollow";
+};
+export const serachContact = async (page: Page, pubKey: string, clickUser: boolean = true) => {
+    await page.waitForSelector(".contact-people-drawer__contacts input");
+    await page.$eval(".contact-people-drawer__contacts input", (el) => {
+        el.value = "";
+        el.focus();
+    });
+    await page.keyboard.sendCharacter(pubKey);
+    await page.waitForTimeout(1 * 1000);
+    if (clickUser) {
+        await clickContact(page);
+    }
+};
+export const serachContactNoResult = async (page: Page, pubKey: string): Promise<string> => {
+    await page.waitForSelector(".contact-people-drawer__contacts input");
+    await page.$eval(".contact-people-drawer__contacts input", (el) => {
+        el.focus();
+    });
+    await page.keyboard.sendCharacter(pubKey);
+    await page.waitForTimeout(1 * 1000);
+    await page.waitForSelector(".contact-people-drawer__noresult p");
+    return await page.$eval(".contact-people-drawer__noresult p", (el) => {
+        return el.innerText;
+    });
+};
+
+export const clickContact = async (page: Page) => {
+    await page.waitForSelector(".contact-people-drawer__content .people-selector__container button");
+    await page.$eval(".contact-people-drawer__content .people-selector__container button", (el) => {
+        el.click();
+    });
+};
+export const closeModal = async (page: Page) => {
+    await page.waitForSelector(".ReactModal__Content--after-open .header  button");
+    await page.$eval(".ReactModal__Content--after-open .header  button", (el) => {
+        el.click();
+    });
 };

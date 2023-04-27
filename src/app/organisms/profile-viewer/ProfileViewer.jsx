@@ -281,6 +281,7 @@ function ProfileFooter({ roomId, userId, onRequestClose }) {
             <Button
               variant={hasFollow ? 'caution' : "caution-invert"}
               onClick={followUser}
+              buttonTestid="follow-btn"
               // className="follow_btn"
               disabled={isFollowing}
             >
