@@ -40,7 +40,10 @@
             position: relative;
             display: flex;
             align-items: center;
-            width: calc((1267 / 1574) * 100%);
+            // width: calc((1267 / 1574) * 100%);
+            width: 100%;
+            margin-left: 20px;
+
             & > .ic-raw,
             & > .ic-btn {
                 position: absolute;

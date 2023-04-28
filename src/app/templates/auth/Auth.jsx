@@ -328,7 +328,6 @@ function LoginByName(props) {
               value={values.nickname}
               name="nickname"
               onChange={handleChange}
-              type="nickname"
               placeholder="What's your name?"
             />
             {errors.nickname && <Text className="auth-form__error" variant="b3">{errors.nickname}</Text>}
