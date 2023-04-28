@@ -43,7 +43,9 @@ describe("teset relays", () => {
     }, 360 * 1000);
     afterAll(async () => {
         pageRes.forEach(async (p) => {
-            await p.browser.close();
+            try {
+                await p.browser.close();
+            } catch (e) {}
         });
     });
     it(
@@ -57,6 +59,8 @@ describe("teset relays", () => {
                 sendMessage(pageRes[1].page, text2),
                 sendMessage(pageRes[2].page, text3),
             ]);
+            await pageRes[1].browser.close();
+            await pageRes[2].browser.close();
             await pageRes[0].page.waitForTimeout(2 * 1000);
         },
         90 * 1000,
@@ -70,6 +74,7 @@ describe("teset relays", () => {
             if (!isFollowed) {
                 await clickFollow(pageRes[0].page);
             }
+
             await closeModal(pageRes[0].page);
             await pageRes[0].page.waitForTimeout(1 * 1000);
 
@@ -87,10 +92,14 @@ describe("teset relays", () => {
         "to contact list to view",
         async () => {
             await toContactPage(pageRes[0].page);
+            await pageRes[0].page.waitForTimeout(3 * 1000);
+
             await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY2));
             let isFollowed = await hasFollow(pageRes[0].page);
             expect(isFollowed).toEqual(true);
             await closeModal(pageRes[0].page);
+            await pageRes[0].page.waitForTimeout(1 * 1000);
+
             await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY3));
             isFollowed = await hasFollow(pageRes[0].page);
             expect(isFollowed).toEqual(true);
@@ -98,43 +107,48 @@ describe("teset relays", () => {
         },
         90 * 1000,
     );
-    // it(
-    //     "user1 logout and re scan",
-    //     async () => {
-    //         await logout(pageRes[0].page);
-    //         pageRes[0].page.waitForTimeout(4 * 1000);
+    it(
+        "user1 logout and re scan",
+        async () => {
+            await logout(pageRes[0].page, true);
+            await pageRes[0].page.waitForTimeout(4 * 1000);
+            await login(pageRes[0].page, PRIVATE_KEY);
+            await toContactPage(pageRes[0].page);
+            await pageRes[0].page.waitForTimeout(3 * 1000);
 
-    //         await login(pageRes[0].page, PRIVATE_KEY);
-    //         await toContactPage(pageRes[0].page);
-    //         await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY2));
-    //         let isFollowed = await hasFollow(pageRes[0].page);
-    //         expect(isFollowed).toEqual(true);
-    //         await closeModal(pageRes[0].page);
-    //         await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY3));
-    //         isFollowed = await hasFollow(pageRes[0].page);
-    //         expect(isFollowed).toEqual(true);
-    //         await closeModal(pageRes[0].page);
-    //     },
-    //     90 * 1000,
-    // );
-    // it(
-    //     "user1 unfollow user2 and reload to sance",
-    //     async () => {
-    //         await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY2));
-    //         await clickFollow(pageRes[0].page);
+            await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY2));
+            let isFollowed = await hasFollow(pageRes[0].page);
+            expect(isFollowed).toEqual(true);
+            await closeModal(pageRes[0].page);
+            await pageRes[0].page.waitForTimeout(1 * 1000);
+            await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY3));
+            isFollowed = await hasFollow(pageRes[0].page);
+            expect(isFollowed).toEqual(true);
+            await closeModal(pageRes[0].page);
+        },
+        90 * 1000,
+    );
+    it(
+        "user1 unfollow user2 and reload to sance",
+        async () => {
+            await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY2));
+            await clickFollow(pageRes[0].page);
+            await pageRes[0].page.waitForTimeout(2 * 1000);
 
-    //         await logout(pageRes[0].page);
-    //         pageRes[0].page.waitForTimeout(4 * 1000);
+            await logout(pageRes[0].page, true);
+            await pageRes[0].page.waitForTimeout(2 * 1000);
 
-    //         await login(pageRes[0].page, PRIVATE_KEY);
-    //         await toContactPage(pageRes[0].page);
-    //         const res = await serachContactNoResult(pageRes[0].page, getPublicKey(PRIVATE_KEY2));
-    //         expect(res).toEqual("No results found!");
-    //         await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY3));
-    //         let isFollowed = await hasFollow(pageRes[0].page);
-    //         expect(isFollowed).toEqual(true);
-    //         await closeModal(pageRes[0].page);
-    //     },
-    //     90 * 1000,
-    // );
+            await login(pageRes[0].page, PRIVATE_KEY);
+            await toContactPage(pageRes[0].page);
+            await pageRes[0].page.waitForTimeout(3 * 1000);
+
+            const res = await serachContactNoResult(pageRes[0].page, getPublicKey(PRIVATE_KEY2));
+            expect(res).toEqual("No results found!");
+            await serachContact(pageRes[0].page, getPublicKey(PRIVATE_KEY3));
+            let isFollowed = await hasFollow(pageRes[0].page);
+            expect(isFollowed).toEqual(true);
+            await closeModal(pageRes[0].page);
+        },
+        90 * 1000,
+    );
 });

@@ -25,7 +25,10 @@ export const login = async (page: Page, pubKey: string) => {
     await page.keyboard.sendCharacter(pubKey);
     await page.keyboard.press("Enter");
 };
-export const logout = async (page: Page) => {
+export const logout = async (page: Page, openModal: boolean = false) => {
+    if (openModal) {
+        await openUserMetaInfo(page);
+    }
     await page.waitForSelector("button[data-testid=logout]");
     await page.$eval("button[data-testid=logout]", (el) => {
         el.click();
@@ -608,7 +611,7 @@ export const enterRoomFromRoomList = async (page: Page, name: string) => {
 export const findRoomFromRoomList = async (page: Page, name: string = "public room global"): Promise<string> => {
     await page.waitForTimeout(10 * 1000);
 
-    // await page.waitForSelector(".room-selector__content p");
+    await page.waitForSelector(".room-category__header");
     const result = await page.$$eval(
         ".room-selector__content p",
         (el, name) => {
