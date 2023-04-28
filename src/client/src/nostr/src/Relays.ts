@@ -34,7 +34,7 @@ const DEFAULT_RELAYS = [
     "wss://denostr.paiya.app",
 
     // "wss://nostr.paiyaapp.com",
-    "ws://localhost:8008",
+    // "ws://localhost:8008",
     // "wss://denostr.chickenkiller.com",
     // "wss://qwqb4l.paiya.app",
     // 'wss://offchain.pub',

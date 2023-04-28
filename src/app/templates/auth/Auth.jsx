@@ -397,7 +397,7 @@ function LoginByNameConfirm(props) {
       }) => (
         <>
           {isSubmitting && <LoadingScreen message="Login in progress..." />}
-          <Text variant="h2" weight="medium">Save Key</Text>
+          <Text variant="h2" weight="medium">Save Keys</Text>
           <form className="auth-form" onSubmit={handleSubmit}>
             <Text style={{ marginTop: '12px', color: "rgba(133, 133, 133, 1)" }}>{`Your private key is your password. If you lose this key, you will lose access to your account! Copy it and keep it in a safe place. There is no way to reset your private key.`}</Text>
             <div className="auth-form__pass-eye-wrapper">
@@ -410,7 +410,7 @@ function LoginByNameConfirm(props) {
               <IconButton onClick={onPrivateClick} size="extra-small" src={copyIC} tooltip={'copy'} />
             </div>
             <div className="auth-form__btns">
-              <Button variant="primary" type="submit" disabled={isSubmitting}>Save and continue</Button>
+              <Button variant="primary" type="submit" disabled={isSubmitting}>Saved and continue</Button>
             </div>
           </form>
         </>
