@@ -789,3 +789,6 @@ export const timedelta = (n: number, unit = "seconds") => {
             throw new Error(`Invalid unit ${unit}`);
     }
 };
+
+export const sortAsc = (a: number, b: number) => a - b;
+export const sortDesc = (a: number, b: number) => b - a;
