@@ -25,9 +25,9 @@ function RoomTile({
       <div className="room-tile__content">
         <Text variant="s1" style={{
           overflow: "hidden",
-          "text-overflow": "ellipsis",
-          "white-space": "nowrap",
-          "max-width": "300px"
+          "textOverflow": "ellipsis",
+          "whiteSpace": "nowrap",
+          "maxWidth": "300px"
         }}>{twemojify(name)}</Text>
         <Text variant="b3">
           {/* {

@@ -328,10 +328,10 @@ class Events {
         // 获取联系人列表
         const created_at = event.created_at * 1000;
 
-        const contacts = client.getContact(event.pubkey);
-        const firstContact = contacts[0];
-        let currentTs = firstContact?.getTs?.() || 0;
-        if (!firstContact || currentTs < created_at) {
+        const contactEvent = client.getContactEvent(event.pubkey);
+        console.info(contactEvent, "contactEvent");
+        let currentTs = contactEvent?.origin_server_ts || 0;
+        if (!currentTs < created_at) {
             const people = event.tags
                 .filter((i) => i[0] === "p")
                 .map((i) => {

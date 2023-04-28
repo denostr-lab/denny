@@ -1161,6 +1161,13 @@ export class SyncApi {
                     const userId = contactEvent.getSender() as string;
                     const content = contactEvent.getContent();
                     const people = content?.people || [];
+                    const event = {
+                        content: {},
+                        origin_server_ts: contactEvent.getTs(),
+                        sender: userId,
+                        type: contactEvent.getType(),
+                    };
+                    client.store.storeContactEvent(userId, event);
                     client.store.clearContact(userId);
                     people.forEach((followInfo: IPeople) => {
                         const c = new Contact({
@@ -1171,12 +1178,7 @@ export class SyncApi {
                         client.store.storeContact(userId, c);
                     });
                     persistData.push({
-                        event: {
-                            content: {},
-                            origin_server_ts: contactEvent.getTs(),
-                            sender: userId,
-                            type: contactEvent.getType(),
-                        },
+                        event,
                         people: content.people,
                         userId: userId,
                     });

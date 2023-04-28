@@ -151,9 +151,12 @@ export class IndexedDBStore extends MemoryStore {
                 userContacts.forEach((contactEvent: IContactRecord) => {
                     const senderId = contactEvent.event.sender;
                     const origin_server_ts = contactEvent.event.origin_server_ts;
+                    this.storeContactEvent(senderId, contactEvent.event);
+
                     for (const key in contactEvent.people) {
                         const peopleInfo: IPeople = contactEvent.people[key];
                         const c = new Contact({ ...peopleInfo, senderId, origin_server_ts });
+
                         this.storeContact(senderId, c);
                     }
                 });

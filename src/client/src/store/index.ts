@@ -102,6 +102,9 @@ export interface IStore {
      */
     getRoomSummaries(): RoomSummary[];
 
+    storeContactEvent(sendId: string, event: IContactEvent): void;
+    getContactEvent(sendId: string): IContactEvent | undefined;
+
     /**
      * Store a Contact.
      * @param user - The contact to store.

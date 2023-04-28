@@ -83,9 +83,9 @@ const MessageHeader = React.memo(({ userId, username, timestamp, fullTime }) => 
     <Text
       style={{
         color: colorMXID(userId), overflow: "hidden",
-        "text-overflow": "ellipsis",
-        "white-space": "nowrap",
-        "max-width": "300px"
+        "textOverflow": "ellipsis",
+        "whiteSpace": "nowrap",
+        "maxWidth": "600px"
       }}
       className="message__profile"
 
