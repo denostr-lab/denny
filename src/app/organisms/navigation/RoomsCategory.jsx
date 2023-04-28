@@ -70,7 +70,7 @@ function RoomsCategory({
         </div>
       )}
       {(isOpen || hideHeader) && (
-        <div className="room-category__content">
+        <div className={`room-category__content ${name}`}>
           {roomIds.map(renderSelector)}
         </div>
       )}

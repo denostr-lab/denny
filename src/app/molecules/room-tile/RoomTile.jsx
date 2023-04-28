@@ -25,11 +25,14 @@ function RoomTile({
       <div className="room-tile__content">
         <Text variant="s1" style={{
           overflow: "hidden",
-          "text-overflow": "ellipsis",
-          "white-space": "nowrap",
-          "max-width": "300px"
+          "textOverflow": "ellipsis",
+          "whiteSpace": "nowrap",
         }}>{twemojify(name)}</Text>
-        <Text variant="b3">
+        <Text variant="b3" style={{
+          overflow: "hidden",
+          "textOverflow": "ellipsis",
+          "whiteSpace": "nowrap",
+        }}>
           {/* {
             inviterName !== null
               ? `Invited by ${inviterName} to ${id}${memberCount === null ? '' : ` • ${memberCount} members`}`
@@ -39,7 +42,11 @@ function RoomTile({
         </Text>
         {
           desc !== null && (typeof desc === 'string')
-            ? <Text className="room-tile__content__desc" variant="b2">{twemojify(desc, undefined, true)}</Text>
+            ? <Text className="room-tile__content__desc" variant="b2" style={{
+              overflow: "hidden",
+              "textOverflow": "ellipsis",
+              "whiteSpace": "nowrap",
+            }}>{twemojify(desc, undefined, true)}</Text>
             : desc
         }
       </div>

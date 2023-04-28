@@ -24,8 +24,9 @@ import { User } from "../models/user";
 import { IEvent, MatrixEvent } from "../models/event";
 import { RoomState, RoomStateEvent } from "../models/room-state";
 import { RoomMember } from "../models/room-member";
+import { Contact } from "../models/contact";
 import { Filter } from "../filter";
-import { ISavedSync, IStore } from "./index";
+import { ISavedSync, IStore, IContactRecord, IContactEvent } from "./index";
 import { RoomSummary } from "../models/room-summary";
 import { ISyncResponse } from "../sync-accumulator";
 import { IStateEventWithRoomId } from "../@types/search";
@@ -51,6 +52,9 @@ export interface IOpts {
 export class MemoryStore implements IStore {
     private rooms: Record<string, Room> = {}; // roomId: Room
     private users: Record<string, User> = {}; // userId: User
+    private contacts: Map<string, Map<string, Contact>> = new Map();
+    private contactsEvent: Map<string, IContactEvent> = new Map(); // userId: Contact
+
     private syncToken: string | null = null;
     // userId: {
     //    filterId: Filter
@@ -169,6 +173,56 @@ export class MemoryStore implements IStore {
         return Object.values(this.rooms).map(function (room) {
             return room.summary!;
         });
+    }
+    public storeContactEvent(userId: string, event: IContactEvent): void {
+        this.contactsEvent.set(userId, event);
+    }
+    public getContactEvent(userId: string) {
+        return this.contactsEvent.get(userId);
+    }
+
+    /**
+     * Store a User's contact
+     * @param userId - The user ID.
+
+     */
+    public storeContact(userId: string, contact: Contact): void {
+        let contactMap = this.contacts.get(userId);
+        if (!contactMap) {
+            contactMap = new Map();
+            this.contacts.set(userId, contactMap);
+        }
+        contactMap.set(contact.userId, contact);
+    }
+    /**
+     * Retrieve Contact by userId
+     * @param userId - The user ID.
+     * @returns Contact list
+     */
+    public getContact(userId: string): Contact[] {
+        let res = this.contacts.get(userId)?.values() as unknown as Contact[];
+        if (res) {
+            res = [...res];
+        }
+        return res || [];
+    }
+
+    public persistUserContactsEvents(_contacts: IContactRecord[]) {
+        return Promise.resolve();
+    }
+
+    /**
+     * Clear User's contacts
+     * @param userId - The user ID.
+
+     */
+    public clearContact(userId: string): void {
+        //
+        let contactMap = this.contacts.get(userId);
+        if (!contactMap) {
+            return;
+        }
+        contactMap.clear();
     }
 
     /**

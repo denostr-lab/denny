@@ -157,7 +157,7 @@ import { randomString } from "./randomstring";
 import { BackupManager, IKeyBackup, IKeyBackupCheck, IPreparedKeyBackupVersion, TrustInfo } from "./crypto/backup";
 import { DEFAULT_TREE_POWER_LEVELS_TEMPLATE, MSC3089TreeSpace } from "./models/MSC3089TreeSpace";
 import { ISignatures } from "./@types/signed";
-import { IStore } from "./store";
+import { IContactEvent, IStore } from "./store";
 import { ISecretRequest } from "./crypto/SecretStorage";
 import {
     IEventWithRoomId,
@@ -213,6 +213,9 @@ import { DeviceInfoMap } from "./crypto/DeviceList";
 import Relays, { NostrRelay } from "./nostr/src/Relays";
 import NostrClient from "./nostr/src/client";
 import Key from "./nostr/src/Key";
+import { TFollow } from "./nostr/src/@types/index";
+
+import { Contact, ContactEvent } from "./models/contact";
 
 export type Store = IStore;
 
@@ -932,6 +935,7 @@ type UserEvents =
     | UserEvent.CurrentlyActive
     | UserEvent.LastPresenceTs;
 
+type ContactEvents = ContactEvent.Change;
 export type EmittedEvents =
     | ClientEvent
     | RoomEvents
@@ -948,7 +952,8 @@ export type EmittedEvents =
     | GroupCallEventHandlerEvent.Participants
     | HttpApiEvent.SessionLoggedOut
     | HttpApiEvent.NoConsent
-    | BeaconEvent;
+    | BeaconEvent
+    | ContactEvents;
 
 export type ClientEventHandlerMap = {
     /**
@@ -9925,6 +9930,23 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     public subscribeUsersDeletionRoom(roomid: string) {
         return this.nostrClient.subscribeUsersDeletionRoom(roomid);
     }
+
+    /**
+     * Retrieve user's contacts.
+     * @param userId - The user ID to retrieve.
+     * @returns Contact list
+     * not exist.
+     */
+    public getContact(userId: string): Contact[] {
+        return this.store.getContact(userId);
+    }
+    public getContactEvent(userId: string): IContactEvent | undefined {
+        return this.store.getContactEvent(userId);
+    }
+
+    public followUser(info: TFollow, type: boolean) {
+        return this.nostrClient.followUser(info, type);
+    }
 }
 
 /**
@@ -9950,7 +9972,6 @@ export function fixNotificationCountOnDecryption(cli: MatrixClient, event: Matri
     const isThreadEvent = !!event.threadRootId && !event.isThreadRoot;
 
     // const currentHighlightCount = room.getUnreadCountForEventContext(NotificationCountType.Total, event);
-    // console.info(currentHighlightCount, "currentHighlightCount", room.roomId);
     // room.setUnreadNotificationCount(NotificationCountType.Total, currentHighlightCount + 1);
     // Ensure the unread counts are kept up to date if the event is encrypted
     // We also want to make sure that the notification count goes up if we already

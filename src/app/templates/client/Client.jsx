@@ -27,15 +27,26 @@ function Client() {
   const [loadingMsg, setLoadingMsg] = useState('Heating up');
   const [dragCounter, setDragCounter] = useState(0);
   const classNameHidden = 'client__item-hidden';
+  const navigationkeepRoom = 'navigation__wrapper_keeproom'
 
   const navWrapperRef = useRef(null);
   const roomWrapperRef = useRef(null);
 
-  function onRoomSelected() {
+  function onRoomSelected(roomId) {
+    if (roomId === cons.sepcialRoomType.Contacts) {
+      navWrapperRef.current?.classList.remove(classNameHidden);
+      roomWrapperRef.current?.classList.remove(classNameHidden);
+      navWrapperRef.current?.classList.add(navigationkeepRoom);
+      return
+    }
+    navWrapperRef.current?.classList.remove(navigationkeepRoom);
+
     navWrapperRef.current?.classList.add(classNameHidden);
     roomWrapperRef.current?.classList.remove(classNameHidden);
   }
-  function onNavigationSelected() {
+  function onNavigationSelected(naviId) {
+
+    navWrapperRef.current?.classList.remove(navigationkeepRoom);
     navWrapperRef.current?.classList.remove(classNameHidden);
     roomWrapperRef.current?.classList.add(classNameHidden);
   }

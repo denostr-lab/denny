@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { ISavedSync } from "./index";
+import { ISavedSync, IContactRecord } from "./index";
 import { IEvent, IStateEventWithRoomId, IStoredClientOpts, ISyncResponse } from "../matrix";
 import { IndexedToDeviceBatch, ToDeviceBatchWithTxnId } from "../models/ToDeviceMessage";
 
@@ -30,11 +30,13 @@ export interface IIndexedDBBackend {
     setOutOfBandMembers(roomId: string, membershipEvents: IStateEventWithRoomId[]): Promise<void>;
     clearOutOfBandMembers(roomId: string): Promise<void>;
     getUserPresenceEvents(): Promise<UserTuple[]>;
+    getUserContactsEvents(): Promise<IContactRecord[]>;
     getClientOptions(): Promise<IStoredClientOpts | undefined>;
     storeClientOptions(options: IStoredClientOpts): Promise<void>;
     saveToDeviceBatches(batches: ToDeviceBatchWithTxnId[]): Promise<void>;
     getOldestToDeviceBatch(): Promise<IndexedToDeviceBatch | null>;
     removeToDeviceBatch(id: number): Promise<void>;
+    persistUserContactsEvents(contacts: IContactRecord[]): Promise<void>;
 }
 
 export type UserTuple = [userId: string, presenceEvent: Partial<IEvent>];

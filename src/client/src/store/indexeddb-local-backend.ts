@@ -19,7 +19,7 @@ import * as utils from "../utils";
 import * as IndexedDBHelpers from "../indexeddb-helpers";
 import { logger } from "../logger";
 import { IStateEventWithRoomId, IStoredClientOpts } from "../matrix";
-import { ISavedSync } from "./index";
+import { ISavedSync, IContactRecord } from "./index";
 import { IIndexedDBBackend, UserTuple } from "./indexeddb-backend";
 import { IndexedToDeviceBatch, ToDeviceBatchWithTxnId } from "../models/ToDeviceMessage";
 
@@ -47,6 +47,9 @@ const DB_MIGRATIONS: DbMigration[] = [
     },
     (db): void => {
         db.createObjectStore("to_device_queue", { autoIncrement: true });
+    },
+    (db): void => {
+        db.createObjectStore("contacts", { keyPath: ["userId"] });
     },
     // Expand as needed.
 ];
@@ -484,6 +487,41 @@ export class LocalIndexedDBStoreBackend implements IIndexedDBBackend {
             const store = txn.objectStore("users");
             return selectQuery(store, undefined, (cursor) => {
                 return [cursor.value.userId, cursor.value.event];
+            });
+        });
+    }
+
+    /**
+     * Persist a list of [user id, presence event] they are for.
+     * Users with the same 'userId' will be replaced.
+     * Presence events should be the event in its raw form (not the Event
+     * object)
+     * @param tuples - An array of [userid, event] tuples
+     * @returns Promise which resolves if the users were persisted.
+     */
+    public persistUserContactsEvents(contacts: IContactRecord[]): Promise<void> {
+        return utils.promiseTry<void>(() => {
+            const txn = this.db!.transaction(["contacts"], "readwrite");
+            const store = txn.objectStore("contacts");
+            for (const tuple of contacts) {
+                store.put(tuple); // put == UPSERT
+            }
+            return txnAsPromise(txn).then();
+        });
+    }
+
+    /**
+     * Load all user presence events from the database. This is not cached.
+     * FIXME: It would probably be more sensible to store the events in the
+     * sync.
+     * @returns A list of presence events in their raw form.
+     */
+    public getUserContactsEvents(): Promise<IContactRecord[]> {
+        return utils.promiseTry<IContactRecord[]>(() => {
+            const txn = this.db!.transaction(["contacts"], "readonly");
+            const store = txn.objectStore("contacts");
+            return selectQuery(store, undefined, (cursor) => {
+                return cursor.value;
             });
         });
     }

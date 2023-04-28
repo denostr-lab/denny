@@ -97,9 +97,9 @@ function ProfileEditor({ userId }) {
       <div>
         <Text variant="h2" primary weight="medium" style={{
           overflow: "hidden",
-          "text-overflow": "ellipsis",
-          "white-space": "nowrap",
-          "max-width": "300px"
+          "textOverflow": "ellipsis",
+          "whiteSpace": "nowrap",
+          "maxWidth": "300px"
         }}
           textTestid='my-name'>{twemojify(username) ?? userId}</Text>
         <IconButton

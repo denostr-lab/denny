@@ -62,6 +62,9 @@ export const getDefaultSyncResponse = (): ISyncResponse => {
         presence: {
             events: [],
         },
+        contacts: {
+            events: [],
+        },
         to_device: {
             events: [],
         },

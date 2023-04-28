@@ -170,9 +170,9 @@ function RoomProfile({ roomId }) {
       <div>
         <Text variant="h2" weight="medium" primary style={{
           overflow: "hidden",
-          "text-overflow": "ellipsis",
-          "white-space": "nowrap",
-          "max-width": "300px"
+          "textOverflow": "ellipsis",
+          "whiteSpace": "nowrap",
+          "maxWidth": "300px"
         }}>{twemojify(roomName)}</Text>
         {(canChangeName || canChangeTopic) && (
           <IconButton

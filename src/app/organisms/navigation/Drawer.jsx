@@ -38,19 +38,36 @@ function useSystemState() {
 
 function Drawer() {
   const [systemState] = useSystemState();
-  const [selectedTab] = useSelectedTab();
+  const [selectedTab, subSelectedTab] = useSelectedTab();
   const [spaceId] = useSelectedSpace();
   const [, forceUpdate] = useForceUpdate();
   const scrollRef = useRef(null);
   const { roomList } = initMatrix;
+  const classNameHidden = 'client__item-hidden';
+  const navWrapperRef = useRef(null);
 
+  function onRoomSelected(roomId) {
+    if (roomId === cons.sepcialRoomType.Contacts) {
+      navWrapperRef.current?.classList.add(classNameHidden);
+    }
+  }
+  function onNavigationSelected() {
+    navWrapperRef.current?.classList.remove(classNameHidden);
+  }
   useEffect(() => {
     const handleUpdate = () => {
       forceUpdate();
     };
+    navigation.on(cons.events.navigation.ROOM_SELECTED, onRoomSelected);
+    navigation.on(cons.events.navigation.NAVIGATION_OPENED, onNavigationSelected);
+
     roomList.on(cons.events.roomList.ROOMLIST_UPDATED, handleUpdate);
     return () => {
       roomList.removeListener(cons.events.roomList.ROOMLIST_UPDATED, handleUpdate);
+      navigation.off(cons.events.navigation.ROOM_SELECTED, onRoomSelected);
+      navigation.off(cons.events.navigation.NAVIGATION_OPENED, onNavigationSelected);
+
+
     };
   }, []);
 
@@ -63,8 +80,8 @@ function Drawer() {
   }, [selectedTab]);
 
   return (
-    <div className="drawer">
-      <DrawerHeader selectedTab={selectedTab} spaceId={spaceId} />
+    <div className="drawer" ref={navWrapperRef}>
+      <DrawerHeader selectedTab={selectedTab} spaceId={spaceId} subSelectedTab={subSelectedTab} />
       <div className="drawer__content-wrapper">
         {navigation.selectedSpacePath.length > 1 && selectedTab !== cons.tabs.DIRECTS && (
           <DrawerBreadcrumb spaceId={spaceId} />
@@ -81,7 +98,7 @@ function Drawer() {
           </ScrollView>
         </div>
       </div>
-      { systemState !== null && (
+      {systemState !== null && (
         <div className="drawer__state">
           <Text>{systemState.status}</Text>
         </div>

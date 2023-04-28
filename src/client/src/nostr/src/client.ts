@@ -12,7 +12,7 @@ import {
     splitRequest,
 } from "./Helpers";
 import * as utils from "../../utils";
-import { MetaInfo } from "./@types/index";
+import { MetaInfo, TFollow } from "./@types/index";
 import { EventType } from "../../@types/event";
 import { IJoinedRoom } from "../../sync-accumulator";
 import { MatrixEvent } from "../../models/event";
@@ -21,7 +21,6 @@ import Key from "./Key";
 import { Room } from "../../models/room";
 
 // export { Filter as NostrFilter };
-let allUsers: string[] = [];
 export interface UpdateRoomMetadata {
     name: string;
     about: string;
@@ -169,7 +168,7 @@ class NostrClient {
         const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since }];
         this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
         const filters: Filter[] = [
-            { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since },
+            { kinds: [0, 40, 42, 4, 7, 3], authors: [pubkey], since },
             { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since },
         ];
         this.relay.subscribe({ filters, id: "global" });
@@ -754,9 +753,37 @@ class NostrClient {
             });
         });
     }
+    async followUser(followInfo: TFollow, follow: boolean) {
+        const userId = this.client.getUserId() as string;
+        const currentPeople = this.client.getContact(userId);
+        const tags = currentPeople.map((i) => {
+            return ["p", i.userId, "", i.name ?? ""];
+        });
+        const index = tags.findIndex((i) => i[1] === followInfo.userId);
+        if (follow) {
+            if (index === -1) {
+                tags.push(["p", followInfo.userId, "", followInfo.name]);
+            }
+        } else {
+            if (index !== -1) {
+                tags.splice(index, 1);
+            }
+        }
+        const create_at = Date.now();
+        const event = {
+            kind: 3,
+            created_at: Math.floor(create_at / 1000),
+            tags,
+            content: "",
+            pubkey: userId,
+        } as Event;
+        await this.handPublishEvent(event);
+        Events.handle(this.client, event);
 
+        await this.relay.publishAsPromise(event);
+    }
     async setUserMetaData({ avatar_url, displayname }: { avatar_url?: string; displayname?: string }) {
-        const userId = this.client.getUserId();
+        const userId = this.client.getUserId() as string;
         localStorage.removeItem("user_meta_create");
         const user = this.client.getUser(userId);
         const content = {

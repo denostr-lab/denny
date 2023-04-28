@@ -324,12 +324,43 @@ class Events {
 
         // this.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
     };
+    handleContactsEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
+        // 获取联系人列表
+        const created_at = event.created_at * 1000;
 
+        const contactEvent = client.getContactEvent(event.pubkey);
+        console.info(contactEvent, "contactEvent");
+        let currentTs = contactEvent?.origin_server_ts || 0;
+        if (!currentTs < created_at) {
+            const people = event.tags
+                .filter((i) => i[0] === "p")
+                .map((i) => {
+                    if (!i[0] || i[1].length !== 64) return null;
+                    return {
+                        id: i[1] ?? "",
+                        relay: i[2] ?? "",
+                        petname: i[3] ?? "",
+                    };
+                })
+                .filter(Boolean);
+            syncResponse.contacts!.events.push({
+                content: {
+                    people,
+                },
+                origin_server_ts: created_at,
+                sender: event.pubkey,
+                type: EventType.Contact,
+                unsigned: {
+                    age: Date.now() - created_at,
+                },
+            });
+        }
+    };
     handleUserMetaEvent = (client: MatrixClient, event: Event, syncResponse: ISyncResponse) => {
         // 这个除了更新个人信息 还要更新房间的头像信息
         const created_at = event.created_at * 1000;
         const content = JSON.parse(event.content) as MetaInfo;
-        const currentUser = client.getUser(event.pubkey);
+        const currentUser = client.getContact(event.pubkey);
         let currentTs = currentUser?.events?.presence?.getTs?.() || 0;
         if (!currentUser || currentTs < created_at) {
             const userProfile: UserProfile = {
@@ -1091,6 +1122,9 @@ class Events {
         switch (event.kind as Kinds) {
             case 0:
                 this.handleUserMetaEvent(client, event, syncResponse);
+                break;
+            case 3:
+                this.handleContactsEvent(client, event, syncResponse);
                 break;
             case 4:
                 this.handlePrivateEvent(client, event, syncResponse);

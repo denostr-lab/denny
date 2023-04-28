@@ -117,7 +117,7 @@ class AsyncSearch extends EventEmitter {
     if (typeof item !== 'string') return false;
     const myItem = this._normalize(item);
     if (this.isContain) return myItem.indexOf(this.term) !== -1;
-    return myItem.startsWith(this.term);
+    return myItem.includes(this.term);
   }
 
   _normalize(item) {

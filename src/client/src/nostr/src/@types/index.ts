@@ -45,3 +45,8 @@ export type LocalTask = {
     userIds: string[];
     session: RoomKeySession;
 };
+
+export type TFollow = {
+    userId: string;
+    name: string;
+};

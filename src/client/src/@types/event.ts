@@ -80,6 +80,8 @@ export enum EventType {
     Tag = "m.tag",
     SpaceOrder = "org.matrix.msc3230.space_order", // MSC3230
 
+    // contact
+    Contact = "m.contact",
     // User account_data events
     PushRules = "m.push_rules",
     Direct = "m.direct",

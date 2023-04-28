@@ -32,6 +32,9 @@ const cons = {
     SUCCESS: 'success',
     ERROR: 'error',
   },
+  sepcialRoomType: {
+    Contacts: 'Contacts'
+  },
   actions: {
     navigation: {
       SELECT_TAB: 'SELECT_TAB',

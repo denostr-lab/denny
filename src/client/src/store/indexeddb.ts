@@ -20,9 +20,10 @@ import { MemoryStore, IOpts as IBaseOpts } from "./memory";
 import { LocalIndexedDBStoreBackend } from "./indexeddb-local-backend";
 import { RemoteIndexedDBStoreBackend } from "./indexeddb-remote-backend";
 import { User } from "../models/user";
+import { Contact } from "../models/contact";
 import { IEvent, MatrixEvent } from "../models/event";
 import { logger } from "../logger";
-import { ISavedSync } from "./index";
+import { ISavedSync, IContactRecord, IPeople } from "./index";
 import { IIndexedDBBackend } from "./indexeddb-backend";
 import { ISyncResponse } from "../sync-accumulator";
 import { TypedEventEmitter } from "../models/typed-event-emitter";
@@ -128,11 +129,16 @@ export class IndexedDBStore extends MemoryStore {
         logger.log(`IndexedDBStore.startup: connecting to backend`);
         return this.backend
             .connect()
-            .then(() => {
+            .then(async () => {
                 logger.log(`IndexedDBStore.startup: loading presence events`);
-                return this.backend.getUserPresenceEvents();
+                const [userPresenceEvents, userContacts] = await Promise.all([
+                    this.backend.getUserPresenceEvents(),
+                    this.backend.getUserContactsEvents(),
+                ]);
+
+                return { userPresenceEvents, userContacts };
             })
-            .then((userPresenceEvents) => {
+            .then(({ userPresenceEvents, userContacts }) => {
                 logger.log(`IndexedDBStore.startup: processing presence events`);
                 userPresenceEvents.forEach(([userId, rawEvent]) => {
                     const u = new User(userId);
@@ -140,8 +146,19 @@ export class IndexedDBStore extends MemoryStore {
                         u.setPresenceEvent(new MatrixEvent(rawEvent));
                     }
                     this.userModifiedMap[u.userId] = u.getLastModifiedTime();
-
                     this.storeUser(u);
+                });
+                userContacts.forEach((contactEvent: IContactRecord) => {
+                    const senderId = contactEvent.event.sender;
+                    const origin_server_ts = contactEvent.event.origin_server_ts;
+                    this.storeContactEvent(senderId, contactEvent.event);
+
+                    for (const key in contactEvent.people) {
+                        const peopleInfo: IPeople = contactEvent.people[key];
+                        const c = new Contact({ ...peopleInfo, senderId, origin_server_ts });
+
+                        this.storeContact(senderId, c);
+                    }
                 });
             });
     }
@@ -228,7 +245,6 @@ export class IndexedDBStore extends MemoryStore {
             // note that we've saved this version of the user
             this.userModifiedMap[u.userId] = u.getLastModifiedTime();
         }
-
         return this.backend.syncToDatabase(userTuples);
     });
 
@@ -360,6 +376,10 @@ export class IndexedDBStore extends MemoryStore {
 
     public removeToDeviceBatch(id: number): Promise<void> {
         return this.backend.removeToDeviceBatch(id);
+    }
+
+    public persistUserContactsEvents(contacts: IContactRecord[]) {
+        return this.backend.persistUserContactsEvents(contacts);
     }
 }
 

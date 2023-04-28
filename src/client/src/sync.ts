@@ -27,6 +27,7 @@ import { Optional } from "matrix-events-sdk";
 
 import type { SyncCryptoCallbacks } from "./common-crypto/CryptoBackend";
 import { User, UserEvent } from "./models/user";
+import { Contact, ContactEvent } from "./models/contact";
 import { NotificationCountType, Room, RoomEvent } from "./models/room";
 import * as utils from "./utils";
 import { IDeferred, noUnsafeEventProps, unsafeProp } from "./utils";
@@ -51,7 +52,7 @@ import {
 } from "./sync-accumulator";
 import { MatrixEvent } from "./models/event";
 import { MatrixError, Method } from "./http-api";
-import { ISavedSync } from "./store";
+import { ISavedSync, IContactRecord, IPeople } from "./store";
 import { EventType } from "./@types/event";
 import { IPushRules } from "./@types/PushRules";
 import { RoomStateEvent, IMarkerFoundOptions } from "./models/room-state";
@@ -987,7 +988,7 @@ export class SyncApi {
 
     private doSyncRequest(syncOptions: ISyncOptions, syncToken: string | null): Promise<ISyncResponse> {
         // const qps = this.getSyncParams(syncOptions, syncToken);
-
+        // change by nostr
         return Promise.resolve(this.client.getBufferEvent());
         return this.client.http.authedRequest<ISyncResponse>(Method.Get, "/sync", qps as any, undefined, {
             localTimeoutMs: qps.timeout + BUFFER_PERIOD_MS,
@@ -1151,6 +1152,42 @@ export class SyncApi {
         //   do this in one place?
         // - The isBrandNewRoom boilerplate is boilerplatey.
 
+        // handle contact events (User objects)
+        if (Array.isArray(data.contacts?.events)) {
+            let persistData: IContactRecord[] = [];
+            data.contacts!.events.filter(noUnsafeEventProps)
+                .map(client.getEventMapper())
+                .forEach(function (contactEvent) {
+                    const userId = contactEvent.getSender() as string;
+                    const content = contactEvent.getContent();
+                    const people = content?.people || [];
+                    const event = {
+                        content: {},
+                        origin_server_ts: contactEvent.getTs(),
+                        sender: userId,
+                        type: contactEvent.getType(),
+                    };
+                    client.store.storeContactEvent(userId, event);
+                    client.store.clearContact(userId);
+                    people.forEach((followInfo: IPeople) => {
+                        const c = new Contact({
+                            ...followInfo,
+                            senderId: userId,
+                            origin_server_ts: contactEvent.getTs(),
+                        });
+                        client.store.storeContact(userId, c);
+                    });
+                    persistData.push({
+                        event,
+                        people: content.people,
+                        userId: userId,
+                    });
+                });
+            if (persistData.length) {
+                await client.store.persistUserContactsEvents(persistData);
+                client.emit(ContactEvent.Change);
+            }
+        }
         // handle presence events (User objects)
         if (Array.isArray(data.presence?.events)) {
             data.presence!.events.filter(noUnsafeEventProps)

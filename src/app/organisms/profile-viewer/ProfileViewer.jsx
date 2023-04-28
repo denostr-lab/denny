@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import './ProfileViewer.scss';
 import { throttle } from "lodash-es";
@@ -40,18 +40,18 @@ function ModerationTools({
 }) {
   const mx = initMatrix.matrixClient;
   const room = mx.getRoom(roomId);
-  const roomMember = room.getMember(userId);
+  const roomMember = room?.getMember?.(userId);
 
-  const myPowerLevel = room.getMember(mx.getUserId())?.powerLevel || 0;
+  const myPowerLevel = room?.getMember?.(mx.getUserId())?.powerLevel || 0;
   const powerLevel = roomMember?.powerLevel || 0;
   const canIKick = (
     roomMember?.membership === 'join'
-    && room.currentState.hasSufficientPowerLevelFor('kick', myPowerLevel)
+    && room?.currentState?.hasSufficientPowerLevelFor?.('kick', myPowerLevel)
     && powerLevel < myPowerLevel
   );
   const canIBan = (
     ['join', 'leave'].includes(roomMember?.membership)
-    && room.currentState.hasSufficientPowerLevelFor('ban', myPowerLevel)
+    && room?.currentState?.hasSufficientPowerLevelFor?.('ban', myPowerLevel)
     && powerLevel < myPowerLevel
   );
 
@@ -151,21 +151,24 @@ SessionInfo.propTypes = {
 
 function ProfileFooter({ roomId, userId, onRequestClose }) {
   const [isCreatingDM, setIsCreatingDM] = useState(false);
+  const [hasFollow, setHasFollow] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+
   const [isIgnoring, setIsIgnoring] = useState(false);
   const [isUserIgnored, setIsUserIgnored] = useState(initMatrix.matrixClient.isUserIgnored(userId));
-
   const isMountedRef = useRef(true);
   const mx = initMatrix.matrixClient;
   const room = mx.getRoom(roomId);
-  const member = room.getMember(userId);
+  const member = room?.getMember?.(userId);
   const isInvitable = member?.membership !== 'join' && member?.membership !== 'ban';
 
   const [isInviting, setIsInviting] = useState(false);
   const [isInvited, setIsInvited] = useState(member?.membership === 'invite');
+  const username = getUsername(userId);
 
-  const myPowerlevel = room.getMember(mx.getUserId())?.powerLevel || 0;
-  const userPL = room.getMember(userId)?.powerLevel || 0;
-  const canIKick = room.currentState.hasSufficientPowerLevelFor('kick', myPowerlevel) && userPL < myPowerlevel;
+  const myPowerlevel = room?.getMember?.(mx.getUserId())?.powerLevel || 0;
+  const userPL = room?.getMember?.(userId)?.powerLevel || 0;
+  const canIKick = room?.currentState?.hasSufficientPowerLevelFor?.('kick', myPowerlevel) && userPL < myPowerlevel;
 
   const isBanned = member?.membership === 'ban';
 
@@ -179,17 +182,34 @@ function ProfileFooter({ roomId, userId, onRequestClose }) {
   useEffect(() => {
     const { roomList } = initMatrix;
     roomList.on(cons.events.roomList.ROOM_CREATED, onCreated);
+
     return () => {
       isMountedRef.current = false;
       roomList.removeListener(cons.events.roomList.ROOM_CREATED, onCreated);
     };
   }, []);
   useEffect(() => {
+
     setIsUserIgnored(initMatrix.matrixClient.isUserIgnored(userId));
     setIsIgnoring(false);
     setIsInviting(false);
+    const _hasFollow = () => {
+      const contacts = mx.getContact(mx.getUserId())
+      const index = contacts.findIndex(i => i.userId === userId)
+      setHasFollow(index > -1)
+    }
+    _hasFollow();
+    mx.on("Contact.change", _hasFollow)
+    return () => {
+      mx.off("Contact.change", _hasFollow)
+    }
   }, [userId]);
 
+  const followUser = useCallback(async () => {
+    setIsFollowing(true)
+    await mx.followUser({ userId, name: username }, !hasFollow)
+    setIsFollowing(false)
+  }, [hasFollow, userId])
   const openDM = async () => {
     // Check and open if user already have a DM with userId.
     const dmRoomId = hasDMWith(userId);
@@ -255,6 +275,22 @@ function ProfileFooter({ roomId, userId, onRequestClose }) {
       >
         {isCreatingDM ? 'Creating room...' : 'Message'}
       </Button>
+      {
+        hasFollow !== null ? (
+          <div className='follow_btn'>
+            <Button
+              variant={hasFollow ? 'caution' : "caution-invert"}
+              onClick={followUser}
+              buttonTestid="follow-btn"
+              // className="follow_btn"
+              disabled={isFollowing}
+            >
+              {hasFollow ? 'Unfollow' : 'Follow'}
+            </Button>
+          </div>
+        ) : null
+      }
+
       {isBanned && canIKick && (
         <Button
           variant="positive"
@@ -263,7 +299,7 @@ function ProfileFooter({ roomId, userId, onRequestClose }) {
           Unban
         </Button>
       )}
-      {(isInvited ? canIKick : room.canInvite(mx.getUserId())) && isInvitable && (
+      {(isInvited ? canIKick : room?.canInvite?.(mx.getUserId())) && isInvitable && (
         <Button
           onClick={toggleInvite}
           disabled={isInviting}
@@ -373,16 +409,16 @@ function ProfileViewer() {
     }
   }, [userId])
   const renderProfile = () => {
-    const roomMember = room.getMember(userId);
+    const roomMember = room?.getMember?.(userId);
     const username = roomMember ? getUsernameOfRoomMember(roomMember) : getUsername(userId);
     const avatarMxc = roomMember?.getMxcAvatarUrl?.() || mx.getUser(userId)?.avatarUrl;
     const avatarUrl = (avatarMxc && avatarMxc !== 'null') ? mx.mxcUrlToHttp(avatarMxc, 80, 80, 'crop') : null;
 
     const powerLevel = roomMember?.powerLevel || 0;
-    const myPowerLevel = room.getMember(mx.getUserId())?.powerLevel || 0;
+    const myPowerLevel = room?.getMember?.(mx.getUserId())?.powerLevel || 0;
 
     const canChangeRole = (
-      room.currentState.maySendEvent('m.room.power_levels', mx.getUserId())
+      room?.currentState?.maySendEvent?.('m.room.power_levels', mx.getUserId())
       && (powerLevel < myPowerLevel || userId === mx.getUserId())
     );
 

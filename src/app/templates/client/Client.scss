@@ -1,56 +1,60 @@
-@use '../../partials/screen';
+@use "../../partials/screen";
 
 .client-container {
-  display: flex;
-  height: 100%;
+    display: flex;
+    height: 100%;
 }
 
 .navigation__wrapper {
-  width: var(--navigation-width);
-  
-  @include screen.smallerThan(mobileBreakpoint) {
-    width: 100%;
-  }
-}
+    width: var(--navigation-width);
 
+    @include screen.smallerThan(mobileBreakpoint) {
+        width: 100%;
+    }
+}
+.navigation__wrapper.navigation__wrapper_keeproom {
+    @include screen.smallerThan(mobileBreakpoint) {
+        width: auto;
+    }
+}
 .room__wrapper {
-  flex: 1;
-  min-width: 0;
+    flex: 1;
+    min-width: 0;
 }
 
 @include screen.smallerThan(mobileBreakpoint) {
-  .client__item-hidden {
-    display: none;
-  }
+    .client__item-hidden {
+        display: none;
+    }
 }
 
 .loading-display {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100%;
 
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 .loading__message {
-  margin-top: var(--sp-normal);
-  max-width: 350px;
-  text-align: center;
+    margin-top: var(--sp-normal);
+    max-width: 350px;
+    text-align: center;
 }
 .loading__appname {
-  position: absolute;
-  bottom: var(--sp-normal);
+    position: absolute;
+    bottom: var(--sp-normal);
 }
 .loading__menu {
-  position: absolute;
-  top: var(--sp-extra-tight);
-  right: var(--sp-extra-tight);
-  cursor: pointer;
-  .context-menu__item .text {
-    margin: 0 !important;
-  }
+    position: absolute;
+    top: var(--sp-extra-tight);
+    right: var(--sp-extra-tight);
+    cursor: pointer;
+    .context-menu__item .text {
+        margin: 0 !important;
+    }
 }

@@ -24,10 +24,20 @@ function Selector({
   const mx = initMatrix.matrixClient;
   const noti = initMatrix.notifications;
   const room = mx.getRoom(roomId);
-
+  let name = room?.name
   let imageSrc = mx.getUserAvatar(room?.roomId);
+  let isMuted = noti.getNotiType(roomId) === cons.notifs.MUTE;
+  let iconSrc = isDM ? null : joinRuleToIconSrc(room?.getJoinRule?.(), room?.isSpaceRoom?.())
   if (imageSrc === null) imageSrc = room?.getAvatarUrl(mx.baseUrl, 24, 24, 'crop') || null;
-  const isMuted = noti.getNotiType(roomId) === cons.notifs.MUTE;
+  let hasOptions = true
+
+  if (roomId === cons.sepcialRoomType.Contacts) {
+    name = cons.sepcialRoomType.Contacts
+    imageSrc = null
+    isMuted = false
+    iconSrc = joinRuleToIconSrc(roomId.toLocaleLowerCase())
+    hasOptions = false
+  }
 
   const [, forceUpdate] = useForceUpdate();
 
@@ -54,10 +64,10 @@ function Selector({
   return (
     <RoomSelector
       key={roomId}
-      name={room.name}
+      name={name}
       roomId={roomId}
       imageSrc={isDM ? imageSrc : null}
-      iconSrc={isDM ? null : joinRuleToIconSrc(room.getJoinRule(), room.isSpaceRoom())}
+      iconSrc={iconSrc}
       isSelected={navigation.selectedRoomId === roomId}
       isMuted={isMuted}
       isUnread={!isMuted && noti.hasNoti(roomId)}
@@ -65,7 +75,7 @@ function Selector({
       isAlert={noti.getHighlightNoti(roomId) !== 0}
       onClick={onClick}
       onContextMenu={openOptions}
-      options={(
+      options={hasOptions ? (
         <IconButton
           size="extra-small"
           tooltip="Options"
@@ -73,7 +83,7 @@ function Selector({
           src={VerticalMenuIC}
           onClick={openOptions}
         />
-      )}
+      ) : null}
     />
   );
 }

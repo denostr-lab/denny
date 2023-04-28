@@ -4,7 +4,7 @@ import React, {
 import PropTypes from 'prop-types';
 import './PeopleDrawer.scss';
 import { useForceUpdate } from '../../hooks/useForceUpdate';
-import { throttle } from "lodash-es";
+import { throttle, debounce } from "lodash-es";
 
 import initMatrix from '../../../client/initMatrix';
 import { getPowerLabel, getUsernameOfRoomMember } from '../../../util/matrixUtil';
@@ -81,14 +81,6 @@ function PeopleDrawer({ roomId }) {
     } else asyncSearch.search(term);
   }
   useEffect(() => {
-    const t = setInterval(() => {
-      forceUpdateLimit()
-    }, 3000);
-    return () => {
-      clearInterval(t)
-    }
-  }, [])
-  useEffect(() => {
     const mx = initMatrix.matrixClient;
     const _handle = (event) => {
       const userId = event?.event?.user_id
@@ -129,9 +121,11 @@ function PeopleDrawer({ roomId }) {
         ),
       );
     };
+    const debounceed = debounce(updateMemberList, 3000, { 'trailing': false });
+
     searchRef.current.value = '';
     updateMemberList();
-    isLoadingMembers = true;
+    // isLoadingMembers = true;
     // room.loadMembersIfNeeded().then(() => {
     //   isLoadingMembers = false;
     //   if (isRoomChanged) return;
@@ -140,6 +134,7 @@ function PeopleDrawer({ roomId }) {
 
     asyncSearch.on(asyncSearch.RESULT_SENT, handleSearchData);
     mx.on('RoomMember.membership', updateMemberList);
+    mx.on('RoomState.members', debounceed);
     mx.on('RoomMember.powerLevel', updateMemberList);
     return () => {
       isRoomChanged = true;
@@ -147,6 +142,8 @@ function PeopleDrawer({ roomId }) {
       setSearchedMembers(null);
       setItemCount(PER_PAGE_MEMBER);
       asyncSearch.removeListener(asyncSearch.RESULT_SENT, handleSearchData);
+      debounceed.cancel()
+      mx.removeListener('RoomState.members', debounceed);
       mx.removeListener('RoomMember.membership', updateMemberList);
       mx.removeListener('RoomMember.powerLevel', updateMemberList);
     };

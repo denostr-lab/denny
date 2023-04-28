@@ -42,6 +42,7 @@ export interface IMinimalEvent {
     type: EventType | string;
     unsigned?: IUnsigned;
     origin_server_ts?: number;
+    sender?: string;
     presence?: boolean;
 }
 
@@ -119,7 +120,9 @@ export interface IRooms {
 interface IPresence {
     events: IMinimalEvent[];
 }
-
+interface IContacts {
+    events: IMinimalEvent[];
+}
 interface IAccountData {
     events: IMinimalEvent[];
 }
@@ -143,6 +146,7 @@ export interface ISyncResponse {
     "next_batch": string;
     "rooms": IRooms;
     "presence"?: IPresence;
+    "contacts"?: IContacts;
     "account_data": IAccountData;
     "to_device"?: IToDevice;
     "device_lists"?: IDeviceLists;

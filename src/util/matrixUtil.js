@@ -6,6 +6,7 @@ import HashLockIC from '../../public/res/ic/outlined/hash-lock.svg';
 import SpaceIC from '../../public/res/ic/outlined/space.svg';
 import SpaceGlobeIC from '../../public/res/ic/outlined/space-globe.svg';
 import SpaceLockIC from '../../public/res/ic/outlined/space-lock.svg';
+import ContactsIC from '../../public/res/ic/outlined/people.svg';
 
 const WELL_KNOWN_URI = '/.well-known/matrix/client';
 
@@ -115,6 +116,7 @@ export function joinRuleToIconSrc(joinRule, isSpace) {
     knock: () => (isSpace ? SpaceLockIC : HashLockIC),
     invite: () => (isSpace ? SpaceLockIC : HashLockIC),
     public: () => (isSpace ? SpaceGlobeIC : HashGlobeIC),
+    contacts: () => ContactsIC
   }[joinRule]?.() || null);
 }
 

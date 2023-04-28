@@ -225,6 +225,7 @@ function usePaginate(
   eventLimitRef,
 ) {
   const [info, setInfo] = useState(null);
+  const mx = initMatrix.matrixClient;
 
   useEffect(() => {
     const handlePaginatedFromServer = (backwards, loaded) => {

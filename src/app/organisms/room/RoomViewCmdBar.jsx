@@ -256,12 +256,12 @@ function RoomViewCmdBar({ roomId, roomTimeline, viewEvent }) {
 
   useEffect(() => {
     if (cmd !== null) document.body.addEventListener('keydown', listenKeyboard);
-    viewEvent.on('cmd_process', processCmd);
+    // viewEvent.on('cmd_process', processCmd);
     asyncSearch.on(asyncSearch.RESULT_SENT, displaySuggestions);
     return () => {
       if (cmd !== null) document.body.removeEventListener('keydown', listenKeyboard);
 
-      viewEvent.removeListener('cmd_process', processCmd);
+      // viewEvent.removeListener('cmd_process', processCmd);
       asyncSearch.removeListener(asyncSearch.RESULT_SENT, displaySuggestions);
     };
   }, [cmd]);

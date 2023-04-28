@@ -22,7 +22,7 @@ function PeopleSelector({
       >
         <Avatar imageSrc={avatarSrc} text={name} bgColor={color} size="extra-small" />
         <Text className="people-selector__name" variant="b1">{twemojify(name)}</Text>
-        {peopleRole !== null && <Text className="people-selector__role" variant="b3">{peopleRole}</Text>}
+        {/* {peopleRole !== null && <Text className="people-selector__role" variant="b3">{peopleRole}</Text>} */}
       </button>
     </div>
   );

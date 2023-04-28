@@ -44,6 +44,7 @@ class Navigation extends EventEmitter {
       this.selectedTab === cons.tabs.HOME
       && roomList.rooms.has(roomId)
       && !roomList.roomIdToParents.has(roomId)
+
     ) {
       this.spaceToRoom.set(cons.tabs.HOME, {
         roomId,
@@ -51,7 +52,7 @@ class Navigation extends EventEmitter {
       });
       return;
     }
-    if (this.selectedTab === cons.tabs.DIRECTS && roomList.directs.has(roomId)) {
+    if (this.selectedTab === cons.tabs.DIRECTS && roomList.directs.has(roomId) || roomId === cons.sepcialRoomType.Contacts) {
       this.spaceToRoom.set(cons.tabs.DIRECTS, {
         roomId,
         timestamp: Date.now(),
@@ -99,6 +100,11 @@ class Navigation extends EventEmitter {
 
   _selectTabWithRoom(roomId) {
     const { roomList, accountData } = this.initMatrix;
+    if (roomId === cons.sepcialRoomType.Contacts) {
+      this._selectSpace(null, true, false);
+      this._selectTab(cons.tabs.DIRECTS, false);
+      return
+    }
     const { categorizedSpaces } = accountData;
 
     if (roomList.isOrphan(roomId)) {
@@ -287,7 +293,6 @@ class Navigation extends EventEmitter {
         const roomId = (
           action.tabId !== cons.tabs.HOME && action.tabId !== cons.tabs.DIRECTS
         ) ? action.tabId : null;
-
         this._selectSpace(roomId, true);
         this._selectTab(action.tabId);
       },
