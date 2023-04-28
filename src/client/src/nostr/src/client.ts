@@ -19,6 +19,7 @@ import { MatrixEvent } from "../../models/event";
 import * as olmlib from "../../crypto/olmlib";
 import Key from "./Key";
 import { Room } from "../../models/room";
+import { pool, UserPool, RoomPool } from "./Pool";
 
 // export { Filter as NostrFilter };
 let allUsers: string[] = [];
@@ -33,12 +34,20 @@ class NostrClient {
     private leaveRooms: Set<string>;
 
     public readySubscribeRooms: boolean;
+
     public memberListenRoomid: string | null;
+
+    private userPool: UserPool;
+
+    private roomPool: RoomPool;
+
     constructor(private readonly client: MatrixClient) {
         this.relay = new Relays(this.client);
         this.leaveRooms = new Set();
         this.readySubscribeRooms = false;
         this.memberListenRoomid = null;
+        this.userPool = new UserPool(pool, this.relay);
+        this.roomPool = new RoomPool(pool, this.relay);
     }
 
     init() {
@@ -84,80 +93,6 @@ class NostrClient {
         return newFilters;
     }
 
-    batchSubscribe(
-        batchFilters: Filter[][],
-        id: string,
-        opts: {
-            once?: boolean;
-            alwaysOnce?: boolean;
-            since: number;
-            until?: number;
-            period: number;
-            initialSeens?: Map<string, number>;
-            isLastActiveTimestamp?: boolean;
-        },
-    ) {
-        if (batchFilters.length === 0) {
-            return;
-        }
-
-        const { since, until, period, alwaysOnce = false, isLastActiveTimestamp = false, initialSeens } = opts;
-        let { once = false } = opts;
-
-        if ((alwaysOnce && once === false) || (!isLastActiveTimestamp && !alwaysOnce && once === false)) {
-            once = true;
-        }
-
-        if (isLastActiveTimestamp) {
-            const filters: Filter[] = this.handleFilters(batchFilters, { ...opts }); // 移除执行完的filters
-            this.relay.setLastSince(id, since);
-            this.relay.subscribe({ filters, id, once: alwaysOnce });
-            return;
-        }
-
-        const filters: Filter[] = this.handleFilters(batchFilters, { ...opts });
-        if (filters.length === 0) {
-            return;
-        }
-
-        const callback = async (event: Event) => {
-            if (event !== null) {
-                return;
-            }
-            await utils.sleep(5);
-
-            const lastSince = until || since;
-            const lastUntil = lastSince + period;
-
-            const subOpts: any = {
-                since: lastSince,
-                once: true,
-                alwaysOnce,
-                period,
-                isLastActiveTimestamp: false,
-                initialSeens,
-            };
-            if (until && lastUntil >= Math.round(Date.now() / 1000)) {
-                subOpts.once = false;
-                subOpts.isLastActiveTimestamp = true;
-            } else {
-                subOpts.until = lastUntil;
-            }
-
-            batchFilters.unshift(filters);
-            this.batchSubscribe(batchFilters, id, subOpts);
-        };
-
-        const subscribeOpts: any = { filters, id, callback };
-        if (!isLastActiveTimestamp) {
-            subscribeOpts.once = true;
-        }
-        if (isLastActiveTimestamp) {
-            subscribeOpts.once = alwaysOnce;
-        }
-        this.relay.subscribe(subscribeOpts);
-    }
-
     async initGlobalSubscribe() {
         Events.initUsersAndRooms(this.client);
         const roomIds = this.client.getRooms().map((room) => room.roomId) as string[];
@@ -165,14 +100,9 @@ class NostrClient {
         const pubkey = this.client.getUserId() as string;
         this.sendSelfInfo();
 
-        const since = utils.now() - utils.timedelta(7, "days");
-        const onceFilters: Filter[] = [{ "kinds": [42], "#p": [pubkey], since }];
-        this.relay.subscribe({ filters: onceFilters, id: "global-once", once: true });
-        const filters: Filter[] = [
-            { kinds: [0, 40, 42, 4, 7], authors: [pubkey], since },
-            { "kinds": [4, 7, 104, 140, 141], "#p": [pubkey], since },
-        ];
-        this.relay.subscribe({ filters, id: "global" });
+        this.roomPool.fetchRoomMessageByMe(pubkey, 7);
+        this.roomPool.fetchAllRoomInfoByMe(pubkey, 7);
+
         if (roomIds?.length) {
             this.subscribeRooms([...new Set(roomIds)]);
         }
@@ -216,28 +146,8 @@ class NostrClient {
     }
 
     subscribePublicRooms() {
-        try {
-            this.readySubscribeRooms = true;
-            const since = utils.now() - utils.timedelta(30, "days");
-            const filters: Filter[] = [{ kinds: [40, 41], since }];
-            const callback = (event) => {
-                if (!event) {
-                    return;
-                }
-                let roomid = "";
-                if (event.kind === 40) {
-                    roomid = event.id;
-                } else {
-                    roomid = event.tags.find((tags) => tags[0] === "e")?.[1] as string;
-                }
-                try {
-                    const created_at = event.created_at * 1000;
-                    const content = JSON.parse(event.content);
-                    Events.addRoom(roomid, { ...content, pubkey: event.pubkey, created_at });
-                } catch (e) {}
-            };
-            this.relay.subscribe({ filters, id: "public-rooms", disableEventHandle: true, callback });
-        } catch (e) {}
+        this.readySubscribeRooms = true;
+        this.roomPool.fetchPublicRooms();
     }
 
     unsubscribePublicRooms() {
@@ -257,120 +167,17 @@ class NostrClient {
         return Number.MIN_SAFE_INTEGER;
     }
 
-    async subscribeFirstMetadataOfRooms(
-        roomIds: string[],
-        { createChannelKinds, channelMetadataKinds }: { createChannelKinds: number[]; channelMetadataKinds: number[] },
-    ) {
-        return new Promise((resolve, reject) => {
-            const callback = (event: Event | null) => {
-                if (event === null) {
-                    resolve(true);
-                }
-            };
-            const id = "global-room-metadata";
-            const filters: Filter[] = [
-                { "kinds": channelMetadataKinds, "#e": roomIds, "limit": 1000 },
-                { kinds: createChannelKinds, ids: roomIds, limit: 1000 },
-            ];
-            const since = this.relay.getLastSinceById(id);
-            if (since) {
-                filters.forEach((filter) => {
-                    filter.since = since;
-                });
-            } else {
-                this.relay.setLastSince(id);
-            }
-            this.relay.subscribe({ id, filters, once: true, callback });
-        });
-    }
-
-    async subscribeFirstRooms(
-        roomIds: string[],
-        { createChannelKinds, channalMessageKinds }: { createChannelKinds: number[]; channalMessageKinds: number[] },
-    ) {
-        const firstJoinSubscribe = (roomId: string, lastActiveTimestamp: number) =>
-            new Promise((resolve, reject) => {
-                const id = `room/${roomId}`;
-                const since = this.relay.getLastSinceById(id) || lastActiveTimestamp;
-                const filters: Filter[] = [
-                    { "kinds": channalMessageKinds, "#e": [roomId], since },
-                    { kinds: createChannelKinds, ids: [roomId], since },
-                ];
-                let lastCreatedAt = 0;
-                const callback = (event: Event) => {
-                    if (event !== null) {
-                        if (event.created_at >= lastCreatedAt) {
-                            lastCreatedAt = event.created_at + 1;
-                        }
-                        return;
-                    }
-
-                    const newFilters: Filter[] = [];
-                    if (lastCreatedAt >= lastActiveTimestamp) {
-                        filters.forEach((filter) => {
-                            if (filter?.since) {
-                                delete filter.since;
-                            }
-                            if (filter?.until) {
-                                delete filter.until;
-                            }
-
-                            newFilters.push({
-                                ...filter,
-                                since: lastCreatedAt,
-                            });
-                        });
-                    }
-                    this.relay.setLastSince(id);
-                    resolve(true);
-                };
-                this.relay.subscribe({ once: true, id, callback, filters });
-            });
-
-        const since = utils.now() - utils.timedelta(7, "days");
-        const newRoomIds: string[] = [];
-        const batchRoomIds = splitRequest([...roomIds], 1);
-        for (const roomIds of batchRoomIds) {
-            let lastActiveTimestamp = since;
-            const roomId = roomIds[0];
-            const room = this.client.getRoom(roomId);
-            if (room) {
-                const newLastActiveTimestamp = Math.round(this.getLastActiveTimestamp(room) / 1000);
-                if (newLastActiveTimestamp > 0 && newLastActiveTimestamp >= since) {
-                    lastActiveTimestamp = newLastActiveTimestamp;
-                }
-            }
-
-            await firstJoinSubscribe(roomId, lastActiveTimestamp);
-            newRoomIds.push(roomId);
-        }
-
-        return newRoomIds;
-    }
-
     async subscribeRooms(roomIds: string[]) {
         // const exitedRoomIds = this.client.getRooms().map((room) => room.roomId) as string[];
         // const roomIds = [...new Set([...roomsIds, ...exitedRoomIds])].filter((i) => !Events.userProfileMap[i]);
         if (!roomIds.length) {
             return;
         }
-        const since = utils.now() - utils.timedelta(7, "days");
 
-        const roomFilters = [
-            {
-                "kinds": [42, 7, 142],
-                "#e": roomIds as string[],
-                since,
-                "limit": 1000,
-            },
-        ] as Filter[];
-        const roomMetaFilters = [
-            { kinds: [40, 140], ids: roomIds },
-            { "kinds": [41, 141], "#e": roomIds },
-        ] as Filter[];
-        this.relay.subscribe({ filters: roomMetaFilters, id: "global-room-meta" });
-        this.relay.subscribe({ filters: roomFilters, id: "global-room" });
+        this.roomPool.fetchMetadataMore(roomIds);
+        this.roomPool.fetchRoomMessages(roomIds, 7);
     }
+
     async initRoomberListen() {
         while (true) {
             if (!this.memberListenRoomid) {
@@ -398,19 +205,20 @@ class NostrClient {
             await utils.sleep(3000);
         }
     }
+
     subscribeUsersDeletionRoom(roomid: string) {
         if (this.memberListenRoomid !== roomid) {
             Events.roomMemberList.clear();
         }
         this.memberListenRoomid = roomid;
     }
+
     subscribeUsersDeletion(userIds: string[]) {
         // const exitedIds = this.client.getUsers().map((user) => user.userId) as string[];
         const ids = [...new Set(userIds)];
         if (ids?.length) {
-            const since = utils.now() - utils.timedelta(2, "days");
-            const roomFilters = [{ kinds: [5], authors: ids, since, limit: 200 }] as Filter[];
-            this.relay.subscribe({ filters: roomFilters, id: "global-user-deletion" });
+            this.userPool.fetchMetadataMore(ids);
+            this.roomPool.fetchRoomDeletionMessage(ids, 2);
         }
     }
 
@@ -480,30 +288,11 @@ class NostrClient {
         await handlePublishEvent(event);
     }
 
-    async fetchRoomMetadatas(roomIds: string[]) {
-        /* 
-        批量获取房间的MetaData信息,
-        如果出现中继提示连接过多的错误，则后续继续获取
-    */
-        if (!roomIds?.length) return;
-        const filters: Filter[] = [
-            {
-                ids: roomIds,
-                kinds: [40],
-            },
-            {
-                "#e": roomIds,
-                "kinds": [41],
-            },
-        ];
-        this.relay.subscribe({ filters, id: `fetchRoomMetadatas`, once: true });
-    }
-
     getUserName(userId: string) {
         return this.client.getUser(userId).displayName ?? "";
     }
 
-    async fetchUserMetadatas(userIds: string[], count: number = 0) {
+    async fetchUserMetadatas(userIds: string[]) {
         /*
             批量获取房间的MetaData信息,
             如果出现中继提示连接过多的错误，则后续继续获取
@@ -520,25 +309,7 @@ class NostrClient {
         });
         if (!userIds?.length) return;
 
-        const filters: Filter[] = [
-            {
-                authors: userIds,
-                kinds: [0],
-            },
-        ];
-
-        const result = new Promise((resolve) => {
-            const callback = (event: Event | null) => {
-                resolve("ok");
-            };
-            this.relay.subscribe({ filters, id: `fetchUserMetadatas-${Math.random()}`, once: true, callback });
-        });
-        // const presult = await Promise.race([utils.sleep(3 * 1000), result]);
-        // if (!presult && count < 3) {
-        //     setTimeout(() => {
-        //         this.fetchUserMetadatas(userIds, count + 1);
-        //     }, 1000);
-        // }
+        await this.userPool.fetchMetadataMore(userIds);
     }
 
     async createRoom(metadata: UpdateRoomMetadata) {
@@ -727,32 +498,15 @@ class NostrClient {
 
     async fetchUserMetadata(userId: string): Promise<{ avatar_url?: string; displayname?: string; about?: string }> {
         // 从中继中获取单个用户的信息
-        return new Promise((resolve) => {
-            const filters: Filter[] = [
-                {
-                    authors: [userId],
-                    kinds: [0],
-                },
-            ];
-            const callback = (event: Event | null) => {
-                if (!event) {
-                    return resolve({});
-                }
-
-                const content = JSON.parse(event.content) as MetaInfo;
-                resolve({
-                    avatar_url: content.picture || "",
-                    displayname: content.name || "",
-                    about: content.about || "",
-                });
-            };
-            this.relay.subscribe({
-                filters,
-                id: `fetchUserMetadata-${userId}-${Math.random()}`,
-                callback,
-                once: true,
-            });
-        });
+        const user = await this.userPool.fetchMetadata(userId, { force: true });
+        if (!user) {
+            return {};
+        }
+        return {
+            avatar_url: user.picture || "",
+            displayname: user.name || "",
+            about: user.about || "",
+        };
     }
 
     async setUserMetaData({ avatar_url, displayname }: { avatar_url?: string; displayname?: string }) {

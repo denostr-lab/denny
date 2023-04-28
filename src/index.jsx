@@ -6,8 +6,8 @@ import './index.scss';
 import settings from './client/state/settings';
 
 import App from './app/pages/App';
-console.info = () => { }
-console.log = () => { }
+// console.info = () => { }
+// console.log = () => { }
 settings.applyTheme();
 
 ReactDom.render(<App />, document.getElementById('root'));
