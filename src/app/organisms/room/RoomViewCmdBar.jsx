@@ -194,7 +194,7 @@ function RoomViewCmdBar({ roomId, roomTimeline, viewEvent }) {
           .getJoinedMembers()
           .map((member) => ({
             name: member.name,
-            userId: member.userId.slice(1),
+            userId: member.userId,
           }));
         asyncSearch.setup(members, { keys: ['name', 'userId'], limit: 20 });
         const endIndex = members.length > 20 ? 20 : members.length;

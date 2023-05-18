@@ -47,8 +47,8 @@ export class MatrixHttpApi<O extends IHttpOpts> extends FetchHttpApi<O> {
      *    opts.onlyContentUri.  Rejects with an error (usually a MatrixError).
      */
     public uploadContent(file: FileType, opts: UploadOpts = {}): Promise<UploadResponse> {
-        return new Promise(async (resolve) => {
-            let formData = new FormData();
+        return new Promise(async (resolve1) => {
+            const formData = new FormData();
             formData.append("fileToUpload", file);
 
             const response = await fetch("https://nostr.build/upload.php", {
@@ -56,11 +56,11 @@ export class MatrixHttpApi<O extends IHttpOpts> extends FetchHttpApi<O> {
                 body: formData,
             });
             const text = await response.text();
-            const url = text.match(/https:\/\/nostr\.build\/(?:i|av)\/nostr\.build_[a-z0-9]{64}\.[a-z0-9]+/i);
+            const url = text.match(/https:\/\/nostr\.build\/[a-z0-9/.-]*/i);
             if (url?.[0]) {
-                resolve({ content_uri: url[0] });
+                resolve1({ content_uri: url[0] });
             } else {
-                resolve({ content_uri: "" });
+                resolve1({ content_uri: "" });
             }
         });
 
