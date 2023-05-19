@@ -25,12 +25,15 @@ interface SubscriptionOption {
     disableEventHandle?: boolean;
 }
 const DEFAULT_RELAYS = [
-    "wss://denostr.sixwings.snowinning.com",
-    "wss://eden.nostr.land",
+    "wss://denostr.frankhu.snowinning.com",
     "wss://relay.damus.io",
-    "wss://relay.snort.social",
     "wss://offchain.pub",
     "wss://nos.lol",
+    "wss://e.nos.lol",
+    "wss://relay.snort.social", // payments
+    "wss://eden.nostr.land", // payments
+    "wss://nostr-pub.wellorder.net",
+    "wss://bitcoiner.social",
     "wss://denostr.paiya.app",
 
     // "wss://nostr.paiyaapp.com",

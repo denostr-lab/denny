@@ -777,7 +777,7 @@ class NostrClient {
     }
 
     getRobotPubkey() {
-        return '8775c146089671ba7246f6977e39273598712a895bf1c1a780ddebd271cf8bd8';
+        return 'd4826f0c7ea24b6c7de1d55ed5c543185729820057e9434c5315859386ce7950';
     }
 
     getRobotMatedata(room: Room) {
