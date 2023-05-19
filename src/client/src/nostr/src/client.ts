@@ -471,7 +471,23 @@ class NostrClient {
         const isDeleteEvent = rawEvent.event.type === EventType.RoomRedaction;
         const emojiRelyEventId = content?.["m.relates_to"]?.["event_id"];
         const citedEventId = content?.["m.relates_to"]?.["m.in_reply_to"];
-        const relatePersonList = content?.body?.match?.(/@[\w]{64}/gi);
+
+        const robotMetadata = this.getRobotMatedata(room);
+        if (robotMetadata && body) {
+            const robotName = robotMetadata.name;
+            const robotUserId = robotMetadata.userId;
+            // body = body.replace(/@[a-f0-9]{64}/i, `@${robotName}`);
+            // if (rawEvent.status && rawEvent?.event?.content) {
+            //     rawEvent.event.content = rawEvent.event.content.replace(/@[a-f0-9]{64}/i, `@${robotName}`);
+            //     room.updatePendingEvent(rawEvent, rawEvent.status)
+            // }
+
+            // @[ROBOT_NAME] hi
+            if (body.match(new RegExp(`@${robotName}`))) {
+                body = body.replace(`@${robotName}`, `@${robotUserId}`);
+            }
+        }
+        const relatePersonList = (body || '')?.match?.(/@[a-f0-9]{64}/i);
 
         // 获取kind
         const _getKind = () => {
@@ -758,6 +774,19 @@ class NostrClient {
     }
     handSetRoomUnReadCount(roomid: string, count: number) {
         Events.handSetRoomUnReadCount(this.client, roomid, count);
+    }
+
+    getRobotPubkey() {
+        return '8775c146089671ba7246f6977e39273598712a895bf1c1a780ddebd271cf8bd8';
+    }
+
+    getRobotMatedata(room: Room) {
+        const members = room.getJoinedMembers()
+          .map((member) => ({
+            name: member?.user?.displayName ?? member.name,
+            userId: member.userId,
+          }));
+        return members.find(m => m.userId === this.getRobotPubkey())
     }
 }
 

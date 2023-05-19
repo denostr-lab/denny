@@ -189,13 +189,14 @@ function RoomViewCmdBar({ roomId, roomTimeline, viewEvent }) {
         });
       },
       '@': () => {
-        const members = mx
+        let members = mx
           .getRoom(roomId)
           .getJoinedMembers()
           .map((member) => ({
-            name: member.name,
+            name: member?.user?.displayName || member.name,
             userId: member.userId,
           }));
+        members = mx.topRobot(members);
         asyncSearch.setup(members, { keys: ['name', 'userId'], limit: 20 });
         const endIndex = members.length > 20 ? 20 : members.length;
         setCmd({ prefix, suggestions: members.slice(0, endIndex) });

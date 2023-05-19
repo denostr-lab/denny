@@ -9947,6 +9947,12 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     public followUser(info: TFollow, type: boolean) {
         return this.nostrClient.followUser(info, type);
     }
+
+    public topRobot(members: { userId: string; name: string }[]) {
+        const pubkey = this.nostrClient.getRobotPubkey()
+        const robot = members.splice(members.findIndex(m => m.userId === pubkey), 1);
+        return [...robot, ...members];
+    }
 }
 
 /**
