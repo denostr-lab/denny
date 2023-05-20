@@ -194,7 +194,7 @@ function RoomViewCmdBar({ roomId, roomTimeline, viewEvent }) {
           .getJoinedMembers()
           .map((member) => ({
             name: member?.user?.displayName || member.name,
-            userId: member.userId,
+            userId: member?.user?.displayName || member.name || member.userId,
           }));
         members = mx.topRobot(members);
         asyncSearch.setup(members, { keys: ['name', 'userId'], limit: 20 });

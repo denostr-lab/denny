@@ -36,13 +36,7 @@ const DEFAULT_RELAYS = [
     "wss://bitcoiner.social",
     "wss://denostr.paiya.app",
 
-    // "wss://nostr.paiyaapp.com",
     // "ws://localhost:8008",
-    // "wss://denostr.chickenkiller.com",
-    // "wss://qwqb4l.paiya.app",
-    // 'wss://offchain.pub',
-    // 'wss://node01.nostress.cc',
-    // 'wss://nostr-pub.wellorder.net',
 ];
 
 const SEARCH_RELAYS = [];
