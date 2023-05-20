@@ -42,7 +42,7 @@
     "linkify-html": "4.0.2",
     "linkifyjs": "4.0.2",
     "matrix-js-sdk": "22.0.0",
-    "nostr-tools": "1.7.5",
+    "nostr-tools": "1.11.1",
     "prop-types": "15.8.1",
     "ramda": "0.28.0",
     "react": "17.0.2",
