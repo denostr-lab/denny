@@ -1,6 +1,6 @@
 {
   "name": "denny",
-  "version": "0.0.3",
+  "version": "0.0.7",
   "description": "Yet another nostr client",
   "main": "index.js",
   "engines": {
@@ -17,7 +17,7 @@
     "test": "jest --runInBand"
   },
   "keywords": [],
-  "author": "Ajay Bura",
+  "author": "Guakamoli",
   "license": "MIT",
   "dependencies": {
     "@babel/preset-typescript": "7.21.4",

@@ -3,10 +3,10 @@ FROM node:18.12.1-alpine3.15 as builder
 
 WORKDIR /src
 
-COPY .npmrc package.json package-lock.json /src/
-RUN npm ci
+COPY .npmrc package.json yarn.lock /src/
+RUN yarn install --frozen-lockfile
 COPY . /src/
-RUN npm run build
+RUN NODE_OPTIONS=--max-old-space-size=8192 yarn build
 
 
 ## App
