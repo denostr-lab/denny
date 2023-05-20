@@ -9949,9 +9949,14 @@ export class MatrixClient extends TypedEventEmitter<EmittedEvents, ClientEventHa
     }
 
     public topRobot(members: { userId: string; name: string }[]) {
-        const pubkey = this.nostrClient.getRobotPubkey()
-        const robot = members.splice(members.findIndex(m => m.userId === pubkey), 1);
-        return [...robot, ...members];
+        const pubkey = this.nostrClient.getRobotPubkey();
+        const robotIndex = members.findIndex(m => m.userId === pubkey);
+        if (robotIndex === -1) {
+            return members;
+        }
+        const [robot] = members.splice(robotIndex, 1);
+        const robotIdentity = robot?.name || robot.userId;
+        return [{ name: robotIdentity, userId: robotIdentity }, ...members];
     }
 }
 
