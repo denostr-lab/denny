@@ -1534,10 +1534,10 @@
   dependencies:
     "@types/react" ">=16.0.0"
 
-"@matrix-org/matrix-sdk-crypto-js@0.1.0-alpha.6":
-  version "0.1.0-alpha.6"
-  resolved "https://registry.yarnpkg.com/@matrix-org/matrix-sdk-crypto-js/-/matrix-sdk-crypto-js-0.1.0-alpha.6.tgz#c0bdb9ab0d30179b8ef744d1b4010b0ad0ab9c3a"
-  integrity sha512-7hMffzw7KijxDyyH/eUyTfrLeCQHuyU3kaPOKGhcl3DZ3vx7bCncqjGMGTnxNPoP23I6gosvKSbO+3wYOT24Xg==
+"@matrix-org/matrix-sdk-crypto-js@0.1.0-alpha.10":
+  version "0.1.0-alpha.10"
+  resolved "https://registry.yarnpkg.com/@matrix-org/matrix-sdk-crypto-js/-/matrix-sdk-crypto-js-0.1.0-alpha.10.tgz#b6a6395cffd3197ae2e0a88f4eeae8b315571fd2"
+  integrity sha512-8V2NKuzGOFzEZeZVgF2is7gmuopdRbMZ064tzPDE0vN34iX6s3O8A4oxIT7SA3qtymwm3t1yEvTnT+0gfbmh4g==
 
 "@matrix-org/olm@3.2.14":
   version "3.2.14"
