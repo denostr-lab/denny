@@ -22,7 +22,7 @@
   "dependencies": {
     "@babel/preset-typescript": "7.21.4",
     "@fontsource/inter": "4.5.14",
-    "@fontsource/roboto": "4.5.8",
+    "@fontsource/roboto": "5.0.8",
     "@khanacademy/simple-markdown": "0.8.6",
     "@matrix-org/matrix-sdk-crypto-js": "0.1.0-alpha.6",
     "@matrix-org/olm": "3.2.14",
