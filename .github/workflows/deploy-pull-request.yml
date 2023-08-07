@@ -45,7 +45,7 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID_PR_CINNY }}
         timeout-minutes: 1
       - name: Comment preview on PR
-        uses: thollander/actions-comment-pull-request@c22fb302208b7b170d252a61a505d2ea27245eff
+        uses: thollander/actions-comment-pull-request@d61db783da9abefc3437960d0cce08552c7c004f
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
