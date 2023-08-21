@@ -10,7 +10,7 @@ RUN NODE_OPTIONS=--max-old-space-size=8192 yarn build
 
 
 ## App
-FROM nginx:1.23.3-alpine
+FROM nginx:1.25.2-alpine
 
 COPY --from=builder /src/dist /app
 
