@@ -20,7 +20,7 @@
   "author": "Guakamoli",
   "license": "MIT",
   "dependencies": {
-    "@babel/preset-typescript": "7.21.4",
+    "@babel/preset-typescript": "7.22.11",
     "@fontsource/inter": "4.5.14",
     "@fontsource/roboto": "4.5.8",
     "@khanacademy/simple-markdown": "0.8.6",
