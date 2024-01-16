@@ -25,7 +25,7 @@ interface SubscriptionOption {
     disableEventHandle?: boolean;
 }
 const DEFAULT_RELAYS = [
-    "wss://denostr.frankhu.snowinning.com",
+    "wss://relay2.denostr.com",
     "wss://relay.damus.io",
     "wss://offchain.pub",
     "wss://nos.lol",
@@ -34,7 +34,6 @@ const DEFAULT_RELAYS = [
     "wss://eden.nostr.land", // payments
     "wss://nostr-pub.wellorder.net",
     "wss://bitcoiner.social",
-    "wss://relay2.denostr.com",
 
     // "ws://localhost:8008",
 ];
@@ -244,8 +243,7 @@ class Relays {
         for (const relay of relays) {
             if (
                 !(
-                    relay.url.includes("paiya") ||
-                    relay.url.includes("snowinning") ||
+                    relay.url.includes("denostr.com") ||
                     relay.url.includes("localhost") ||
                     relay.url.includes("192.168.0")
                 )
