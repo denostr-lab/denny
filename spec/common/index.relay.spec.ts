@@ -1,7 +1,7 @@
 import { Browser, Page } from "puppeteer";
 import { PRIVATE_KEY } from "../data";
 import { login, createBrowserAndPage, getReplayConnectCount } from "../utils";
-let relayUrl = "wss://denostr.paiya.app";
+let relayUrl = "wss://relay2.denostr.com";
 describe("teset relays", () => {
     let browser: Browser;
     let page: Page;

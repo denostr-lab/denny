@@ -34,7 +34,7 @@ const DEFAULT_RELAYS = [
     "wss://eden.nostr.land", // payments
     "wss://nostr-pub.wellorder.net",
     "wss://bitcoiner.social",
-    "wss://denostr.paiya.app",
+    "wss://relay2.denostr.com",
 
     // "ws://localhost:8008",
 ];
