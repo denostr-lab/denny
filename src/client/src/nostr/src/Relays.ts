@@ -410,8 +410,7 @@ class Relays {
             let oldFilter = [...filters];
             if (
                 !(
-                    relay.url.includes("paiya") ||
-                    relay.url.includes("snowinning") ||
+                    relay.url.includes("denostr.com") ||
                     relay.url.includes("localhost") ||
                     relay.url.includes("192.168.0")
                 )
